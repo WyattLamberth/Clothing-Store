@@ -1,13 +1,9 @@
+// src/components/ShoppingCart.js
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import ProductCard from './ProductCard';
 
-const ShoppingCart = () => {
-  // This is a mock cart. In a real app, you'd manage this with state or a state management library
-  const cartItems = [
-    { id: 1, name: 'Classic T-Shirt', price: 19.99, quantity: 2 },
-    { id: 2, name: 'Slim Fit Jeans', price: 49.99, quantity: 1 },
-  ];
-
+const ShoppingCart = ({ cartItems = [], onRemoveItem }) => {
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
@@ -20,11 +16,11 @@ const ShoppingCart = () => {
           <div className="space-y-4">
             {cartItems.map((item) => (
               <div key={item.id} className="flex items-center justify-between border-b pb-4">
-                <div>
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-gray-600">${item.price.toFixed(2)} x {item.quantity}</p>
-                </div>
-                <button className="text-red-500 hover:text-red-700">
+                <ProductCard product={item} />
+                <button 
+                  className="text-red-500 hover:text-red-700"
+                  onClick={() => onRemoveItem(item.id)}
+                >
                   <Trash2 size={20} />
                 </button>
               </div>
