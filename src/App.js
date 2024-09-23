@@ -7,6 +7,11 @@ import ShopPage from './pages/ShopPage';
 import SignInRegister from './components/SignInRegister';
 import CartPage from './pages/CartPage';
 import EmployeePage from './pages/EmployeePage';
+import AdminPage from './pages/AdminPage';
+import UserManagement from './pages/UserManagement';
+import ProductManagement from './pages/ProductManagement';
+import SalesReports from './pages/SalesReports';
+import SystemMaintenance from './pages/SystemMaintenance';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
 
@@ -24,6 +29,21 @@ function App() {
               <Route path="/cart" element={<CartPage />} />
               <Route path="/employee" element={
                 <ProtectedRoute element={<EmployeePage />} />
+              } />
+                <Route path="/admin" element={ // Make sure AdminPage is used here
+                <ProtectedRoute element={<AdminPage />} />
+              } />
+                            <Route path="/admin/users" element={
+                <ProtectedRoute element={<UserManagement />} />
+              } />
+              <Route path="/admin/products" element={
+                <ProtectedRoute element={<ProductManagement />} />
+              } />
+              <Route path="/admin/reports" element={
+                <ProtectedRoute element={<SalesReports />} />
+              } />
+              <Route path="/admin/system-maintenance" element={
+                <ProtectedRoute element={<SystemMaintenance />} />
               } />
             </Routes>
           </main>
