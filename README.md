@@ -21,7 +21,7 @@ Install These:
 - **Node.js**: https://nodejs.org/en/download/package-manager
 - **MySQL**: https://dev.mysql.com/downloads/mysql/
 
-# THE SERVER REQUIRES A RUNNING DATABASE, YOU MUST HAVE A .ENV FILE WITH THE DATABASE CONNECTION INFO
+### THE SERVER REQUIRES A RUNNING DATABASE, YOU MUST HAVE A .ENV FILE WITH THE DATABASE CONNECTION INFO
 - DB_HOST=localhost
 - DB_USER=your-db-user
 - DB_PASSWORD=your-db-password
