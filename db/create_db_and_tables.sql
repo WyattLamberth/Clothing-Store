@@ -4,8 +4,6 @@ CREATE DATABASE IF NOT EXISTS online_store;
 -- Use the database
 USE online_store;
 
-DROP TABLE IF EXISTS ADDRESS;
-
 -- Create ADDRESS table
 CREATE TABLE IF NOT EXISTS ADDRESS (
     Address_ID INT PRIMARY KEY AUTO_INCREMENT,
