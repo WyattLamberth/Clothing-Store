@@ -28,61 +28,22 @@ CREATE TABLE IF NOT EXISTS EMPLOYEE (
     Role ENUM('Admin', 'Staff') DEFAULT 'Staff',
     Address_ID INT,
     Manager_Employee_ID INT NULL,
-    FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID)
+    CONSTRAINT fk_employee_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
+    CONSTRAINT fk_employee_manager FOREIGN KEY (Manager_Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
 );
 
--- Add the self-referencing foreign key for the manager relationship
-ALTER TABLE EMPLOYEE
-ADD CONSTRAINT fk_manager
-FOREIGN KEY (Manager_Employee_ID) REFERENCES EMPLOYEE(Employee_ID);
-
--- Create Customer Table
-CREATE TABLE IF NOT EXISTS CUSTOMER (
-    Customer_ID INT PRIMARY KEY AUTO_INCREMENT,
-    First_Name VARCHAR(50) NOT NULL,
-    Last_Name VARCHAR(50) NOT NULL,
-    Username VARCHAR(50) UNIQUE,
-    Email VARCHAR(255) UNIQUE,
-    Phone_Number VARCHAR(20) NOT NULL,
-    Password_Hash BINARY(64) NOT NULL,
-    Date_Joined DATE NOT NULL,
-    Address_ID INT,
-    Preferred_Payment_ID INT,
-    FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
-    CONSTRAINT chk_date_joined CHECK (Date_Joined <= '9999-12-31')
-);
-
--- Create PAYMENT table
-CREATE TABLE IF NOT EXISTS PAYMENT (
-    Preferred_Payment_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Cardholder_Name VARCHAR(100) NOT NULL,
-    Card_Number CHAR(16) UNIQUE,
-    Expiration_Date CHAR(5) NOT NULL,
-    CVV CHAR(3),
-    Customer_ID INT,
-    Billing_Address_ID INT,
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMER(Customer_ID),
-    FOREIGN KEY (Billing_Address_ID) REFERENCES ADDRESS(Address_ID),
-    CONSTRAINT chk_expiration_date CHECK (Expiration_Date REGEXP '^(0[1-9]|1[0-2])/[0-9]{2}$'),
-    CONSTRAINT chk_cvv CHECK (CVV REGEXP '^[0-9]{3}$')
-);
-
--- Add foreign key to CUSTOMER table after PAYMENT table is created
-ALTER TABLE CUSTOMER
-ADD FOREIGN KEY (Preferred_Payment_ID) REFERENCES PAYMENT(Preferred_Payment_ID);
-
--- Create CATEGORIES table
+-- Modify CATEGORIES table (if needed)
 CREATE TABLE IF NOT EXISTS CATEGORIES (
     Category_ID INT PRIMARY KEY AUTO_INCREMENT,
     Name VARCHAR(100) UNIQUE,
     Description TEXT NOT NULL
 );
 
+
 -- Create PRODUCTS table
 CREATE TABLE IF NOT EXISTS PRODUCTS (
     Product_ID INT PRIMARY KEY AUTO_INCREMENT,
     Product_Name VARCHAR(100) NOT NULL,
-    Category_ID INT,
     Description TEXT NOT NULL,
     Price DECIMAL(10,2) NOT NULL,
     Stock_Quantity INT NOT NULL,
@@ -90,22 +51,30 @@ CREATE TABLE IF NOT EXISTS PRODUCTS (
     Size VARCHAR(50) NOT NULL,
     Color VARCHAR(50) NOT NULL,
     Brand VARCHAR(50) NOT NULL,
-    FOREIGN KEY (Category_ID) REFERENCES CATEGORIES(Category_ID),
     CONSTRAINT chk_price CHECK (Price > 0),
     CONSTRAINT chk_stock CHECK (Stock_Quantity >= 0)
+);
+
+-- Create PRODUCT_CATEGORIES table
+CREATE TABLE IF NOT EXISTS PRODUCT_CATEGORIES (
+    Product_ID INT,
+    Category_ID INT,
+    PRIMARY KEY (Product_ID, Category_ID),
+    CONSTRAINT fk_product_id FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
+    CONSTRAINT fk_category_id FOREIGN KEY (Category_ID) REFERENCES CATEGORIES(Category_ID)
 );
 
 -- ORDERS table
 CREATE TABLE IF NOT EXISTS ORDERS (
     Order_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Customer_ID INT,
+    Employee_ID INT,  -- Changed from Customer_ID to Employee_ID
     Order_Status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
     Shipping_Address_ID INT,
     Order_Date DATE NOT NULL,
     Shipping_Cost DECIMAL(10,2) DEFAULT 5.00,
     Payment_Method VARCHAR(20) NOT NULL,
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMER(Customer_ID),
-    FOREIGN KEY (Shipping_Address_ID) REFERENCES ADDRESS(Address_ID),
+    FOREIGN KEY fk_employee_id (Employee_ID) REFERENCES EMPLOYEE(Employee_ID),
+    FOREIGN KEY fk_shipping_address_id (Shipping_Address_ID) REFERENCES ADDRESS(Address_ID),
     CONSTRAINT chk_order_date CHECK (Order_Date <= '9999-12-31')
 );
 
@@ -123,10 +92,10 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS (
 
 CREATE TABLE IF NOT EXISTS SHOPPING_CART (
     Cart_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Customer_ID INT UNIQUE,
+    Employee_ID INT UNIQUE,  -- Changed from Customer_ID to Employee_ID
     Created_At DATETIME DEFAULT CURRENT_TIMESTAMP,
     Updated_At DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMER(Customer_ID)
+    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
 );
 
 -- Create CART_ITEMS table
@@ -154,11 +123,11 @@ CREATE TABLE IF NOT EXISTS REORDER_ALERTS (
 CREATE TABLE IF NOT EXISTS RETURNS (
     Return_ID INT PRIMARY KEY AUTO_INCREMENT,
     Order_ID INT,
-    Customer_ID INT,
+    Employee_ID INT,  -- Changed from Customer_ID to Employee_ID
     Return_Date DATE NOT NULL,
     Return_Status ENUM('Pending', 'Approved', 'Completed', 'Rejected') NOT NULL,
     FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID),
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMER(Customer_ID),
+    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID),
     CONSTRAINT chk_return_date CHECK (Return_Date <= '9999-12-31')
 );
 
@@ -185,16 +154,18 @@ CREATE TABLE IF NOT EXISTS REFUNDS (
 
 CREATE TABLE IF NOT EXISTS ACTIVITY_LOGS (
     Log_ID INT PRIMARY KEY AUTO_INCREMENT,
-    User_ID INT,
+    Employee_ID INT,  -- Changed from User_ID to Employee_ID
     Action VARCHAR(255) NOT NULL,
     Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Entity_Affected VARCHAR(50)
+    Entity_Affected VARCHAR(50),
+    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
 );
 
 CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
     Notification_ID INT PRIMARY KEY AUTO_INCREMENT,
-    User_ID INT,
+    Employee_ID INT,  -- Changed from User_ID to Employee_ID
     Message TEXT NOT NULL,
     Notification_Date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Read_Status BOOLEAN DEFAULT FALSE
+    Read_Status BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
 );
