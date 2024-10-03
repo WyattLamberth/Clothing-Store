@@ -16,6 +16,22 @@ CREATE TABLE IF NOT EXISTS ADDRESS (
     CONSTRAINT chk_zip CHECK (Zip REGEXP '^[0-9]{5}(-[0-9]{4})?$')
 );
 
+-- Create USER TABLE
+CREATE TABLE IF NOT EXISTS USER (
+    User_ID INT PRIMARY KEY AUTO_INCREMENT,
+    First_Name VARCHAR(50) NOT NULL,
+    Last_Name VARCHAR(50) NOT NULL,
+    Username VARCHAR(50) UNIQUE,
+    Email VARCHAR(255) UNIQUE,
+    Phone_Number VARCHAR(20) UNIQUE,
+    Password_Hash BINARY(64) NOT NULL,
+    Role ENUM('Admin', 'Staff', 'Customer') DEFAULT 'Customer',
+    Address_ID INT,
+    Manager_User_ID INT NULL,
+    CONSTRAINT fk_user_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
+    CONSTRAINT fk_user_manager FOREIGN KEY (Manager_User_ID) REFERENCES USER(User_ID)
+);
+
 -- Create EMPLOYEE table
 CREATE TABLE IF NOT EXISTS EMPLOYEE (
     Employee_ID INT PRIMARY KEY AUTO_INCREMENT,
@@ -25,7 +41,7 @@ CREATE TABLE IF NOT EXISTS EMPLOYEE (
     Email VARCHAR(255) UNIQUE,
     Phone_Number VARCHAR(20) UNIQUE,
     Password_Hash BINARY(64) NOT NULL,
-    Role ENUM('Admin', 'Staff') DEFAULT 'Staff',
+    Role ENUM('Admin', 'Staff', 'Customer') DEFAULT 'Staff',
     Address_ID INT,
     Manager_Employee_ID INT NULL,
     CONSTRAINT fk_employee_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
