@@ -4,184 +4,222 @@ CREATE DATABASE IF NOT EXISTS online_store;
 -- Use the database
 USE online_store;
 
--- Create ADDRESS table
-CREATE TABLE IF NOT EXISTS ADDRESS (
-    Address_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Line_1 VARCHAR(255) NOT NULL,
-    Line_2 VARCHAR(255) DEFAULT 'N/A',
-    City VARCHAR(100) NOT NULL,
-    State VARCHAR(100) NOT NULL,
-    Zip VARCHAR(10) NOT NULL,
-    CONSTRAINT chk_state CHECK (State IN ('AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY')),
-    CONSTRAINT chk_zip CHECK (Zip REGEXP '^[0-9]{5}(-[0-9]{4})?$')
+-- Users table
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone_number VARCHAR(20) UNIQUE,
+  password_hash VARBINARY(64) NOT NULL,
+  role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
+  address_id INT
 );
 
--- Create USER TABLE
-CREATE TABLE IF NOT EXISTS USER (
-    User_ID INT PRIMARY KEY AUTO_INCREMENT,
-    First_Name VARCHAR(50) NOT NULL,
-    Last_Name VARCHAR(50) NOT NULL,
-    Username VARCHAR(50) UNIQUE,
-    Email VARCHAR(255) UNIQUE,
-    Phone_Number VARCHAR(20) UNIQUE,
-    Password_Hash BINARY(64) NOT NULL,
-    Role ENUM('Admin', 'Staff', 'Customer') DEFAULT 'Customer',
-    Address_ID INT,
-    Manager_User_ID INT NULL,
-    CONSTRAINT fk_user_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
-    CONSTRAINT fk_user_manager FOREIGN KEY (Manager_User_ID) REFERENCES USER(User_ID)
+-- Customers table
+CREATE TABLE customers (
+  customer_id INT PRIMARY KEY,
+  date_joined DATE NOT NULL,
+  preferred_payment_id INT
 );
 
--- Create EMPLOYEE table
-CREATE TABLE IF NOT EXISTS EMPLOYEE (
-    Employee_ID INT PRIMARY KEY AUTO_INCREMENT,
-    First_Name VARCHAR(50) NOT NULL,
-    Last_Name VARCHAR(50) NOT NULL,
-    Username VARCHAR(50) UNIQUE,
-    Email VARCHAR(255) UNIQUE,
-    Phone_Number VARCHAR(20) UNIQUE,
-    Password_Hash BINARY(64) NOT NULL,
-    Role ENUM('Admin', 'Staff', 'Customer') DEFAULT 'Staff',
-    Address_ID INT,
-    Manager_Employee_ID INT NULL,
-    CONSTRAINT fk_employee_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID),
-    CONSTRAINT fk_employee_manager FOREIGN KEY (Manager_Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
+-- Employees table
+CREATE TABLE employees (
+  employee_id INT PRIMARY KEY,
+  manager_employee_id INT,
+  role ENUM('Staff', 'Admin') NOT NULL
 );
 
--- Modify CATEGORIES table (if needed)
-CREATE TABLE IF NOT EXISTS CATEGORIES (
-    Category_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Name VARCHAR(100) UNIQUE,
-    Description TEXT NOT NULL
+-- Admins table
+CREATE TABLE admins (
+  admin_id INT PRIMARY KEY
 );
 
-
--- Create PRODUCTS table
-CREATE TABLE IF NOT EXISTS PRODUCTS (
-    Product_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Product_Name VARCHAR(100) NOT NULL,
-    Description TEXT NOT NULL,
-    Price DECIMAL(10,2) NOT NULL,
-    Stock_Quantity INT NOT NULL,
-    Reorder_Threshold INT DEFAULT 0,
-    Size VARCHAR(50) NOT NULL,
-    Color VARCHAR(50) NOT NULL,
-    Brand VARCHAR(50) NOT NULL,
-    CONSTRAINT chk_price CHECK (Price > 0),
-    CONSTRAINT chk_stock CHECK (Stock_Quantity >= 0)
+-- Payment table
+CREATE TABLE payment (
+  preferred_payment_id INT PRIMARY KEY,
+  cardholder_name VARCHAR(100) NOT NULL,
+  card_number CHAR(16) UNIQUE,
+  expiration_date CHAR(5) NOT NULL,
+  cvv CHAR(3) UNIQUE,
+  customer_id INT,
+  billing_address_id INT
 );
 
--- Create PRODUCT_CATEGORIES table
-CREATE TABLE IF NOT EXISTS PRODUCT_CATEGORIES (
-    Product_ID INT,
-    Category_ID INT,
-    PRIMARY KEY (Product_ID, Category_ID),
-    CONSTRAINT fk_product_id FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
-    CONSTRAINT fk_category_id FOREIGN KEY (Category_ID) REFERENCES CATEGORIES(Category_ID)
+-- Address table
+CREATE TABLE address (
+  address_id INT PRIMARY KEY,
+  line_1 VARCHAR(255) NOT NULL,
+  line_2 VARCHAR(255) DEFAULT 'N/A',
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  zip VARCHAR(10) NOT NULL
 );
 
--- ORDERS table
-CREATE TABLE IF NOT EXISTS ORDERS (
-    Order_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Employee_ID INT,  -- Changed from Customer_ID to Employee_ID
-    Order_Status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
-    Shipping_Address_ID INT,
-    Order_Date DATE NOT NULL,
-    Shipping_Cost DECIMAL(10,2) DEFAULT 5.00,
-    Payment_Method VARCHAR(20) NOT NULL,
-    FOREIGN KEY fk_employee_id (Employee_ID) REFERENCES EMPLOYEE(Employee_ID),
-    FOREIGN KEY fk_shipping_address_id (Shipping_Address_ID) REFERENCES ADDRESS(Address_ID),
-    CONSTRAINT chk_order_date CHECK (Order_Date <= '9999-12-31')
+-- Products table
+CREATE TABLE products (
+  product_id INT PRIMARY KEY,
+  product_name VARCHAR(100) NOT NULL,
+  category_id INT,
+  description TEXT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  stock_quantity INT NOT NULL,
+  reorder_threshold INT DEFAULT 0,
+  size VARCHAR(50) NOT NULL,
+  color VARCHAR(50) NOT NULL,
+  brand VARCHAR(50) NOT NULL,
+  CHECK (price > 0),
+  CHECK (stock_quantity >= 0)
 );
 
--- TRANSACTIONS table
-CREATE TABLE IF NOT EXISTS TRANSACTIONS (
-    Transaction_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Order_ID INT UNIQUE,
-    Transaction_Date DATE NOT NULL,
-    Total_Amount DECIMAL(10,2) NOT NULL,
-    Payment_Status ENUM('Pending', 'Paid', 'Failed', 'Refunded') NOT NULL,
-    FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID),
-    CONSTRAINT chk_transaction_date CHECK (Transaction_Date <= '9999-12-31'),
-    CONSTRAINT chk_total_amount CHECK (Total_Amount >= 0)
+-- Categories table
+CREATE TABLE categories (
+  category_id INT PRIMARY KEY,
+  name VARCHAR(100) UNIQUE,
+  description TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS SHOPPING_CART (
-    Cart_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Employee_ID INT UNIQUE,  -- Changed from Customer_ID to Employee_ID
-    Created_At DATETIME DEFAULT CURRENT_TIMESTAMP,
-    Updated_At DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
+-- Orders table
+CREATE TABLE orders (
+  order_id INT PRIMARY KEY,
+  customer_id INT,
+  shipping_address_id INT,
+  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
+  order_date DATE NOT NULL,
+  shipping_cost DECIMAL(10,2) DEFAULT 0.00,
+  payment_method VARCHAR(20) NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  CHECK (total_amount >= 0)
 );
 
--- Create CART_ITEMS table
-CREATE TABLE IF NOT EXISTS CART_ITEMS (
-    Cart_Item_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Cart_ID INT,
-    Product_ID INT,
-    Quantity INT NOT NULL,
-    FOREIGN KEY (Cart_ID) REFERENCES SHOPPING_CART(Cart_ID),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
-    CONSTRAINT chk_cart_quantity CHECK (Quantity > 0)
+-- Order Items table
+CREATE TABLE order_items (
+  order_item_id INT PRIMARY KEY,
+  order_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  total_item_price DECIMAL(10,2) NOT NULL,
+  CHECK (quantity > 0)
 );
 
--- reorder alert table
-CREATE TABLE IF NOT EXISTS REORDER_ALERTS (
-    Alert_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Product_ID INT,
-    Alert_Date DATE DEFAULT (CURRENT_DATE),
-    Quantity_To_Reorder INT NOT NULL,
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
-    CONSTRAINT chk_reorder_quantity CHECK (Quantity_To_Reorder > 0)
+-- Transactions table
+CREATE TABLE transactions (
+  transaction_id INT PRIMARY KEY,
+  order_id INT,
+  transaction_date DATE NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  payment_status VARCHAR(20) NOT NULL,
+  CHECK (total_amount >= 0)
 );
 
--- RETURNS table
-CREATE TABLE IF NOT EXISTS RETURNS (
-    Return_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Order_ID INT,
-    Employee_ID INT,  -- Changed from Customer_ID to Employee_ID
-    Return_Date DATE NOT NULL,
-    Return_Status ENUM('Pending', 'Approved', 'Completed', 'Rejected') NOT NULL,
-    FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID),
-    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID),
-    CONSTRAINT chk_return_date CHECK (Return_Date <= '9999-12-31')
+-- Shopping Cart table
+CREATE TABLE shopping_cart (
+  cart_id INT PRIMARY KEY,
+  customer_id INT,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Create RETURN_ITEMS table
-CREATE TABLE IF NOT EXISTS RETURN_ITEMS (
-    ReturnItem_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Return_ID INT,
-    Product_ID INT,
-    Quantity INT NOT NULL,
-    FOREIGN KEY (Return_ID) REFERENCES RETURNS(Return_ID),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
-    CONSTRAINT chk_return_quantity CHECK (Quantity > 0)
+-- Cart Items table
+CREATE TABLE cart_items (
+  cart_item_id INT PRIMARY KEY,
+  cart_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  CHECK (quantity > 0)
 );
 
-CREATE TABLE IF NOT EXISTS REFUNDS (
-    Refund_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Return_ID INT UNIQUE,
-    Refund_Amount DECIMAL(10,2) NOT NULL,
-    Refund_Date DATE DEFAULT (CURRENT_DATE),
-    Refund_Status ENUM('Pending', 'Completed') NOT NULL,
-    FOREIGN KEY (Return_ID) REFERENCES RETURNS(Return_ID),
-    CONSTRAINT chk_refund_amount CHECK (Refund_Amount > 0)
+-- Reorder Alerts table
+CREATE TABLE reorder_alerts (
+  alert_id INT PRIMARY KEY,
+  product_id INT,
+  alert_date DATE NOT NULL,
+  quantity_to_reorder INT NOT NULL,
+  CHECK (quantity_to_reorder > 0)
 );
 
-CREATE TABLE IF NOT EXISTS ACTIVITY_LOGS (
-    Log_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Employee_ID INT,  -- Changed from User_ID to Employee_ID
-    Action VARCHAR(255) NOT NULL,
-    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Entity_Affected VARCHAR(50),
-    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
+-- Returns table
+CREATE TABLE returns (
+  return_id INT PRIMARY KEY,
+  order_id INT,
+  customer_id INT,
+  return_date DATE NOT NULL,
+  return_status VARCHAR(20) NOT NULL,
+  CHECK (return_status IN ('Pending', 'Approved', 'Completed', 'Rejected'))
 );
 
-CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
-    Notification_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Employee_ID INT,  -- Changed from User_ID to Employee_ID
-    Message TEXT NOT NULL,
-    Notification_Date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Read_Status BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (Employee_ID) REFERENCES EMPLOYEE(Employee_ID)
+-- Return Items table
+CREATE TABLE return_items (
+  return_item_id INT PRIMARY KEY,
+  return_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  CHECK (quantity > 0)
+);
+
+-- Refunds table
+CREATE TABLE refunds (
+  refund_id INT PRIMARY KEY,
+  return_id INT,
+  refund_amount DECIMAL(10,2) NOT NULL,
+  refund_date DATE NOT NULL,
+  refund_status VARCHAR(20) NOT NULL,
+  CHECK (refund_amount <= 0),
+  CHECK (refund_status IN ('Pending', 'Completed'))
+);
+
+-- Activity Logs table
+CREATE TABLE activity_logs (
+  log_id INT PRIMARY KEY,
+  user_id INT,
+  action VARCHAR(255) NOT NULL,
+  timestamp DATETIME NOT NULL,
+  entity_affected VARCHAR(50)
+);
+
+-- Notifications table
+CREATE TABLE notifications (
+  notification_id INT PRIMARY KEY,
+  user_id INT,
+  message TEXT NOT NULL,
+  notification_date DATETIME NOT NULL,
+  read_status BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Sale Events table
+CREATE TABLE sale_events (
+  sale_event_id INT PRIMARY KEY,
+  event_name VARCHAR(100) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  CHECK (end_date > start_date)
+);
+
+-- Discounts table
+CREATE TABLE discounts (
+  discount_id INT PRIMARY KEY,
+  discount_type VARCHAR(50) NOT NULL,
+  discount_percentage DECIMAL(5,2) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  product_id INT,
+  category_id INT,
+  sale_event_id INT,
+  CHECK (discount_type IN ('Product', 'Category', 'Order')),
+  CHECK (discount_percentage BETWEEN 0 AND 50),
+  CHECK (end_date > start_date)
+);
+
+-- Permissions table
+CREATE TABLE permissions (
+  permission_id INT PRIMARY KEY,
+  permission_name VARCHAR(50) NOT NULL
+);
+
+-- Role Permissions table
+CREATE TABLE role_permissions (
+  role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
+  permission_id INT
 );
