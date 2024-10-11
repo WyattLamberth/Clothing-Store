@@ -15,25 +15,28 @@ CREATE TABLE users (
   password_hash VARBINARY(64) NOT NULL,
   role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
   address_id INT
+  -- foreign key address_id references address(address_id)
 );
 
 -- Customers table
 CREATE TABLE customers (
   customer_id INT PRIMARY KEY,
   date_joined DATE NOT NULL,
-  preferred_payment_id INT
+  preferred_payment_id INT,
+  -- FOREIGN KEY (customer_id) REFERENCES users(user_id)
 );
 
 -- Employees table
 CREATE TABLE employees (
   employee_id INT PRIMARY KEY,
-  manager_employee_id INT,
   role ENUM('Staff', 'Admin') NOT NULL
+  -- FOREIGN KEY (customer_id) REFERENCES users(user_id) CHANGE TO EMPLOYEE
 );
 
 -- Admins table
 CREATE TABLE admins (
   admin_id INT PRIMARY KEY
+  -- FOREIGN KEY (customer_id) REFERENCES users(user_id) CHANGE TO ADMIN
 );
 
 -- Payment table
@@ -45,6 +48,7 @@ CREATE TABLE payment (
   cvv CHAR(3) UNIQUE,
   customer_id INT,
   billing_address_id INT
+  -- foreign key billing_Address_id references address(address_id)
 );
 
 -- Address table
@@ -71,6 +75,7 @@ CREATE TABLE products (
   brand VARCHAR(50) NOT NULL,
   CHECK (price > 0),
   CHECK (stock_quantity >= 0)
+  -- foreign key category_id references categories(category_id)
 );
 
 -- Categories table
@@ -78,6 +83,7 @@ CREATE TABLE categories (
   category_id INT PRIMARY KEY,
   name VARCHAR(100) UNIQUE,
   description TEXT NOT NULL
+  sex ENUM('M', 'F', 'K')
 );
 
 -- Orders table
@@ -85,12 +91,15 @@ CREATE TABLE orders (
   order_id INT PRIMARY KEY,
   customer_id INT,
   shipping_address_id INT,
-  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
+  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
   order_date DATE NOT NULL,
   shipping_cost DECIMAL(10,2) DEFAULT 0.00,
   payment_method VARCHAR(20) NOT NULL,
   total_amount DECIMAL(10,2) NOT NULL,
   CHECK (total_amount >= 0)
+  -- foreign key shipping_address_id references user(address_id)
+  -- foreign key customer_id references customer(customer_id)
+  
 );
 
 -- Order Items table
@@ -102,6 +111,7 @@ CREATE TABLE order_items (
   unit_price DECIMAL(10,2) NOT NULL,
   total_item_price DECIMAL(10,2) NOT NULL,
   CHECK (quantity > 0)
+  -- foreign key order_id references orders()
 );
 
 -- Transactions table
@@ -120,6 +130,7 @@ CREATE TABLE shopping_cart (
   customer_id INT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  running_total DECIMAL(10,2) NOT NULL
 );
 
 -- Cart Items table
@@ -144,6 +155,7 @@ CREATE TABLE reorder_alerts (
 CREATE TABLE returns (
   return_id INT PRIMARY KEY,
   order_id INT,
+  approval BOOL,
   customer_id INT,
   return_date DATE NOT NULL,
   return_status VARCHAR(20) NOT NULL,
@@ -194,6 +206,8 @@ CREATE TABLE sale_events (
   event_name VARCHAR(100) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
+  product_id INT,
+  category_id INT,
   CHECK (end_date > start_date)
 );
 
@@ -202,14 +216,11 @@ CREATE TABLE discounts (
   discount_id INT PRIMARY KEY,
   discount_type VARCHAR(50) NOT NULL,
   discount_percentage DECIMAL(5,2) NOT NULL,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  product_id INT,
-  category_id INT,
+  -- add shopping cart id
   sale_event_id INT,
-  CHECK (discount_type IN ('Product', 'Category', 'Order')),
+  -- CHECK (discount_type IN ('Product', 'Category', 'Order')),
   CHECK (discount_percentage BETWEEN 0 AND 50),
-  CHECK (end_date > start_date)
+  -- constraint no active sale event
 );
 
 -- Permissions table
