@@ -1,241 +1,313 @@
 -- Create the database (if it doesn't exist)
-CREATE DATABASE IF NOT EXISTS online_store;
+CREATE DATABASE IF NOT EXISTS clothingStore;
 
 -- Use the database
-USE online_store;
+USE clothingStore;
 
--- Create ADDRESS table
-CREATE TABLE IF NOT EXISTS ADDRESS (
-    Address_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Line_1 NVARCHAR(255) NOT NULL,
-    Line_2 NVARCHAR(255) DEFAULT 'N/A',
-    City NVARCHAR(100) NOT NULL,
-    State NVARCHAR(100) NOT NULL,
-    Zip VARCHAR(10) NOT NULL,
-    CONSTRAINT chk_state CHECK (State IN ('AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY')),
-    CONSTRAINT chk_zip CHECK (Zip REGEXP '^[0-9]{5}(-[0-9]{4})?$')
+-- Users table
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone_number VARCHAR(20) UNIQUE,
+  password_hash VARBINARY(64) NOT NULL,
+  role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
+  address_id INT
 );
 
--- Create USERS table
-CREATE TABLE IF NOT EXISTS USERS (
-    User_ID INT PRIMARY KEY AUTO_INCREMENT,
-    First_Name VARCHAR(50) NOT NULL,
-    Last_Name VARCHAR(50) NOT NULL,
-    Username VARCHAR(50) UNIQUE,
-    Email VARCHAR(255) UNIQUE,
-    Phone_Number VARCHAR(20) UNIQUE,
-    Password_Hash BINARY(64) NOT NULL,
-    Role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
-    Address_ID INT,
-    CONSTRAINT fk_user_address FOREIGN KEY (Address_ID) REFERENCES ADDRESS(Address_ID)
+-- Customers table
+CREATE TABLE customers (
+  customer_id INT PRIMARY KEY,
+  date_joined DATE NOT NULL,
+  preferred_payment_id INT
 );
 
--- Create CUSTOMERS table
-CREATE TABLE IF NOT EXISTS CUSTOMERS (
-    Customer_ID INT PRIMARY KEY,
-    Date_Joined DATE NOT NULL,
-    Preferred_Payment_ID INT,
-    FOREIGN KEY (Customer_ID) REFERENCES USERS(User_ID),
-    FOREIGN KEY (Preferred_Payment_ID) REFERENCES PAYMENT(Preferred_Payment_ID)
+-- Employees table
+CREATE TABLE employees (
+  employee_id INT PRIMARY KEY,
+  manager_employee_id INT,
+  role ENUM('Staff', 'Admin') NOT NULL
 );
 
--- Create EMPLOYEES table
-CREATE TABLE IF NOT EXISTS EMPLOYEES (
-    Employee_ID INT PRIMARY KEY,
-    Manager_Employee_ID INT,
-    Role ENUM('Staff', 'Admin') NOT NULL,
-    FOREIGN KEY (Employee_ID) REFERENCES USERS(User_ID),
-    FOREIGN KEY (Manager_Employee_ID) REFERENCES EMPLOYEES(Employee_ID)
+-- Admins table
+CREATE TABLE admins (
+  admin_id INT PRIMARY KEY
 );
 
--- Create ADMINS table (if specific fields are needed)
-CREATE TABLE IF NOT EXISTS ADMINS (
-    Admin_ID INT PRIMARY KEY,
-    FOREIGN KEY (Admin_ID) REFERENCES USERS(User_ID)
+-- Payment table
+CREATE TABLE payment (
+  preferred_payment_id INT PRIMARY KEY,
+  cardholder_name VARCHAR(100) NOT NULL,
+  card_number CHAR(16) UNIQUE,
+  expiration_date CHAR(5) NOT NULL,
+  cvv CHAR(3) UNIQUE,
+  customer_id INT,
+  billing_address_id INT
 );
 
--- Create PAYMENT table
-CREATE TABLE IF NOT EXISTS PAYMENT (
-    Preferred_Payment_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Cardholder_Name NVARCHAR(100) NOT NULL,
-    Card_Number CHAR(16) UNIQUE,
-    Expiration_Date CHAR(5) NOT NULL, -- Format MM/YY
-    CVV CHAR(3) UNIQUE,
-    Customer_ID INT,
-    Billing_Address_ID INT,
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMERS(Customer_ID),
-    FOREIGN KEY (Billing_Address_ID) REFERENCES ADDRESS(Address_ID)
+-- Address table
+CREATE TABLE address (
+  address_id INT PRIMARY KEY,
+  line_1 VARCHAR(255) NOT NULL,
+  line_2 VARCHAR(255) DEFAULT 'N/A',
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  zip VARCHAR(10) NOT NULL
 );
 
--- Create PRODUCTS table
-CREATE TABLE IF NOT EXISTS PRODUCTS (
-    Product_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Product_Name NVARCHAR(100) NOT NULL,
-    Category_ID INT,
-    Description TEXT NOT NULL,
-    Price DECIMAL(10,2) NOT NULL CHECK (Price > 0),
-    Stock_Quantity INT NOT NULL CHECK (Stock_Quantity >= 0),
-    Reorder_Threshold INT DEFAULT 0,
-    Size NVARCHAR(50) NOT NULL,
-    Color NVARCHAR(50) NOT NULL,
-    Brand NVARCHAR(50) NOT NULL,
-    FOREIGN KEY (Category_ID) REFERENCES CATEGORIES(Category_ID)
+-- Products table
+CREATE TABLE products (
+  product_id INT PRIMARY KEY,
+  product_name VARCHAR(100) NOT NULL,
+  category_id INT,
+  description TEXT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  stock_quantity INT NOT NULL,
+  reorder_threshold INT DEFAULT 0,
+  size VARCHAR(50) NOT NULL,
+  color VARCHAR(50) NOT NULL,
+  brand VARCHAR(50) NOT NULL,
+  CHECK (price > 0),
+  CHECK (stock_quantity >= 0)
 );
 
--- Create CATEGORIES table
-CREATE TABLE IF NOT EXISTS CATEGORIES (
-    Category_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Name NVARCHAR(100) UNIQUE NOT NULL,
-    Description TEXT NOT NULL
+-- Categories table
+CREATE TABLE categories (
+  category_id INT PRIMARY KEY,
+  name VARCHAR(100) UNIQUE,
+  description TEXT NOT NULL
 );
 
--- Create ORDERS table
-CREATE TABLE IF NOT EXISTS ORDERS (
-    Order_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Customer_ID INT,
-    Shipping_Address_ID INT,
-    Order_Status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
-    Order_Date DATE NOT NULL CHECK (Order_Date <= CURRENT_DATE),
-    Shipping_Cost DECIMAL(10,2) DEFAULT 5.00,
-    Payment_Method VARCHAR(20) NOT NULL,
-    Total_Amount DECIMAL(10,2) NOT NULL CHECK (Total_Amount >= 0),
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMERS(Customer_ID),
-    FOREIGN KEY (Shipping_Address_ID) REFERENCES ADDRESS(Address_ID)
+-- Orders table
+CREATE TABLE orders (
+  order_id INT PRIMARY KEY,
+  customer_id INT,
+  shipping_address_id INT,
+  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') NOT NULL,
+  order_date DATE NOT NULL,
+  shipping_cost DECIMAL(10,2) DEFAULT 0.00,
+  payment_method VARCHAR(20) NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  CHECK (total_amount >= 0)
 );
 
--- Create ORDER_ITEMS table
-CREATE TABLE IF NOT EXISTS ORDER_ITEMS (
-    Order_Item_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Order_ID INT,
-    Product_ID INT,
-    Quantity INT NOT NULL CHECK (Quantity > 0),
-    Unit_Price DECIMAL(10,2) NOT NULL,
-    Total_Item_Price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID)
+-- Order Items table
+CREATE TABLE order_items (
+  order_item_id INT PRIMARY KEY,
+  order_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  total_item_price DECIMAL(10,2) NOT NULL,
+  CHECK (quantity > 0)
 );
 
--- Create TRANSACTIONS table
-CREATE TABLE IF NOT EXISTS TRANSACTIONS (
-    Transaction_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Order_ID INT UNIQUE,
-    Transaction_Date DATE NOT NULL CHECK (Transaction_Date <= CURRENT_DATE),
-    Total_Amount DECIMAL(10,2) NOT NULL CHECK (Total_Amount >= 0),
-    Payment_Status ENUM('Pending', 'Paid', 'Failed', 'Refunded') NOT NULL,
-    FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID)
+-- Transactions table
+CREATE TABLE transactions (
+  transaction_id INT PRIMARY KEY,
+  order_id INT,
+  transaction_date DATE NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  payment_status VARCHAR(20) NOT NULL,
+  CHECK (total_amount >= 0)
 );
 
--- Create SHOPPING_CART table
-CREATE TABLE IF NOT EXISTS SHOPPING_CART (
-    Cart_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Customer_ID INT UNIQUE,
-    Created_At DATETIME DEFAULT CURRENT_TIMESTAMP,
-    Updated_At DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMERS(Customer_ID)
+-- Shopping Cart table
+CREATE TABLE shopping_cart (
+  cart_id INT PRIMARY KEY,
+  customer_id INT,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Create CART_ITEMS table
-CREATE TABLE IF NOT EXISTS CART_ITEMS (
-    Cart_Item_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Cart_ID INT,
-    Product_ID INT,
-    Quantity INT NOT NULL CHECK (Quantity > 0),
-    FOREIGN KEY (Cart_ID) REFERENCES SHOPPING_CART(Cart_ID),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID)
+-- Cart Items table
+CREATE TABLE cart_items (
+  cart_item_id INT PRIMARY KEY,
+  cart_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  CHECK (quantity > 0)
 );
 
--- Create REORDER_ALERTS table
-CREATE TABLE IF NOT EXISTS REORDER_ALERTS (
-    Alert_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Product_ID INT,
-    Alert_Date DATE DEFAULT CURRENT_DATE,
-    Quantity_To_Reorder INT NOT NULL CHECK (Quantity_To_Reorder > 0),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID)
+-- Reorder Alerts table
+CREATE TABLE reorder_alerts (
+  alert_id INT PRIMARY KEY,
+  product_id INT,
+  alert_date DATE NOT NULL,
+  quantity_to_reorder INT NOT NULL,
+  CHECK (quantity_to_reorder > 0)
 );
 
--- Create RETURNS table
-CREATE TABLE IF NOT EXISTS RETURNS (
-    Return_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Order_ID INT,
-    Customer_ID INT,
-    Return_Date DATE NOT NULL CHECK (Return_Date <= CURRENT_DATE),
-    Return_Status ENUM('Pending', 'Approved', 'Completed', 'Rejected') NOT NULL,
-    FOREIGN KEY (Order_ID) REFERENCES ORDERS(Order_ID),
-    FOREIGN KEY (Customer_ID) REFERENCES CUSTOMERS(Customer_ID)
+-- Returns table
+CREATE TABLE returns (
+  return_id INT PRIMARY KEY,
+  order_id INT,
+  customer_id INT,
+  return_date DATE NOT NULL,
+  return_status VARCHAR(20) NOT NULL,
+  CHECK (return_status IN ('Pending', 'Approved', 'Completed', 'Rejected'))
 );
 
--- Create RETURN_ITEMS table
-CREATE TABLE IF NOT EXISTS RETURN_ITEMS (
-    ReturnItem_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Return_ID INT,
-    Product_ID INT,
-    Quantity INT NOT NULL CHECK (Quantity > 0),
-    FOREIGN KEY (Return_ID) REFERENCES RETURNS(Return_ID),
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID)
+-- Return Items table
+CREATE TABLE return_items (
+  return_item_id INT PRIMARY KEY,
+  return_id INT,
+  product_id INT,
+  quantity INT NOT NULL,
+  CHECK (quantity > 0)
 );
 
--- Create REFUNDS table
-CREATE TABLE IF NOT EXISTS REFUNDS (
-    Refund_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Return_ID INT UNIQUE,
-    Refund_Amount DECIMAL(10,2) NOT NULL CHECK (Refund_Amount >= 0),
-    Refund_Date DATE DEFAULT CURRENT_DATE,
-    Refund_Status ENUM('Pending', 'Completed') NOT NULL,
-    FOREIGN KEY (Return_ID) REFERENCES RETURNS(Return_ID)
+-- Refunds table
+CREATE TABLE refunds (
+  refund_id INT PRIMARY KEY,
+  return_id INT,
+  refund_amount DECIMAL(10,2) NOT NULL,
+  refund_date DATE NOT NULL,
+  refund_status VARCHAR(20) NOT NULL,
+  CHECK (refund_amount <= 0),
+  CHECK (refund_status IN ('Pending', 'Completed'))
 );
 
--- Create ACTIVITY_LOGS table
-CREATE TABLE IF NOT EXISTS ACTIVITY_LOGS (
-    Log_ID INT PRIMARY KEY AUTO_INCREMENT,
-    User_ID INT,
-    Action VARCHAR(255) NOT NULL,
-    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Entity_Affected VARCHAR(50),
-    FOREIGN KEY (User_ID) REFERENCES USERS(User_ID)
+-- Activity Logs table
+CREATE TABLE activity_logs (
+  log_id INT PRIMARY KEY,
+  user_id INT,
+  action VARCHAR(255) NOT NULL,
+  timestamp DATETIME NOT NULL,
+  entity_affected VARCHAR(50)
 );
 
--- Create NOTIFICATIONS table
-CREATE TABLE IF NOT EXISTS NOTIFICATIONS (
-    Notification_ID INT PRIMARY KEY AUTO_INCREMENT,
-    User_ID INT,
-    Message TEXT NOT NULL,
-    Notification_Date DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    Read_Status BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (User_ID) REFERENCES USERS(User_ID)
+-- Notifications table
+CREATE TABLE notifications (
+  notification_id INT PRIMARY KEY,
+  user_id INT,
+  message TEXT NOT NULL,
+  notification_date DATETIME NOT NULL,
+  read_status BOOLEAN NOT NULL DEFAULT FALSE
 );
 
--- Create SALE_EVENTS table
-CREATE TABLE IF NOT EXISTS SALE_EVENTS (
-    Sale_Event_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Event_Name VARCHAR(100) NOT NULL,
-    Start_Date DATE NOT NULL CHECK (Start_Date >= CURRENT_DATE),
-    End_Date DATE NOT NULL CHECK (End_Date > Start_Date)
+-- Sale Events table
+CREATE TABLE sale_events (
+  sale_event_id INT PRIMARY KEY,
+  event_name VARCHAR(100) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  CHECK (end_date > start_date)
 );
 
--- Create DISCOUNTS table
-CREATE TABLE IF NOT EXISTS DISCOUNTS (
-    Discount_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Discount_Type VARCHAR(50),
-    Discount_Percentage DECIMAL(5,2) CHECK (Discount_Percentage >= 0 AND Discount_Percentage <= 50),
-    Start_Date DATE NOT NULL CHECK (Start_Date >= CURRENT_DATE),
-    End_Date DATE NOT NULL CHECK (End_Date > Start_Date),
-    Product_ID INT,
-    Category_ID INT,
-    Sale_Event_ID INT,
-    FOREIGN KEY (Product_ID) REFERENCES PRODUCTS(Product_ID),
-    FOREIGN KEY (Category_ID) REFERENCES CATEGORIES(Category_ID),
-    FOREIGN KEY (Sale_Event_ID) REFERENCES SALE_EVENTS(Sale_Event_ID)
+-- Discounts table
+CREATE TABLE discounts (
+  discount_id INT PRIMARY KEY,
+  discount_type VARCHAR(50) NOT NULL,
+  discount_percentage DECIMAL(5,2) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  product_id INT,
+  category_id INT,
+  sale_event_id INT,
+  CHECK (discount_type IN ('Product', 'Category', 'Order')),
+  CHECK (discount_percentage BETWEEN 0 AND 50),
+  CHECK (end_date > start_date)
 );
 
--- Create PERMISSIONS table
-CREATE TABLE IF NOT EXISTS PERMISSIONS (
-    Permission_ID INT PRIMARY KEY AUTO_INCREMENT,
-    Permission_Name VARCHAR(50) NOT NULL
+-- Permissions table
+CREATE TABLE permissions (
+  permission_id INT PRIMARY KEY,
+  permission_name VARCHAR(50) NOT NULL
 );
 
--- Create ROLE_PERMISSIONS table
-CREATE TABLE IF NOT EXISTS ROLE_PERMISSIONS (
-    Role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
-    Permission_ID INT,
-    FOREIGN KEY (Permission_ID) REFERENCES PERMISSIONS(Permission_ID)
+-- Role Permissions table
+CREATE TABLE role_permissions (
+  role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
+  permission_id INT
 );
+
+-- Step 2: Add the foreign keys and relationships
+
+-- USERS to ADDRESS
+ALTER TABLE users
+ADD CONSTRAINT fk_user_address FOREIGN KEY (address_id) REFERENCES address(address_id);
+
+-- CUSTOMERS to USERS and PAYMENT
+ALTER TABLE customers
+ADD CONSTRAINT fk_customers_user FOREIGN KEY (customer_id) REFERENCES users(user_id),
+ADD CONSTRAINT fk_customers_payment FOREIGN KEY (preferred_payment_id) REFERENCES payment(preferred_payment_id);
+
+-- EMPLOYEES to USERS and MANAGER_EMPLOYEE
+ALTER TABLE employees
+ADD CONSTRAINT fk_employees_user FOREIGN KEY (employee_id) REFERENCES users(user_id),
+ADD CONSTRAINT fk_employees_manager FOREIGN KEY (manager_employee_id) REFERENCES employees(employee_id);
+
+-- ADMINS to USERS
+ALTER TABLE admins
+ADD CONSTRAINT fk_admins_user FOREIGN KEY (admin_id) REFERENCES users(user_id);
+
+-- PAYMENT to CUSTOMERS and ADDRESS
+ALTER TABLE payment
+ADD CONSTRAINT fk_payment_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+ADD CONSTRAINT fk_payment_address FOREIGN KEY (billing_address_id) REFERENCES address(address_id);
+
+-- PRODUCTS to CATEGORIES
+ALTER TABLE products
+ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(category_id);
+
+-- ORDERS to CUSTOMERS and ADDRESS
+ALTER TABLE orders
+ADD CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+ADD CONSTRAINT fk_orders_address FOREIGN KEY (shipping_address_id) REFERENCES address(address_id);
+
+-- ORDER_ITEMS to ORDERS and PRODUCTS
+ALTER TABLE order_items
+ADD CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(order_id),
+ADD CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+
+-- TRANSACTIONS to ORDERS
+ALTER TABLE transactions
+ADD CONSTRAINT fk_transactions_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
+
+-- SHOPPING_CART to CUSTOMERS
+ALTER TABLE shopping_cart
+ADD CONSTRAINT fk_shopping_cart_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id);
+
+-- CART_ITEMS to SHOPPING_CART and PRODUCTS
+ALTER TABLE cart_items
+ADD CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES shopping_cart(cart_id),
+ADD CONSTRAINT fk_cart_items_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+
+-- REORDER_ALERTS to PRODUCTS
+ALTER TABLE reorder_alerts
+ADD CONSTRAINT fk_reorder_alerts_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+
+-- RETURNS to ORDERS and CUSTOMERS
+ALTER TABLE returns
+ADD CONSTRAINT fk_returns_order FOREIGN KEY (order_id) REFERENCES orders(order_id),
+ADD CONSTRAINT fk_returns_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id);
+
+-- RETURN_ITEMS to RETURNS and PRODUCTS
+ALTER TABLE return_items
+ADD CONSTRAINT fk_return_items_return FOREIGN KEY (return_id) REFERENCES returns(return_id),
+ADD CONSTRAINT fk_return_items_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+
+-- REFUNDS to RETURNS
+ALTER TABLE refunds
+ADD CONSTRAINT fk_refunds_return FOREIGN KEY (return_id) REFERENCES returns(return_id);
+
+-- ACTIVITY_LOGS to USERS
+ALTER TABLE activity_logs
+ADD CONSTRAINT fk_activity_logs_user FOREIGN KEY (user_id) REFERENCES users(user_id);
+
+-- NOTIFICATIONS to USERS
+ALTER TABLE notifications
+ADD CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(user_id);
+
+-- DISCOUNTS to PRODUCTS, CATEGORIES, and SALE_EVENTS
+ALTER TABLE discounts
+ADD CONSTRAINT fk_discounts_product FOREIGN KEY (product_id) REFERENCES products(product_id),
+ADD CONSTRAINT fk_discounts_category FOREIGN KEY (category_id) REFERENCES categories(category_id),
+ADD CONSTRAINT fk_discounts_sale_event FOREIGN KEY (sale_event_id) REFERENCES sale_events(sale_event_id);
+
+-- ROLE_PERMISSIONS to PERMISSIONS
+ALTER TABLE role_permissions
+ADD CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
