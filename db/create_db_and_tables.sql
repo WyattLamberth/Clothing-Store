@@ -30,13 +30,15 @@ CREATE TABLE customers (
 CREATE TABLE employees (
   employee_id INT PRIMARY KEY,
   role ENUM('Staff', 'Admin') NOT NULL
-  -- FOREIGN KEY (customer_id) REFERENCES users(user_id) CHANGE TO EMPLOYEE
+  -- FOREIGN KEY (employee_id) REFERENCES users(user_id)
+  -- foreign key (permission_id) REFERENCES permissions(permission_id)
 );
 
 -- Admins table
 CREATE TABLE admins (
   admin_id INT PRIMARY KEY
-  -- FOREIGN KEY (customer_id) REFERENCES users(user_id) CHANGE TO ADMIN
+  -- FOREIGN KEY (admin_id) REFERENCES users(user_id)
+  -- foreign key (permission_id) REFERENCES permissions(permission_id)
 );
 
 -- Payment table
@@ -46,7 +48,7 @@ CREATE TABLE payment (
   card_number CHAR(16) UNIQUE,
   expiration_date CHAR(5) NOT NULL,
   cvv CHAR(3) UNIQUE,
-  customer_id INT,
+  customer_id INT, -- foreign key to customer table
   billing_address_id INT
   -- foreign key billing_Address_id references address(address_id)
 );
@@ -65,7 +67,7 @@ CREATE TABLE address (
 CREATE TABLE products (
   product_id INT PRIMARY KEY,
   product_name VARCHAR(100) NOT NULL,
-  category_id INT,
+  category_id INT NOT NULL, -- foreign key
   description TEXT NOT NULL,
   price DECIMAL(10,2) NOT NULL,
   stock_quantity INT NOT NULL,
@@ -82,15 +84,15 @@ CREATE TABLE products (
 CREATE TABLE categories (
   category_id INT PRIMARY KEY,
   name VARCHAR(100) UNIQUE,
-  description TEXT NOT NULL
+  description TEXT NOT NULL,
   sex ENUM('M', 'F', 'K')
 );
 
 -- Orders table
 CREATE TABLE orders (
   order_id INT PRIMARY KEY,
-  customer_id INT,
-  shipping_address_id INT,
+  customer_id INT, -- foreign key to customer table
+  shipping_address_id INT, -- foreign key to address table
   order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
   order_date DATE NOT NULL,
   shipping_cost DECIMAL(10,2) DEFAULT 0.00,
@@ -99,14 +101,13 @@ CREATE TABLE orders (
   CHECK (total_amount >= 0)
   -- foreign key shipping_address_id references user(address_id)
   -- foreign key customer_id references customer(customer_id)
-  
 );
 
 -- Order Items table
 CREATE TABLE order_items (
   order_item_id INT PRIMARY KEY,
-  order_id INT,
-  product_id INT,
+  order_id INT, -- foreign key to order table
+  product_id INT, -- foreign key to product table
   quantity INT NOT NULL,
   unit_price DECIMAL(10,2) NOT NULL,
   total_item_price DECIMAL(10,2) NOT NULL,
@@ -117,7 +118,7 @@ CREATE TABLE order_items (
 -- Transactions table
 CREATE TABLE transactions (
   transaction_id INT PRIMARY KEY,
-  order_id INT,
+  order_id INT, -- foreign key to orders
   transaction_date DATE NOT NULL,
   total_amount DECIMAL(10,2) NOT NULL,
   payment_status VARCHAR(20) NOT NULL,
@@ -127,21 +128,22 @@ CREATE TABLE transactions (
 -- Shopping Cart table
 CREATE TABLE shopping_cart (
   cart_id INT PRIMARY KEY,
-  customer_id INT,
+  customer_id INT, -- foreign key to customer table
   created_at DATETIME NOT NULL,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  running_total DECIMAL(10,2) NOT NULL
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  running_total DECIMAL(10,2) NOT NULL -- current total
 );
 
 -- Cart Items table
 CREATE TABLE cart_items (
   cart_item_id INT PRIMARY KEY,
-  cart_id INT,
-  product_id INT,
-  quantity INT NOT NULL,
+  cart_id INT, -- foreign key to shopping cart
+  product_id INT, -- foreign key to product
+  quantity INT NOT NULL, -- number of items in cart
   CHECK (quantity > 0)
 );
 
+-- leave for now
 -- Reorder Alerts table
 CREATE TABLE reorder_alerts (
   alert_id INT PRIMARY KEY,
@@ -165,8 +167,8 @@ CREATE TABLE returns (
 -- Return Items table
 CREATE TABLE return_items (
   return_item_id INT PRIMARY KEY,
-  return_id INT,
-  product_id INT,
+  return_id INT, -- foreign key to returns
+  product_id INT, -- foreign key to product
   quantity INT NOT NULL,
   CHECK (quantity > 0)
 );
@@ -174,7 +176,7 @@ CREATE TABLE return_items (
 -- Refunds table
 CREATE TABLE refunds (
   refund_id INT PRIMARY KEY,
-  return_id INT,
+  return_id INT, -- foreign key to refunds
   refund_amount DECIMAL(10,2) NOT NULL,
   refund_date DATE NOT NULL,
   refund_status VARCHAR(20) NOT NULL,
@@ -185,16 +187,25 @@ CREATE TABLE refunds (
 -- Activity Logs table
 CREATE TABLE activity_logs (
   log_id INT PRIMARY KEY,
-  user_id INT,
+  user_id INT, --  foreign key
   action VARCHAR(255) NOT NULL,
   timestamp DATETIME NOT NULL,
   entity_affected VARCHAR(50)
 );
 
+-- CUSTOMER
+-- notif for refund
+-- notif for return approval
+-- notif for product sale
+-- notif for sale event
+-- EMPLOYEE
+-- notif for product restock
+-- notif for product return approval
+
 -- Notifications table
 CREATE TABLE notifications (
   notification_id INT PRIMARY KEY,
-  user_id INT,
+  user_id INT, -- foreign key
   message TEXT NOT NULL,
   notification_date DATETIME NOT NULL,
   read_status BOOLEAN NOT NULL DEFAULT FALSE
@@ -206,20 +217,20 @@ CREATE TABLE sale_events (
   event_name VARCHAR(100) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
-  product_id INT,
-  category_id INT,
+  product_id INT, -- foreign key
+  category_id INT, -- foreign key
   CHECK (end_date > start_date)
 );
 
 -- Discounts table
 CREATE TABLE discounts (
-  discount_id INT PRIMARY KEY,
+  discount_id INT PRIMARY KEY, -- code
   discount_type VARCHAR(50) NOT NULL,
   discount_percentage DECIMAL(5,2) NOT NULL,
   -- add shopping cart id
   sale_event_id INT,
   -- CHECK (discount_type IN ('Product', 'Category', 'Order')),
-  CHECK (discount_percentage BETWEEN 0 AND 50),
+  CHECK (discount_percentage BETWEEN 0 AND 50)
   -- constraint no active sale event
 );
 
@@ -232,5 +243,5 @@ CREATE TABLE permissions (
 -- Role Permissions table
 CREATE TABLE role_permissions (
   role ENUM('Customer', 'Employee', 'Admin') NOT NULL,
-  permission_id INT
+  permission_id INT -- foreign key to permissions table
 );
