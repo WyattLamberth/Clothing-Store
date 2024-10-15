@@ -19,7 +19,7 @@ db.connect(err => {
   console.log('Connected to the database');
 });
 
-// Add a new product
+// Add a new product -- NEED TO COMPLETELY REDO THIS API
 router.post('/products', (req, res) => {
     const { name, description, price, stock, size, color, brand, categories } = req.body;
     const query = 'INSERT INTO PRODUCTS (Product_Name, Description, Price, Stock_Quantity, Size, Color, Brand) VALUES (?, ?, ?, ?, ?, ?, ?)';
