@@ -130,7 +130,8 @@ CREATE TABLE shopping_cart (
   customer_id INT, -- foreign key to customer table
   created_at DATETIME NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  running_total DECIMAL(10,2) NOT NULL -- current total
+  running_total DECIMAL(10,2) NOT NULL, -- current total
+  discount_id INT -- foreign key to discounts
 );
 
 -- Cart Items table
@@ -226,7 +227,6 @@ CREATE TABLE discounts (
   discount_id INT PRIMARY KEY, -- code
   discount_type VARCHAR(50) NOT NULL,
   discount_percentage DECIMAL(5,2) NOT NULL,
-  -- add shopping cart id
   sale_event_id INT,
   -- CHECK (discount_type IN ('Product', 'Category', 'Order')),
   CHECK (discount_percentage BETWEEN 0 AND 50)
