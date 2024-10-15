@@ -84,7 +84,6 @@ CREATE TABLE products (
 CREATE TABLE categories (
   category_id INT PRIMARY KEY,
   name VARCHAR(100) UNIQUE,
-  description TEXT NOT NULL,
   sex ENUM('M', 'F', 'K')
 );
 
