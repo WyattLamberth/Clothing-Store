@@ -24,6 +24,7 @@ const Header = () => {
             {isAuthenticated && (
               <>
                 <li><Link to="/employee" className="text-gray-600 hover:text-gray-900">Employee Dashboard</Link></li>
+                <li><Link to="/admin" className="text-gray-600 hover:text-gray-900">Admin Dashboard</Link></li> {/* Admin Dashboard Link */}
                 <li>
                   <button 
                     onClick={handleLogout} 
