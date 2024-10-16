@@ -383,4 +383,4 @@ FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
 -- Reorder Alerts table relationships
 ALTER TABLE reorder_alerts
 ADD CONSTRAINT fk_reorder_alert_product
-FOREIGN KEY (product_id) REFERENCES products(product_id);
+FOREIGN KEY (product_id) REFERENCES products(product_id);;
