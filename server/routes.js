@@ -37,22 +37,26 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// User login
+// User login (updated to use Passport)
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
 
     const query = 'SELECT * FROM users WHERE email = ?';
     const [rows] = await pool.execute(query, [email]);
 
     if (rows.length === 0) {
+      console.log('No user found with email:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = rows[0];
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const passwordHashString = user.password_hash.toString('utf8');
+    const isPasswordValid = await bcrypt.compare(password, passwordHashString);
 
     if (!isPasswordValid) {
+      console.log('Invalid password for user:', email);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -62,10 +66,14 @@ router.post('/login', async (req, res) => {
       { expiresIn: '1h' }
     );
 
+    console.log('Login successful for user:', email);
     res.json({ token, userId: user.user_id, role: user.role_id });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed. Please try again.' });
+    res.status(500).json({ 
+      error: 'Login failed. Please try again.',
+      details: error.message
+    });
   }
 });
 
