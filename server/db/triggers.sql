@@ -60,3 +60,19 @@ BEGIN
   )
   WHERE cart_id = NEW.cart_id;
 END;
+
+CREATE TRIGGER notify_admin_about_low_stock
+AFTER UPDATE ON products
+FOR EACH ROW
+BEGIN
+  -- If stock quantity is below the critical level (e.g., 5), notify admin
+  IF NEW.stock_quantity < 5 THEN
+    INSERT INTO notifications (user_id, message, notification_date, read_status)
+    VALUES (
+      (SELECT user_id FROM users WHERE role_id = 3 LIMIT 1),  -- Admin role_id = 3
+      CONCAT('Stock is critically low for product: ', NEW.product_name),
+      NOW(),
+      FALSE
+    );
+  END IF;
+END;
