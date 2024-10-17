@@ -45,3 +45,18 @@ BEGIN
   INSERT INTO activity_logs (user_id, action, timestamp, entity_affected)
   VALUES (NEW.user_id, action_type, NOW(), 'products');
 END;
+
+CREATE TRIGGER update_cart_total_after_adding_item
+AFTER INSERT ON cart_items
+FOR EACH ROW
+BEGIN
+  -- Calculate the running total of the cart based on item prices and quantities
+  UPDATE shopping_cart
+  SET running_total = (
+    SELECT SUM(ci.quantity * p.price)
+    FROM cart_items ci
+    JOIN products p ON ci.product_id = p.product_id
+    WHERE ci.cart_id = NEW.cart_id
+  )
+  WHERE cart_id = NEW.cart_id;
+END;
