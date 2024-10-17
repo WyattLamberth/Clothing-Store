@@ -1,32 +1,68 @@
--- Place another order
-INSERT INTO order_items (order_item_id, order_id, product_id, quantity, unit_price, total_item_price)
-VALUES 
-(3, 1, 1, 5, 19.99, 99.95);  -- Should reduce stock for Classic T-Shirt
+use online_store;
 
---  Then check if the stock has decreased:
-SELECT stock_quantity FROM products WHERE product_id = 1;
+-- Insert a new order item to simulate a purchase
+INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price)
+VALUES (1, 1, 2, 19.99, 39.98);  -- Buying 2 units of 'Classic T-Shirt' (product_id = 1)
 
--- Update stock to simulate inventory running low
-UPDATE products SET stock_quantity = 3 WHERE product_id = 1;
+-- Check if the stock has been reduced
+SELECT product_name, stock_quantity
+FROM products
+WHERE product_id = 1;
 
--- Check if reorder alert was triggered
-SELECT * FROM reorder_alerts;
+-- Insert another order item to decrease stock further
+INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price)
+VALUES (1, 1, 96, 19.99, 1959.02);  -- This should cause stock to fall below the reorder threshold
 
--- Update a product's price
-UPDATE products SET price = 59.99 WHERE product_id = 1;
+-- Check if a reorder alert was created
+SELECT *
+FROM reorder_alerts
+WHERE product_id = 1;
 
--- Check if the activity log was updated
-SELECT * FROM activity_logs;
+-- Perform an INSERT operation on products to trigger the log
+INSERT INTO products (product_id, product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
+VALUES (3, 'Winter Jacket', 1, 'A warm winter jacket', 99.99, 50, 10, 'L', 'Black', 'BrandY');
 
--- Add items to the cart
-INSERT INTO cart_items (cart_item_id, cart_id, product_id, quantity)
-VALUES (1, 1, 1, 2);  -- Add 2 Classic T-Shirts to cart
+-- Check the activity logs for the new entry
+SELECT *
+FROM activity_logs
+WHERE entity_affected = 'products';
 
--- Check the updated running total in the shopping cart
-SELECT running_total FROM shopping_cart WHERE cart_id = 1;
+-- Perform an UPDATE operation on products to trigger the log
+UPDATE products
+SET price = 89.99
+WHERE product_id = 3;
 
--- Update stock to simulate low inventory
-UPDATE products SET stock_quantity = 1 WHERE product_id = 1;
+-- Check the logs again
+SELECT *
+FROM activity_logs
+WHERE entity_affected = 'products';
 
--- Check if a notification was triggered
-SELECT * FROM notifications;
+-- Perform a DELETE operation on products to trigger the log
+DELETE FROM products
+WHERE product_id = 3;
+
+-- Check the logs for the delete action
+SELECT *
+FROM activity_logs
+WHERE entity_affected = 'products';
+
+-- Add an item to the shopping cart
+INSERT INTO cart_items (cart_id, product_id, quantity)
+VALUES (1, 2, 2);  -- Adding 2 units of 'Slim Fit Jeans' (product_id = 2) to cart (cart_id = 1)
+
+-- Check if the cart total was updated
+SELECT running_total
+FROM shopping_cart
+WHERE cart_id = 1;
+
+-- Insert another order item to simulate low stock and trigger a notification
+INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price)
+VALUES (1, 2, 49, 49.99, 2499.50);  -- Draining stock for 'Slim Fit Jeans'
+
+-- Check the activity logs or notifications table for an entry related to low stock
+SELECT *
+FROM activity_logs
+WHERE action = 'LOW_STOCK';
+
+
+
