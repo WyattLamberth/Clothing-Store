@@ -25,3 +25,23 @@ BEGIN
     VALUES (NEW.product_id, CURDATE(), NEW.reorder_threshold);
   END IF;
 END;
+
+CREATE TRIGGER log_user_action
+AFTER INSERT OR UPDATE OR DELETE ON products
+FOR EACH ROW
+BEGIN
+  DECLARE action_type VARCHAR(50);
+
+  -- Determine the type of action performed
+  IF INSERTING THEN
+    SET action_type = 'INSERT';
+  ELSIF UPDATING THEN
+    SET action_type = 'UPDATE';
+  ELSIF DELETING THEN
+    SET action_type = 'DELETE';
+  END IF;
+
+  -- Insert the action into the activity_logs table
+  INSERT INTO activity_logs (user_id, action, timestamp, entity_affected)
+  VALUES (NEW.user_id, action_type, NOW(), 'products');
+END;
