@@ -390,3 +390,12 @@ ALTER TABLE activity_logs
 MODIFY log_id INT AUTO_INCREMENT;
 
 ALTER TABLE order_items MODIFY order_item_id INT AUTO_INCREMENT;
+
+ALTER TABLE reorder_alerts 
+MODIFY COLUMN alert_id INT AUTO_INCREMENT;
+
+-- Modify notifications table
+ALTER TABLE notifications
+MODIFY notification_id INT AUTO_INCREMENT;
+
+ALTER TABLE cart_items MODIFY cart_item_id INT AUTO_INCREMENT;
