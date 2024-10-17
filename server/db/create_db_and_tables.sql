@@ -384,3 +384,7 @@ FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
 ALTER TABLE reorder_alerts
 ADD CONSTRAINT fk_reorder_alert_product
 FOREIGN KEY (product_id) REFERENCES products(product_id);;
+
+-- lod_id needs to auto_increment
+ALTER TABLE activity_logs
+MODIFY log_id INT AUTO_INCREMENT;
