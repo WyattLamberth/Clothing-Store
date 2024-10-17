@@ -1,4 +1,4 @@
-DELIMETER //
+USE online_store;
 
 CREATE TRIGGER update_stock_after_order
 AFTER INSERT ON order_items
@@ -26,24 +26,43 @@ BEGIN
   END IF;
 END;
 
-CREATE TRIGGER log_user_action
-AFTER INSERT OR UPDATE OR DELETE ON products
+-- Trigger for INSERT (without user_id)
+CREATE TRIGGER log_user_action_insert
+AFTER INSERT ON products
 FOR EACH ROW
 BEGIN
-  DECLARE action_type VARCHAR(50);
-
-  -- Determine the type of action performed
-  IF INSERTING THEN
+    DECLARE action_type VARCHAR(50);
     SET action_type = 'INSERT';
-  ELSIF UPDATING THEN
-    SET action_type = 'UPDATE';
-  ELSIF DELETING THEN
-    SET action_type = 'DELETE';
-  END IF;
+    
+    -- Insert the action into the activity_logs table
+    INSERT INTO activity_logs (action, timestamp, entity_affected)
+    VALUES (action_type, NOW(), 'products');
+END;
 
-  -- Insert the action into the activity_logs table
-  INSERT INTO activity_logs (user_id, action, timestamp, entity_affected)
-  VALUES (NEW.user_id, action_type, NOW(), 'products');
+-- Trigger for UPDATE (without user_id)
+CREATE TRIGGER log_user_action_update
+AFTER UPDATE ON products
+FOR EACH ROW
+BEGIN
+    DECLARE action_type VARCHAR(50);
+    SET action_type = 'UPDATE';
+    
+    -- Insert the action into the activity_logs table
+    INSERT INTO activity_logs (action, timestamp, entity_affected)
+    VALUES (action_type, NOW(), 'products');
+END;
+
+-- Trigger for DELETE (without user_id)
+CREATE TRIGGER log_user_action_delete
+AFTER DELETE ON products
+FOR EACH ROW
+BEGIN
+    DECLARE action_type VARCHAR(50);
+    SET action_type = 'DELETE';
+    
+    -- Insert the action into the activity_logs table
+    INSERT INTO activity_logs (action, timestamp, entity_affected)
+    VALUES (action_type, NOW(), 'products');
 END;
 
 CREATE TRIGGER update_cart_total_after_adding_item
