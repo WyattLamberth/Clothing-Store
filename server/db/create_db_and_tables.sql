@@ -388,3 +388,5 @@ FOREIGN KEY (product_id) REFERENCES products(product_id);;
 -- lod_id needs to auto_increment
 ALTER TABLE activity_logs
 MODIFY log_id INT AUTO_INCREMENT;
+
+ALTER TABLE order_items MODIFY order_item_id INT AUTO_INCREMENT;
