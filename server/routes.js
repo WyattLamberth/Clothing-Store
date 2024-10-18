@@ -98,4 +98,18 @@ router.post('/category', async(req, res) => {
 });
 
 
+//PRODUCT MANAGEMENT:
+
+// Get all products
+router.get('/products', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM products');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 module.exports = router;
