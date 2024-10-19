@@ -103,7 +103,7 @@ CREATE TABLE categories (
 
 -- Orders table
 CREATE TABLE orders (
-  order_id INT PRIMARY KEY,
+  order_id INT AUTO_INCREMENT PRIMARY KEY,
   customer_id INT,
   shipping_address_id INT,
   order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
@@ -118,7 +118,7 @@ CREATE TABLE orders (
 
 -- Order Items table
 CREATE TABLE order_items (
-  order_item_id INT PRIMARY KEY,
+  order_item_id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT,
   product_id INT,
   quantity INT NOT NULL,
@@ -142,7 +142,7 @@ CREATE TABLE transactions (
 
 -- Shopping Cart table
 CREATE TABLE shopping_cart (
-  cart_id INT PRIMARY KEY,
+  cart_id INT AUTO_INCREMENT PRIMARY KEY,
   customer_id INT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
