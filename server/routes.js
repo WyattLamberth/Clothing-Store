@@ -141,6 +141,23 @@ router.post('/products', async (req, res) => {
   }
 });
 
+// Get product by ID
+router.get('/products/:productId', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const query = 'SELECT * FROM products WHERE product_id = ?';
+    const [rows] = await pool.execute(query, [productId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ error: 'Error fetching product' });
+  }
+});
 
 
 
