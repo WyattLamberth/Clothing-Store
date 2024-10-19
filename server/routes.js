@@ -111,5 +111,38 @@ router.get('/products', async (req, res) => {
   }
 });
 
+// Create a new product
+router.post('/products', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const { 
+      product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand 
+    } = req.body;
+
+    const query = `
+      INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const [result] = await connection.execute(query, [
+      product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand
+    ]);
+
+    await connection.commit();
+    res.status(201).json({ message: 'Product created successfully', productId: result.insertId });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating product:', error);
+    res.status(400).json({ error: 'Error creating product' });
+  } finally {
+    connection.release();
+  }
+});
+
+
+
+
 
 module.exports = router;
