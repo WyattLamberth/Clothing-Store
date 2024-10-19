@@ -103,6 +103,69 @@ router.post('/category', async(req, res) => {
   }
 });
 
+// Order Management
+// Post
+router.post('/orders', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const {customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
+    const OrderQuery = 'INSERT INTO orders (customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    const [OrderResult] = await connection.execute(OrderQuery, [customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]);
+    const order_id = OrderResult.insertId;
+    await connection.commit();
+    
+    res.status(201).json({ message: 'Order created successfully', order_id: order_id });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(400).json({ error: 'Error creating order' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get order via order ID 
+router.get('/orders', async (req, res) => {
+  const connection = await pool.getConnection();
+  // If the order ID in the link (\orders\1), using req.params instead
+  // Same JSON format as POST
+  const {order_id} = req.body;
+  try {
+    await connection.beginTransaction();
+    const [orders] = await pool.execute('SELECT * FROM orders WHERE order_id = ?', [order_id]);
+    // Check if the order exists
+    if (orders.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    // Return the order details
+    res.status(200).json(orders[0]); // Return the first order object
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
+// Put (Update order status)
+router.put('/orders', async (req, res) => {
+  const connection = await pool.getConnection(); 
+  const { order_id, order_status } = req.body;
+  try {
+    await connection.beginTransaction(); 
+    // Execute the update query
+    const [result] = await connection.execute('UPDATE orders SET order_status = ? WHERE order_id = ?',[order_status, order_id]);
+    await connection.commit(); 
+    res.status(200).json({ message: 'Order status updated successfully' }); 
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating order status:', error);
+    res.status(500).json({ error: 'Failed to update order status' });
+  } finally {
+    connection.release();
+  }
+});
+
+
 
 
 
