@@ -321,6 +321,33 @@ router.put('/categories/:categoryId', async (req, res) => {
   }
 });
 
+// Delete a category by ID
+router.delete('/categories/:categoryId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { categoryId } = req.params;
+    const query = 'DELETE FROM categories WHERE category_id = ?';
+
+    const [result] = await connection.execute(query, [categoryId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deleting category:', error);
+    res.status(400).json({ error: 'Error deleting category' });
+  } finally {
+    connection.release();
+  }
+});
+
 
 //PRODUCT MANAGEMENT:
 
