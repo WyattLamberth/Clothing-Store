@@ -165,6 +165,43 @@ router.put('/orders', async (req, res) => {
   }
 });
 
+// Order Item Management
+// Post
+router.post('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const {order_id, product_id, quantity, unit_price, total_item_price} = req.body;
+    const OrderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price) VALUES (?, ?, ?, ?, ?)';
+    const [OrderItemsResult] = await connection.execute(OrderItemsQuery, [order_id, product_id, quantity, unit_price, total_item_price]);
+    const order_item_id = OrderItemsResult.insertId;
+    await connection.commit();
+    
+    res.status(201).json({ message: 'Order item created successfully', order_item_id: order_item_id });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(400).json({ error: 'Error creating order item' });
+  } finally {
+    connection.release();
+  }
+});
+// Get order item via ID 
+router.get('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  // Input by link (/order_items), with order_item_id in the body
+  const {order_item_id} = req.body;
+  try {
+    await connection.beginTransaction();
+    const [orderItem] = await pool.execute('SELECT * FROM order_items WHERE order_item_id = ?', [order_item_id]);
+    // Return the order details
+    res.status(200).json(orderItem[0]);
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+});
+
 
 
 
