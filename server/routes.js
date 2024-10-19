@@ -196,6 +196,32 @@ router.put('/products/:productId', async (req, res) => {
   }
 });
 
+// Delete a product by ID
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const { productId } = req.params;
+
+    const query = 'DELETE FROM products WHERE product_id = ?';
+    const [result] = await connection.execute(query, [productId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Error deleting product' });
+  } finally {
+    connection.release();
+  }
+});
 
 
 module.exports = router;
