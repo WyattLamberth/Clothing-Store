@@ -223,5 +223,23 @@ router.delete('/products/:productId', async (req, res) => {
   }
 });
 
+// Get products by category ID
+router.get('/products/category/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const query = 'SELECT * FROM products WHERE category_id = ?';
+    const [rows] = await pool.execute(query, [categoryId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No products found for this category' });
+    }
+
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('Error fetching products by category:', error);
+    res.status(500).json({ error: 'Error fetching products by category' });
+  }
+});
+
 
 module.exports = router;
