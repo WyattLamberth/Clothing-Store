@@ -159,6 +159,42 @@ router.get('/products/:productId', async (req, res) => {
   }
 });
 
+// Update a product by ID
+router.put('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { productId } = req.params;
+    const { 
+      product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand 
+    } = req.body;
+
+    const query = `
+      UPDATE products 
+      SET product_name = ?, category_id = ?, description = ?, price = ?, stock_quantity = ?, reorder_threshold = ?, size = ?, color = ?, brand = ?
+      WHERE product_id = ?
+    `;
+
+    const [result] = await connection.execute(query, [
+      product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand, productId
+    ]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({ message: 'Product updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating product:', error);
+    res.status(400).json({ error: 'Error updating product' });
+  } finally {
+    connection.release();
+  }
+});
 
 
 
