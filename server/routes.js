@@ -288,6 +288,39 @@ router.get('/categories/:categoryId', async (req, res) => {
   }
 });
 
+// Update a category by ID
+router.put('/categories/:categoryId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { categoryId } = req.params;
+    const { name, sex } = req.body;
+
+    const query = `
+      UPDATE categories 
+      SET name = ?, sex = ?
+      WHERE category_id = ?
+    `;
+
+    const [result] = await connection.execute(query, [name, sex, categoryId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json({ message: 'Category updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating category:', error);
+    res.status(400).json({ error: 'Error updating category' });
+  } finally {
+    connection.release();
+  }
+});
+
 
 //PRODUCT MANAGEMENT:
 
