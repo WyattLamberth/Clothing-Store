@@ -270,7 +270,23 @@ router.get('/categories', async (req, res) => {
   }
 });
 
+// Get category by ID
+router.get('/categories/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const query = 'SELECT * FROM categories WHERE category_id = ?';
+    const [rows] = await pool.execute(query, [categoryId]);
 
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching category:', error);
+    res.status(500).json({ error: 'Error fetching category' });
+  }
+});
 
 
 //PRODUCT MANAGEMENT:
