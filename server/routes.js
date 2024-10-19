@@ -202,8 +202,59 @@ router.get('/order_items', async (req, res) => {
   }
 });
 
+// Cart Management
+// Post
+router.post('/shopping_cart', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const {customer_id, created_at, running_total} = req.body;
+    const CartQuery = 'INSERT INTO shopping_cart (customer_id, created_at, running_total) VALUES (?, ?, ?)';
+    const [CartResult] = await connection.execute(CartQuery, [customer_id, created_at, running_total]);
+    const cart_id = CartResult.insertId;
+    await connection.commit();
+    res.status(201).json({ message: 'Cart created successfully', cart_id: cart_id});
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(400).json({ error: 'Error creating Cart' });
+  } finally {
+    connection.release();
+  }
+});
+// Get order item via ID 
+router.get('/shopping_cart', async (req, res) => {
+  const connection = await pool.getConnection();
+  // Input by link (/shopping_cart), with cart_id in the body
+  const {cart_id} = req.body;
+  try {
+    await connection.beginTransaction();
+    const [cart] = await pool.execute('SELECT * FROM shopping_cart WHERE cart_id = ?', [cart_id]);
+    // Return the order details
+    res.status(200).json(cart[0]);
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.status(500).json({ error: 'Failed to fetch cart' });
+  }
+});
 
-
+router.delete('/shopping_cart', async (req, res) => {
+  const connection = await pool.getConnection();
+  // Input by link (/shopping_cart), with cart_id in the body
+  const {cart_id} = req.body;
+  try {
+      await connection.beginTransaction(); 
+      const [cart] = await pool.execute('DELETE FROM shopping_cart WHERE cart_id = ?', [cart_id]);
+      await connection.commit(); 
+      res.status(200).json({ message: 'Shopping cart deleted successfully' });
+  } catch (error) {
+      await connection.rollback();
+      console.error('Error deleting shopping cart:', error);
+      res.status(500).json({ error: 'Failed to delete shopping cart' });
+  } finally {
+      connection.release(); 
+  }
+});
 
 
 //PRODUCT MANAGEMENT:
