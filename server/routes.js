@@ -78,31 +78,6 @@ router.post('/login', async (req, res) => {
 });
 
 
-router.post('/category', async(req, res) => {
-  const connection = await pool.getConnection();
-  try {
-      await connection.beginTransaction();
-      const { name, sex } = req.body; // Remove 'description'
-      
-      // Adjust the query to match your table structure
-      const CategoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
-      
-      // Execute the query without 'description'
-      const [CategoryResult] = await connection.query(CategoryQuery, [name, sex]);
-      
-      const category_id = CategoryResult.insertId; // Get the id of the newly created category
-      await connection.commit();
-      
-      res.status(201).json({ message: 'Category created successfully', category_id: category_id });
-  } catch (error) {
-      await connection.rollback(); // If there is an error, rollback (undo all changes made to the database)
-      console.error('Error creating category:', error);
-      res.status(400).json({ error: 'Error creating category' });
-  } finally {
-      connection.release(); // Release the connection back to the pool
-  }
-});
-
 // Order Management
 // Post
 router.post('/orders', async (req, res) => {
@@ -255,6 +230,47 @@ router.delete('/shopping_cart', async (req, res) => {
       connection.release(); 
   }
 });
+
+// CATEGORY MANAGEMENT 
+
+// Create a new category
+router.post('/category', async(req, res) => {
+  const connection = await pool.getConnection();
+  try {
+      await connection.beginTransaction();
+      const { name, sex } = req.body; // Remove 'description'
+      
+      // Adjust the query to match your table structure
+      const CategoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
+      
+      // Execute the query without 'description'
+      const [CategoryResult] = await connection.query(CategoryQuery, [name, sex]);
+      
+      const category_id = CategoryResult.insertId; // Get the id of the newly created category
+      await connection.commit();
+      
+      res.status(201).json({ message: 'Category created successfully', category_id: category_id });
+  } catch (error) {
+      await connection.rollback(); // If there is an error, rollback (undo all changes made to the database)
+      console.error('Error creating category:', error);
+      res.status(400).json({ error: 'Error creating category' });
+  } finally {
+      connection.release(); // Release the connection back to the pool
+  }
+});
+
+// Get all categories
+router.get('/categories', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM categories');
+    res.json(rows); // Return all categories in JSON format
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 
 //PRODUCT MANAGEMENT:
