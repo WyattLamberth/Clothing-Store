@@ -757,4 +757,31 @@ router.put('/roles/:roleId', async (req, res) => {
   }
 });
 
+// Delete role by ID
+router.delete('/roles/:roleId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { roleId } = req.params;
+    const query = 'DELETE FROM roles WHERE role_id = ?';
+
+    const [result] = await connection.execute(query, [roleId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deleting role:', error);
+    res.status(400).json({ error: 'Error deleting role' });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;
