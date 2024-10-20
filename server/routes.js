@@ -832,7 +832,111 @@ router.delete('/sale-event/:sale_event_id', async (req, res) => {
 
 
 
+// ROLE MANAGEMENT
 
+// Get all roles
+router.get('/roles', async (req, res) => {
+  try {
+    const [roles] = await pool.query('SELECT * FROM roles');
+    res.status(200).json(roles);
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
+// Create a new role
+router.post('/roles', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { role_name } = req.body;
+
+    const query = 'INSERT INTO roles (role_name) VALUES (?)';
+    const [result] = await connection.execute(query, [role_name]);
+
+    await connection.commit();
+    res.status(201).json({ message: 'Role created successfully', roleId: result.insertId });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating role:', error);
+    res.status(400).json({ error: 'Error creating role' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get role by ID
+router.get('/roles/:roleId', async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    const query = 'SELECT * FROM roles WHERE role_id = ?';
+    const [rows] = await pool.execute(query, [roleId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching role:', error);
+    res.status(500).json({ error: 'Error fetching role' });
+  }
+});
+
+// Update role by ID
+router.put('/roles/:roleId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { roleId } = req.params;
+    const { role_name } = req.body;
+
+    const query = 'UPDATE roles SET role_name = ? WHERE role_id = ?';
+    const [result] = await connection.execute(query, [role_name, roleId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json({ message: 'Role updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating role:', error);
+    res.status(400).json({ error: 'Error updating role' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Delete role by ID
+router.delete('/roles/:roleId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { roleId } = req.params;
+    const query = 'DELETE FROM roles WHERE role_id = ?';
+
+    const [result] = await connection.execute(query, [roleId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deleting role:', error);
+    res.status(400).json({ error: 'Error deleting role' });
+  } finally {
+    connection.release();
+  }
+});
 
 module.exports = router;

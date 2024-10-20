@@ -10,12 +10,6 @@ CREATE TABLE roles (
   role_name VARCHAR(50) NOT NULL
 );
 
--- Insert role data
-INSERT INTO roles (role_id, role_name) VALUES
-(1, 'Customer'),
-(2, 'Employee'),
-(3, 'Admin');
-
 -- Users table
 CREATE TABLE users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
