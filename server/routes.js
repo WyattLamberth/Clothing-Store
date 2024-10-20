@@ -939,4 +939,162 @@ router.delete('/roles/:roleId', async (req, res) => {
   }
 });
 
+// DISCOUNT MANAGEMENT  
+
+// POST Discount API
+router.post('/discount', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { 
+      name, sex, description, price, stock_quantity, reorder_threshold, size, color, brand,
+      event_name, start_date, end_date, 
+      discount_type, discount_percentage
+    } = req.body;
+
+    // Validate required fields
+    if (!discount_type || !discount_percentage) {
+      return res.status(400).json({ error: 'Discount type and percentage are required.' });
+    }
+
+    // 1. Insert category
+    const categoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
+    const [categoryResult] = await connection.execute(categoryQuery, [name, sex]);
+    const category_id = categoryResult.insertId;
+
+    // 2. Insert product
+    const productQuery = `INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const [productResult] = await connection.execute(productQuery, [description, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand]);
+    const product_id = productResult.insertId;
+
+    // 3. Insert sale event
+    const saleEventQuery = 'INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) VALUES (?, ?, ?, ?, ?)';
+    const [saleEventResult] = await connection.execute(saleEventQuery, [event_name, start_date, end_date, product_id, category_id]);
+    const sale_event_id = saleEventResult.insertId;
+
+    // 4. Insert discount into the discounts table
+    const discountQuery = `INSERT INTO discounts (discount_type, discount_percentage, sale_event_id) VALUES (?, ?, ?)`;
+    const [discountResult] = await connection.execute(discountQuery, [discount_type, discount_percentage, sale_event_id]);
+    const discount_id = discountResult.insertId;
+
+    // Commit transaction
+    await connection.commit();
+
+    res.status(201).json({ message: 'Discount created successfully', discount_id: discount_id });
+  } catch (error) {
+    await connection.rollback(); // Rollback in case of error
+    console.error('Error creating discount:', error);
+    res.status(400).json({ error: 'Error creating discount' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get all discounts API
+router.get('/all_discounts', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Query to get all discounts
+    const discountsQuery = `
+      SELECT *
+      FROM discounts`;
+
+    const [discountsResult] = await connection.execute(discountsQuery);
+
+    if (discountsResult.length === 0) { // if there are no discounts found
+      return res.status(404).json({ message: 'No discounts found.' });
+    }
+
+    res.status(201).json(discountsResult);
+  } catch (error) {
+    console.error('Error retrieving discounts:', error);
+    res.status(400).json({ error: 'Error retrieving discounts' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// Get Discount by discount_id API
+router.get('/discount/:discount_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { discount_id } = req.params; // request parameters
+
+    // Query to get payment details by customer_id
+    const discountsQuery = `
+      SELECT *
+      FROM discounts
+      WHERE discount_id = ?
+    `;
+
+    const [discountsResult] = await connection.execute(discountsQuery, [discount_id]); // execute query with parameter
+
+    if (discountsResult.length === 0) { // if no payment method found
+      return res.status(404).json({ message: 'No discount found for this ID.' });
+    }
+    res.status(201).json(discountsResult);
+  } catch (error) {
+    console.error('Error retrieving discount:', error);
+    res.status(400).json({ error: 'Error retrieving discount' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// POST (Update) Discount by discount_id API
+router.put('/discount/:discount_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { discount_id } = req.params;
+    const { discount_type, discount_percentage } = req.body; // new sale event details
+
+    // Update query to modify the sale event details
+    const updateQuery = `
+      UPDATE discounts
+      SET discount_type = ?, discount_percentage = ?
+      WHERE discount_id = ?
+    `;
+
+    const [updateResult] = await connection.execute(updateQuery, [discount_type, discount_percentage, discount_id]);
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ message: 'Discount not found.' });
+    }
+
+    // Respond with a success message
+    res.status(200).json({ message: 'Discount updated successfully.' });
+  } catch (error) {
+    console.error('Error updating discount:', error);
+    res.status(500).json({ error: 'Error updating discount' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// DELETE Discount API
+router.delete('/discount/:discount_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { discount_id } = req.params;
+
+    // Query to delete the discount by discount_id
+    const deleteQuery = 'DELETE FROM discounts WHERE discount_id = ?';
+    const [result] = await connection.execute(deleteQuery, [discount_id]);
+
+    if (result.affectedRows === 0) { // discount not found
+      return res.status(404).json({ error: 'Discount not found.' });
+    }
+
+    res.status(204).send(); // Successfully deleted, no content to return
+  } catch (error) {
+    console.error('Error deleting discount:', error);
+    res.status(500).json({ error: 'Error deleting discount' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+
 module.exports = router;
