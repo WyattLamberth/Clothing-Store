@@ -541,4 +541,35 @@ router.post('/payment', async (req, res) => {
   }
 });
 
+// Get Payment API
+router.get('/payment/:preferred_payment_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { preferred_payment_id } = req.params; // request parameters
+
+    // Query to get payment details by preferred_payment_id
+    const paymentQuery = `
+      SELECT *
+      FROM payment
+      WHERE preferred_payment_id = ?
+    `;
+
+    const [paymentResult] = await connection.execute(paymentQuery, [preferred_payment_id]); // execute query with parameter
+
+    if (paymentResult.length === 0) { // if no payment method found
+      return res.status(404).json({ message: 'No payment method found for this customer.' });
+    }
+
+    // Respond with the payment data, if found payment method
+    res.status(200).json(paymentResult);
+  } catch (error) {
+    console.error('Error retrieving payment method:', error);
+    res.status(500).json({ error: 'Error retrieving payment method' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+
+
 module.exports = router;
