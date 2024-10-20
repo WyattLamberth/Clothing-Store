@@ -690,6 +690,25 @@ router.get('/roles', async (req, res) => {
   }
 });
 
+// Create a new role
+router.post('/roles', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { role_name } = req.body;
 
+    const query = 'INSERT INTO roles (role_name) VALUES (?)';
+    const [result] = await connection.execute(query, [role_name]);
+
+    await connection.commit();
+    res.status(201).json({ message: 'Role created successfully', roleId: result.insertId });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating role:', error);
+    res.status(400).json({ error: 'Error creating role' });
+  } finally {
+    connection.release();
+  }
+});
 
 module.exports = router;
