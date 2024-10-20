@@ -711,4 +711,22 @@ router.post('/roles', async (req, res) => {
   }
 });
 
+// Get role by ID
+router.get('/roles/:roleId', async (req, res) => {
+  try {
+    const { roleId } = req.params;
+    const query = 'SELECT * FROM roles WHERE role_id = ?';
+    const [rows] = await pool.execute(query, [roleId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error('Error fetching role:', error);
+    res.status(500).json({ error: 'Error fetching role' });
+  }
+});
+
 module.exports = router;
