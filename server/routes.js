@@ -557,7 +557,7 @@ router.get('/payment/:preferred_payment_id', async (req, res) => {
     const [paymentResult] = await connection.execute(paymentQuery, [preferred_payment_id]); // execute query with parameter
 
     if (paymentResult.length === 0) { // if no payment method found
-      return res.status(404).json({ message: 'No payment method found for this customer.' });
+      return res.status(404).json({ message: 'No payment method found for this ID.' });
     }
 
     // Respond with the payment data, if found payment method
@@ -582,7 +582,7 @@ router.get('/all_payments', async (req, res) => {
     const [paymentResult] = await connection.execute(paymentQuery);
 
     if (paymentResult.length === 0) { // if there are no payment method found
-      return res.status(404).json({ message: 'No payment method found for this customer.' });
+      return res.status(404).json({ message: 'No payment method found.' });
     }
 
     // Respond with the payment data, if found payment method
@@ -676,6 +676,161 @@ router.delete('/payment/:preferred_payment_id', async (req, res) => {
     connection.release(); // Release the connection back to the pool
   }
 });
+
+
+// SALE EVENT MANAGEMENT:
+
+// POST Sale Event API
+router.post('/sale-event', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();  // Begin the transaction
+
+    const { 
+      name, sex,
+      description, price, stock_quantity, reorder_threshold, size, color, brand,
+      event_name, start_date, end_date 
+    } = req.body;
+
+    // 1. Insert category
+    const categoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
+    const [categoryResult] = await connection.execute(categoryQuery, [name, sex]);
+    const category_id = categoryResult.insertId;
+
+    // 2. Insert product
+    const productQuery = `INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [productResult] = await connection.execute(productQuery, [description, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand]);
+    const product_id = productResult.insertId;
+
+    // 3. Insert sale event
+    const saleEventQuery = 'INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) VALUES (?, ?, ?, ?, ?)';
+    const [saleEventResult] = await connection.execute(saleEventQuery, [event_name, start_date, end_date, product_id, category_id]);
+    const sale_event_id = saleEventResult.insertId;
+
+    // Commit the transaction
+    await connection.commit();
+
+    res.status(201).json({ message: 'Sale event created successfully', sale_event_id: sale_event_id });
+  } catch (error) {
+    // Rollback the transaction in case of error
+    await connection.rollback();
+    console.error('Error creating sale event:', error);
+    res.status(400).json({ error: 'Error creating sale event' });
+  } finally {
+    connection.release();  // Release the connection
+  }
+});
+
+// Get Sale Event by eventID API
+router.get('/sale-event/:event_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { event_id } = req.params; // request parameters
+
+    // Query to get sale event details by event_id
+    const saleEventQuery = `
+      SELECT *
+      FROM sale_events
+      WHERE sale_event_id = ?
+    `;
+
+    const [saleEventResult] = await connection.execute(saleEventQuery, [event_id]); // execute query with parameter
+
+    if (saleEventResult.length === 0) { // if no event found
+      return res.status(404).json({ message: 'No sale event found for this ID.' });
+    }
+
+    // Respond with the sale event data if found
+    res.status(201).json(saleEventResult);
+  } catch (error) {
+    console.error('Error retrieving event:', error);
+    res.status(400).json({ error: 'Error retrieving event' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// Get all Sale Events API
+router.get('/sale-events', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Query to get all sale events
+    const saleEventQuery = `
+      SELECT *
+      FROM sale_events`; // Correct table name (use underscores, not hyphens)
+
+    const [saleEventResult] = await connection.execute(saleEventQuery);
+
+    if (saleEventResult.length === 0) { // if no events found
+      return res.status(404).json({ message: 'No sale events found.' });
+    }
+
+    // Respond with the sale events data if found
+    res.status(201).json(saleEventResult);
+  } catch (error) {
+    console.error('Error retrieving events:', error);
+    res.status(400).json({ error: 'Error retrieving sale events' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// PUT event API (Update a Sale Event)
+router.put('/sale-event/:sale_event_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { sale_event_id } = req.params;
+    const { event_name, start_date, end_date } = req.body; // new sale event details
+
+    // Update query to modify the sale event details
+    const updateQuery = `
+      UPDATE sale_events
+      SET event_name = ?, start_date = ?, end_date = ?
+      WHERE sale_event_id = ?
+    `;
+
+    const [updateResult] = await connection.execute(updateQuery, [event_name, start_date, end_date, sale_event_id]);
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ message: 'Sale event not found.' });
+    }
+
+    // Respond with a success message
+    res.status(200).json({ message: 'Sale event updated successfully.' });
+  } catch (error) {
+    console.error('Error updating sale event:', error);
+    res.status(500).json({ error: 'Error updating sale event' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// DELETE Sale Event API
+router.delete('/sale-event/:sale_event_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { sale_event_id } = req.params;
+
+    // Query to delete the sale event by sale_event_id
+    const deleteQuery = 'DELETE FROM sale_events WHERE sale_event_id = ?';
+    const [result] = await connection.execute(deleteQuery, [sale_event_id]);
+
+    if (result.affectedRows === 0) { // sale event not found
+      return res.status(404).json({ error: 'Sale event not found.' });
+    }
+
+    res.status(204).send(); // Successfully deleted, no content to return
+  } catch (error) {
+    console.error('Error deleting sale event:', error);
+    res.status(500).json({ error: 'Error deleting sale event' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+
 
 
 
