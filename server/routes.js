@@ -541,7 +541,7 @@ router.post('/payment', async (req, res) => {
   }
 });
 
-// Get Payment API
+// Get one Payment API
 router.get('/payment/:preferred_payment_id', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -555,6 +555,60 @@ router.get('/payment/:preferred_payment_id', async (req, res) => {
     `;
 
     const [paymentResult] = await connection.execute(paymentQuery, [preferred_payment_id]); // execute query with parameter
+
+    if (paymentResult.length === 0) { // if no payment method found
+      return res.status(404).json({ message: 'No payment method found for this customer.' });
+    }
+
+    // Respond with the payment data, if found payment method
+    res.status(201).json(paymentResult);
+  } catch (error) {
+    console.error('Error retrieving payment method:', error);
+    res.status(400).json({ error: 'Error retrieving payment method' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// Get all Payment API
+router.get('/all_payments', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Query to get all payment methods
+    const paymentQuery = `
+      SELECT *
+      FROM payment`;
+
+    const [paymentResult] = await connection.execute(paymentQuery);
+
+    if (paymentResult.length === 0) { // if there are no payment method found
+      return res.status(404).json({ message: 'No payment method found for this customer.' });
+    }
+
+    // Respond with the payment data, if found payment method
+    res.status(201).json(paymentResult);
+  } catch (error) {
+    console.error('Error retrieving payment method:', error);
+    res.status(400).json({ error: 'Error retrieving payment method' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
+// Get Payment by customerID API
+router.get('/payment/:customer_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { customer_id } = req.params; // request parameters
+
+    // Query to get payment details by customer_id
+    const paymentQuery = `
+      SELECT *
+      FROM payment
+      WHERE customer_id = ?
+    `;
+
+    const [paymentResult] = await connection.execute(paymentQuery, [customer_id]); // execute query with parameter
 
     if (paymentResult.length === 0) { // if no payment method found
       return res.status(404).json({ message: 'No payment method found for this customer.' });
@@ -597,6 +651,29 @@ router.put('/payment/:preferred_payment_Id', async (req, res) => {
     res.status(400).json({ error: 'Error updating payment method' });
   } finally {
     connection.release(); // release the connection back to the pool
+  }
+});
+
+// DELETE Payment API
+router.delete('/payment/:preferred_payment_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { preferred_payment_id } = req.params;
+
+    // Query to delete the payment record by paymentId
+    const deleteQuery = 'DELETE FROM payment WHERE preferred_payment_id = ?';
+    const [result] = await connection.execute(deleteQuery, [preferred_payment_id]);
+
+    if (result.affectedRows === 0) { // payment method not found
+      return res.status(404).json({ error: 'Payment method not found.' });
+    }
+
+    res.status(201).send(); // Successfully deleted, no content to return
+  } catch (error) {
+    console.error('Error deleting payment method:', error);
+    res.status(400).json({ error: 'Error deleting payment method' });
+  } finally {
+    connection.release(); // Release the connection back to the pool
   }
 });
 
