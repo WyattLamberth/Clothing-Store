@@ -33,7 +33,7 @@ CREATE TABLE users (
 
 -- Customers table
 CREATE TABLE customers (
-  customer_id INT PRIMARY KEY,
+  customer_id INT AUTO_INCREMENT PRIMARY KEY,
   date_joined DATE NOT NULL,
   preferred_payment_id INT
   -- FOREIGN KEY (customer_id) REFERENCES users(user_id)
@@ -55,7 +55,7 @@ CREATE TABLE admins (
 
 -- Payment table
 CREATE TABLE payment (
-  preferred_payment_id INT PRIMARY KEY,
+  preferred_payment_id INT AUTO_INCREMENT PRIMARY KEY DEFAULT 1,
   cardholder_name VARCHAR(100) NOT NULL,
   card_number CHAR(16) UNIQUE,
   expiration_date CHAR(5) NOT NULL,
@@ -384,3 +384,8 @@ FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
 ALTER TABLE reorder_alerts
 ADD CONSTRAINT fk_reorder_alert_product
 FOREIGN KEY (product_id) REFERENCES products(product_id);;
+
+
+
+
+
