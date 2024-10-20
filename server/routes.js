@@ -677,6 +677,18 @@ router.delete('/payment/:preferred_payment_id', async (req, res) => {
   }
 });
 
+// ROLE MANAGEMENT
+
+// Get all roles
+router.get('/roles', async (req, res) => {
+  try {
+    const [roles] = await pool.query('SELECT * FROM roles');
+    res.status(200).json(roles);
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 
 
