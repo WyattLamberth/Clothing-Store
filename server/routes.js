@@ -729,4 +729,32 @@ router.get('/roles/:roleId', async (req, res) => {
   }
 });
 
+// Update role by ID
+router.put('/roles/:roleId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { roleId } = req.params;
+    const { role_name } = req.body;
+
+    const query = 'UPDATE roles SET role_name = ? WHERE role_id = ?';
+    const [result] = await connection.execute(query, [role_name, roleId]);
+
+    await connection.commit();
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+
+    res.status(200).json({ message: 'Role updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating role:', error);
+    res.status(400).json({ error: 'Error updating role' });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;
