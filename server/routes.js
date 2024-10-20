@@ -561,14 +561,45 @@ router.get('/payment/:preferred_payment_id', async (req, res) => {
     }
 
     // Respond with the payment data, if found payment method
-    res.status(200).json(paymentResult);
+    res.status(201).json(paymentResult);
   } catch (error) {
     console.error('Error retrieving payment method:', error);
-    res.status(500).json({ error: 'Error retrieving payment method' });
+    res.status(400).json({ error: 'Error retrieving payment method' });
   } finally {
     connection.release(); // release the connection back to the pool
   }
 });
+
+// PUT Payment API
+router.put('/payment/:preferred_payment_Id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { preferred_payment_Id } = req.params;
+    const { cardholder_name, card_number, expiration_date, cvv } = req.body; // new payment details
+
+    // Update query to modify the payment details
+    const updateQuery = `
+      UPDATE payment
+      SET cardholder_name = ?, card_number = ?, expiration_date = ?, cvv = ?
+      WHERE preferred_payment_id = ?
+    `;
+
+    const [updateResult] = await connection.execute(updateQuery, [cardholder_name, card_number, expiration_date, cvv, preferred_payment_Id]); // new values passed in
+
+    if (updateResult.affectedRows === 0) {
+      return res.status(404).json({ message: 'Payment method not found.' });
+    }
+
+    // Respond with a success message
+    res.status(201).json({ message: 'Payment method updated successfully.' });
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    res.status(400).json({ error: 'Error updating payment method' });
+  } finally {
+    connection.release(); // release the connection back to the pool
+  }
+});
+
 
 
 
