@@ -1228,6 +1228,30 @@ router.delete('/address/:address_id', async (req, res) => {
   }
 });
 
+//  ROLE MANAGEMENT
+
+// Fetch all roles from the database
+router.get('/roles', async (req, res) => {
+  try {
+    const [roles] = await pool.query('SELECT * FROM roles');
+    res.status(200).json(roles);
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new role in the roles table
+router.post('/roles', async (req, res) => {
+  const { role_name } = req.body;
+  try {
+    const [result] = await pool.execute('INSERT INTO roles (role_name) VALUES (?)', [role_name]);
+    res.status(201).json({ message: 'Role created successfully', roleId: result.insertId });
+  } catch (error) {
+    console.error('Error creating role:', error);
+    res.status(400).json({ error: 'Error creating role' });
+  }
+});
 
 
 module.exports = router;
