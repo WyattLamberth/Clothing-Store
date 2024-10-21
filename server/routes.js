@@ -1268,4 +1268,35 @@ router.get('/roles/:roleId', async (req, res) => {
   }
 });
 
+// Update a specific role in the database by its role_id
+router.put('/roles/:roleId', async (req, res) => {
+  const { roleId } = req.params;
+  const { role_name } = req.body;
+  try {
+    const [result] = await pool.execute('UPDATE roles SET role_name = ? WHERE role_id = ?', [role_name, roleId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+    res.status(200).json({ message: 'Role updated successfully' });
+  } catch (error) {
+    console.error('Error updating role:', error);
+    res.status(400).json({ error: 'Error updating role' });
+  }
+});
+
+// Delete a specific role by its role_id
+router.delete('/roles/:roleId', async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM roles WHERE role_id = ?', [roleId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+    res.status(200).json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting role:', error);
+    res.status(400).json({ error: 'Error deleting role' });
+  }
+});
+
 module.exports = router;
