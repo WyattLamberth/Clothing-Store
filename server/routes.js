@@ -1420,4 +1420,59 @@ router.delete('/roles/:roleId/permissions/:permissionId', async (req, res) => {
   }
 });
 
+// ACTIVITY LOG MANAGEMENT
+
+// Log a new activity (Add an activity log)
+router.post('/activity-logs', async (req, res) => {
+  const { user_id, action, entity_affected } = req.body;
+  const timestamp = new Date(); // Get current timestamp
+  try {
+    const query = 'INSERT INTO activity_logs (user_id, action, timestamp, entity_affected) VALUES (?, ?, ?, ?)';
+    const [result] = await pool.execute(query, [user_id, action, timestamp, entity_affected]);
+    res.status(201).json({ message: 'Activity logged successfully', log_id: result.insertId });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+    res.status(500).json({ error: 'Error logging activity' });
+  }
+});
+
+// Get all activity logs
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const [logs] = await pool.query('SELECT * FROM activity_logs');
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    res.status(500).json({ error: 'Error fetching activity logs' });
+  }
+});
+
+// Get an activity log by log ID
+router.get('/activity-logs/:logId', async (req, res) => {
+  const { logId } = req.params;
+  try {
+    const [log] = await pool.execute('SELECT * FROM activity_logs WHERE log_id = ?', [logId]);
+    if (log.length === 0) {
+      return res.status(404).json({ message: 'Activity log not found' });
+    }
+    res.status(200).json(log[0]);
+  } catch (error) {
+    console.error('Error fetching activity log:', error);
+    res.status(500).json({ error: 'Error fetching activity log' });
+  }
+});
+
+// Get all activity logs for a specific user by user ID
+router.get('/activity-logs/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [logs] = await pool.execute('SELECT * FROM activity_logs WHERE user_id = ?', [userId]);
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching activity logs for user:', error);
+    res.status(500).json({ error: 'Error fetching activity logs for user' });
+  }
+});
+
+
 module.exports = router;
