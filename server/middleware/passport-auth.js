@@ -26,8 +26,16 @@ passport.use(new JwtStrategy(options, async (jwt_payload, done) => {
 // Create middleware that combines passport auth and role checking
 const auth = (allowedRoles = []) => {
   return (req, res, next) => {
-    // Skip authentication for register and login routes
-    if (req.path === '/register' || req.path === '/login') {
+    // Define public paths
+    const publicPaths = [
+      '/api/register',
+      '/api/login',
+      '/api/products',
+      '/api/categories'
+    ];
+
+    // Check if the path starts with any of the public paths
+    if (publicPaths.some(path => req.path.startsWith(path))) {
       return next();
     }
 
@@ -35,15 +43,14 @@ const auth = (allowedRoles = []) => {
       if (err) {
         return res.status(500).json({ message: 'Authentication error' });
       }
-
       if (!user) {
         return res.status(401).json({ message: 'Unauthorized - No valid token' });
       }
 
       // Check roles if specified
       if (allowedRoles.length && !allowedRoles.includes(user.role_id)) {
-        return res.status(403).json({ 
-          message: 'Access denied', 
+        return res.status(403).json({
+          message: 'Access denied',
           required: allowedRoles,
           current: user.role_id
         });
