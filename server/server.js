@@ -1,7 +1,7 @@
 // server.js
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 5001;
+const port = process.env.PORT || 6001;
 const { passport, authMiddleware } = require('./middleware/passport-auth');
 
 const publicRoutes = require('./routes/publicRoutes');
