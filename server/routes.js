@@ -1299,4 +1299,71 @@ router.delete('/roles/:roleId', async (req, res) => {
   }
 });
 
+// PERMISSION MANAGEMENT
+// Fetch all permissions from the permissions table
+router.get('/permissions', async (req, res) => {
+  try {
+    const [permissions] = await pool.query('SELECT * FROM permissions');
+    res.status(200).json(permissions);
+  } catch (error) {
+    console.error('Error fetching permissions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+// Create a new permission in the permissions table
+router.post('/permissions', async (req, res) => {
+  const { permission_name } = req.body;
+  try {
+    const [result] = await pool.execute('INSERT INTO permissions (permission_name) VALUES (?)', [permission_name]);
+    res.status(201).json({ message: 'Permission created successfully', permissionId: result.insertId });
+  } catch (error) {
+    console.error('Error creating permission:', error);
+    res.status(400).json({ error: 'Error creating permission' });
+  }
+});
+// Fetch a specific permission by its permission_id
+router.get('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  try {
+    const [permission] = await pool.execute('SELECT * FROM permissions WHERE permission_id = ?', [permissionId]);
+    if (permission.length === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json(permission[0]);
+  } catch (error) {
+    console.error('Error fetching permission:', error);
+    res.status(500).json({ error: 'Error fetching permission' });
+  }
+});
+// Update a specific permission by its permission_id
+router.put('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  const { permission_name } = req.body;
+  try {
+    const [result] = await pool.execute('UPDATE permissions SET permission_name = ? WHERE permission_id = ?', [permission_name, permissionId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json({ message: 'Permission updated successfully' });
+  } catch (error) {
+    console.error('Error updating permission:', error);
+    res.status(400).json({ error: 'Error updating permission' });
+  }
+});
+// Delete a specific permission by its permission_id
+router.delete('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM permissions WHERE permission_id = ?', [permissionId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json({ message: 'Permission deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting permission:', error);
+    res.status(400).json({ error: 'Error deleting permission' });
+  }
+});
+
+
 module.exports = router;
