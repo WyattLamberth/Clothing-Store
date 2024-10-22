@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db/connection');
 
-
+// USER AND ROLE MANAGEMENT
 // User registration
 router.post('/register', async (req, res) => {
   const connection = await pool.getConnection();
@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// User login (updated to use Passport)
+// User login 
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -77,6 +77,270 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// User Management Routes
+// get a user
+router.get('/users/:userId', async (req, res) => {
+  try {
+    const [user] = await pool.execute(
+      'SELECT user_id, first_name, last_name, username, email, phone_number, role_id FROM users WHERE user_id = ?',
+      [req.params.userId]
+    );
+    if (!user.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+});
+
+// update a user
+router.put('/users/:userId', async (req, res) => {
+  const { first_name, last_name, email, phone_number } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE users SET first_name = ?, last_name = ?, email = ?, phone_number = ? WHERE user_id = ?',
+      [first_name, last_name, email, phone_number, req.params.userId]
+    );
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user', error: error.message });
+  }
+});
+
+// delete a user
+router.delete('/users/:userId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM users WHERE user_id = ?', [req.params.userId]);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user', error: error.message });
+  }
+});
+
+// get all orders under a user
+router.get('/users/:userId/orders', async (req, res) => {
+  try {
+    const [orders] = await pool.execute(
+      'SELECT * FROM orders WHERE customer_id = ?',
+      [req.params.userId]
+    );
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders', error: error.message });
+  }
+});
+
+// get a users cart
+router.get('/users/:userId/cart', async (req, res) => {
+  try {
+    const [cart] = await pool.execute(
+      `SELECT sc.*, ci.product_id, ci.quantity, p.product_name, p.price 
+       FROM shopping_cart sc 
+       LEFT JOIN cart_items ci ON sc.cart_id = ci.cart_id 
+       LEFT JOIN products p ON ci.product_id = p.product_id 
+       WHERE sc.customer_id = ?`,
+      [req.params.userId]
+    );
+    res.json(cart);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching cart', error: error.message });
+  }
+});
+
+// Customer Management Routes
+// get all customers
+router.get('/customers', async (req, res) => {
+  try {
+    const [customers] = await pool.execute(
+      `SELECT c.*, u.first_name, u.last_name, u.email 
+       FROM customers c 
+       JOIN users u ON c.customer_id = u.user_id`
+    );
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching customers', error: error.message });
+  }
+});
+
+// get a customer
+router.get('/customers/:customerId', async (req, res) => {
+  try {
+    const [customer] = await pool.execute(
+      `SELECT c.*, u.first_name, u.last_name, u.email 
+       FROM customers c 
+       JOIN users u ON c.customer_id = u.user_id 
+       WHERE c.customer_id = ?`,
+      [req.params.customerId]
+    );
+    if (!customer.length) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    res.json(customer[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching customer', error: error.message });
+  }
+});
+
+// update a customer
+router.put('/customers/:customerId', async (req, res) => {
+  const { preferred_payment_id } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE customers SET preferred_payment_id = ? WHERE customer_id = ?',
+      [preferred_payment_id, req.params.customerId]
+    );
+    res.json({ message: 'Customer updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating customer', error: error.message });
+  }
+});
+
+// delete a customer
+router.delete('/customers/:customerId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM customers WHERE customer_id = ?', [req.params.customerId]);
+    res.json({ message: 'Customer deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting customer', error: error.message });
+  }
+});
+
+// Employee Management Routes
+// get all employees
+router.get('/employees', async (req, res) => {
+  try {
+    const [employees] = await pool.execute(
+      `SELECT e.*, u.first_name, u.last_name, u.email 
+       FROM employees e 
+       JOIN users u ON e.employee_id = u.user_id`
+    );
+    res.json(employees);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching employees', error: error.message });
+  }
+});
+
+// create an employee
+router.post('/employees', async (req, res) => {
+  const { user_id, job_title } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO employees (employee_id, job_title) VALUES (?, ?)',
+      [user_id, job_title]
+    );
+    res.status(201).json({ message: 'Employee created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating employee', error: error.message });
+  }
+});
+
+// get an employee
+router.get('/employees/:employeeId', async (req, res) => {
+  try {
+    const [employee] = await pool.execute(
+      `SELECT e.*, u.first_name, u.last_name, u.email 
+       FROM employees e 
+       JOIN users u ON e.employee_id = u.user_id 
+       WHERE e.employee_id = ?`,
+      [req.params.employeeId]
+    );
+    if (!employee.length) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    res.json(employee[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching employee', error: error.message });
+  }
+});
+
+// update an employee
+router.put('/employees/:employeeId', async (req, res) => {
+  const { job_title } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE employees SET job_title = ? WHERE employee_id = ?',
+      [job_title, req.params.employeeId]
+    );
+    res.json({ message: 'Employee updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating employee', error: error.message });
+  }
+});
+
+// delete an employee
+router.delete('/employees/:employeeId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM employees WHERE employee_id = ?', [req.params.employeeId]);
+    res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting employee', error: error.message });
+  }
+});
+
+// Admin Management Routes
+// get all admins
+router.get('/admins', async (req, res) => {
+  try {
+    const [admins] = await pool.execute(
+      `SELECT a.*, u.first_name, u.last_name, u.email 
+       FROM admins a 
+       JOIN users u ON a.admin_id = u.user_id`
+    );
+    res.json(admins);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching admins', error: error.message });
+  }
+});
+
+// create an admin
+router.post('/admins', async (req, res) => {
+  const { user_id } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO admins (admin_id) VALUES (?)',
+      [user_id]
+    );
+    res.status(201).json({ message: 'Admin created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating admin', error: error.message });
+  }
+});
+
+// get an admin
+router.get('/admins/:adminId', async (req, res) => {
+  try {
+    const [admin] = await pool.execute(
+      `SELECT a.*, u.first_name, u.last_name, u.email 
+       FROM admins a 
+       JOIN users u ON a.admin_id = u.user_id 
+       WHERE a.admin_id = ?`,
+      [req.params.adminId]
+    );
+    if (!admin.length) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+    res.json(admin[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching admin', error: error.message });
+  }
+});
+
+// update an admin
+router.put('/admins/:adminId', async (req, res) => {
+  // Since admins table doesn't have additional fields, we might update user table information
+  res.status(501).json({ message: 'Admin update functionality not implemented' });
+});
+
+// delete an admin
+router.delete('/admins/:adminId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM admins WHERE admin_id = ?', [req.params.adminId]);
+    res.json({ message: 'Admin deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting admin', error: error.message });
+  }
+});
 
 // Order Management
 // Post
@@ -499,47 +763,36 @@ router.post('/payment', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const {
-      first_name, last_name, username, email, phone_number, password_hash, role_id, 
-      cardholder_name, card_number, expiration_date, cvv, 
-      date_joined, line_1, line_2, city, state, zip
-    } = req.body;
 
-    // 1. Insert address
-    const addressQuery = 'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)';
-    const [addressResult] = await connection.execute(addressQuery, [line_1, line_2, city, state, zip]);
-    const address_id = addressResult.insertId;
+    const { 
+      cardholder_name, card_number, expiration_date, cvv, customer_id, address_id
+    } = req.body; // Make sure customer_id and address_id are included in the request body
 
-    // 2. Insert into users table
-    const userQuery = 'INSERT INTO users (first_name, last_name, username, email, phone_number, password_hash, role_id, address_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    const [userResult] = await connection.execute(userQuery, [first_name, last_name, username, email, phone_number, password_hash, role_id, address_id]);
-    const user_id = userResult.insertId;
+    // Insert into payment table
+    const paymentQuery = `
+      INSERT INTO payment (cardholder_name, card_number, expiration_date, cvv, customer_id, billing_address_id) 
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
 
-    // 3. Insert into customers table, use the user_id as customer_id
-    const customerQuery = 'INSERT INTO customers (customer_id, date_joined, preferred_payment_id) VALUES (?, ?, NULL)';
-    const[customerResult] = await connection.execute(customerQuery, [user_id, date_joined]);
-    const customer_id = customerResult.insertId;
-
-    // 4. Insert into payment table
-    const paymentQuery = 'INSERT INTO payment (cardholder_name, card_number, expiration_date, cvv, customer_id, billing_address_id) VALUES (?, ?, ?, ?, ?, ?)';
-    const [paymentResult] = await connection.query(paymentQuery, [cardholder_name, card_number, expiration_date, cvv, customer_id, address_id]);
+    const [paymentResult] = await connection.execute(paymentQuery, [cardholder_name, card_number, expiration_date, cvv, customer_id, address_id]);
     const preferred_payment_id = paymentResult.insertId;
 
-    // 5. Commit transaction
+    // Commit transaction
     await connection.commit();
 
     // Respond with success and return the new preferred_payment_id
-    res.status(201).json({ message: 'Payment method created successfully', preferred_payment_id: preferred_payment_id});
+    res.status(201).json({ message: 'Payment method created successfully', preferred_payment_id: preferred_payment_id });
   } catch (error) {
     // Rollback in case of error
     await connection.rollback();
     console.error('Error creating payment method:', error);
-    res.status(400).json({ error: 'Error creating payment method, please try again.' });
+    res.status(500).json({ error: 'Error creating payment method, please try again.' });
   } finally {
     // Release the connection
     connection.release();
   }
 });
+
 
 // Get one Payment API
 router.get('/payment/:preferred_payment_id', async (req, res) => {
@@ -684,28 +937,17 @@ router.delete('/payment/:preferred_payment_id', async (req, res) => {
 router.post('/sale-event', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction();  // Begin the transaction
+    await connection.beginTransaction(); // Begin the transaction
 
     const { 
-      name, sex,
-      description, price, stock_quantity, reorder_threshold, size, color, brand,
-      event_name, start_date, end_date 
+      event_name, start_date, end_date, product_id, category_id // Added product_id and category_id
     } = req.body;
 
-    // 1. Insert category
-    const categoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
-    const [categoryResult] = await connection.execute(categoryQuery, [name, sex]);
-    const category_id = categoryResult.insertId;
-
-    // 2. Insert product
-    const productQuery = `INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    // Insert sale event
+    const saleEventQuery = `
+      INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) 
+      VALUES (?, ?, ?, ?, ?)
     `;
-    const [productResult] = await connection.execute(productQuery, [description, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand]);
-    const product_id = productResult.insertId;
-
-    // 3. Insert sale event
-    const saleEventQuery = 'INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) VALUES (?, ?, ?, ?, ?)';
     const [saleEventResult] = await connection.execute(saleEventQuery, [event_name, start_date, end_date, product_id, category_id]);
     const sale_event_id = saleEventResult.insertId;
 
@@ -717,11 +959,12 @@ router.post('/sale-event', async (req, res) => {
     // Rollback the transaction in case of error
     await connection.rollback();
     console.error('Error creating sale event:', error);
-    res.status(400).json({ error: 'Error creating sale event' });
+    res.status(500).json({ error: 'Error creating sale event' }); // Changed to 500 for server error
   } finally {
-    connection.release();  // Release the connection
+    connection.release(); // Release the connection
   }
 });
+
 
 // Get Sale Event by eventID API
 router.get('/sale-event/:event_id', async (req, res) => {
@@ -948,34 +1191,21 @@ router.post('/discount', async (req, res) => {
     await connection.beginTransaction();
 
     const { 
-      name, sex, description, price, stock_quantity, reorder_threshold, size, color, brand,
-      event_name, start_date, end_date, 
-      discount_type, discount_percentage
+      discount_type, 
+      discount_percentage, 
+      sale_event_id // Added sale_event_id to the destructuring
     } = req.body;
 
     // Validate required fields
-    if (!discount_type || !discount_percentage) {
-      return res.status(400).json({ error: 'Discount type and percentage are required.' });
+    if (!discount_type || !discount_percentage || !sale_event_id) {
+      return res.status(400).json({ error: 'Discount type, percentage, and sale event ID are required.' });
     }
 
-    // 1. Insert category
-    const categoryQuery = 'INSERT INTO categories (name, sex) VALUES (?, ?)';
-    const [categoryResult] = await connection.execute(categoryQuery, [name, sex]);
-    const category_id = categoryResult.insertId;
-
-    // 2. Insert product
-    const productQuery = `INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const [productResult] = await connection.execute(productQuery, [description, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand]);
-    const product_id = productResult.insertId;
-
-    // 3. Insert sale event
-    const saleEventQuery = 'INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) VALUES (?, ?, ?, ?, ?)';
-    const [saleEventResult] = await connection.execute(saleEventQuery, [event_name, start_date, end_date, product_id, category_id]);
-    const sale_event_id = saleEventResult.insertId;
-
-    // 4. Insert discount into the discounts table
-    const discountQuery = `INSERT INTO discounts (discount_type, discount_percentage, sale_event_id) VALUES (?, ?, ?)`;
+    // Insert discount into the discounts table
+    const discountQuery = `
+      INSERT INTO discounts (discount_type, discount_percentage, sale_event_id) 
+      VALUES (?, ?, ?)
+    `;
     const [discountResult] = await connection.execute(discountQuery, [discount_type, discount_percentage, sale_event_id]);
     const discount_id = discountResult.insertId;
 
@@ -986,11 +1216,12 @@ router.post('/discount', async (req, res) => {
   } catch (error) {
     await connection.rollback(); // Rollback in case of error
     console.error('Error creating discount:', error);
-    res.status(400).json({ error: 'Error creating discount' });
+    res.status(500).json({ error: 'Error creating discount' }); // Changed to 500 for server error
   } finally {
     connection.release();
   }
 });
+
 
 // Get all discounts API
 router.get('/all_discounts', async (req, res) => {
@@ -1228,6 +1459,251 @@ router.delete('/address/:address_id', async (req, res) => {
   }
 });
 
+//  ROLE MANAGEMENT
+
+// Fetch all roles from the database
+router.get('/roles', async (req, res) => {
+  try {
+    const [roles] = await pool.query('SELECT * FROM roles');
+    res.status(200).json(roles);
+  } catch (error) {
+    console.error('Error fetching roles:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new role in the roles table
+router.post('/roles', async (req, res) => {
+  const { role_name } = req.body;
+  try {
+    const [result] = await pool.execute('INSERT INTO roles (role_name) VALUES (?)', [role_name]);
+    res.status(201).json({ message: 'Role created successfully', roleId: result.insertId });
+  } catch (error) {
+    console.error('Error creating role:', error);
+    res.status(400).json({ error: 'Error creating role' });
+  }
+});
+
+// Fetch a specific role by its role_id
+router.get('/roles/:roleId', async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const [role] = await pool.execute('SELECT * FROM roles WHERE role_id = ?', [roleId]);
+    if (role.length === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+    res.status(200).json(role[0]);
+  } catch (error) {
+    console.error('Error fetching role:', error);
+    res.status(500).json({ error: 'Error fetching role' });
+  }
+});
+
+// Update a specific role in the database by its role_id
+router.put('/roles/:roleId', async (req, res) => {
+  const { roleId } = req.params;
+  const { role_name } = req.body;
+  try {
+    const [result] = await pool.execute('UPDATE roles SET role_name = ? WHERE role_id = ?', [role_name, roleId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+    res.status(200).json({ message: 'Role updated successfully' });
+  } catch (error) {
+    console.error('Error updating role:', error);
+    res.status(400).json({ error: 'Error updating role' });
+  }
+});
+
+// Delete a specific role by its role_id
+router.delete('/roles/:roleId', async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM roles WHERE role_id = ?', [roleId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role not found' });
+    }
+    res.status(200).json({ message: 'Role deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting role:', error);
+    res.status(400).json({ error: 'Error deleting role' });
+  }
+});
+
+// PERMISSION MANAGEMENT
+// Fetch all permissions from the permissions table
+router.get('/permissions', async (req, res) => {
+  try {
+    const [permissions] = await pool.query('SELECT * FROM permissions');
+    res.status(200).json(permissions);
+  } catch (error) {
+    console.error('Error fetching permissions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+// Create a new permission in the permissions table
+router.post('/permissions', async (req, res) => {
+  const { permission_name } = req.body;
+  try {
+    const [result] = await pool.execute('INSERT INTO permissions (permission_name) VALUES (?)', [permission_name]);
+    res.status(201).json({ message: 'Permission created successfully', permissionId: result.insertId });
+  } catch (error) {
+    console.error('Error creating permission:', error);
+    res.status(400).json({ error: 'Error creating permission' });
+  }
+});
+// Fetch a specific permission by its permission_id
+router.get('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  try {
+    const [permission] = await pool.execute('SELECT * FROM permissions WHERE permission_id = ?', [permissionId]);
+    if (permission.length === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json(permission[0]);
+  } catch (error) {
+    console.error('Error fetching permission:', error);
+    res.status(500).json({ error: 'Error fetching permission' });
+  }
+});
+// Update a specific permission by its permission_id
+router.put('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  const { permission_name } = req.body;
+  try {
+    const [result] = await pool.execute('UPDATE permissions SET permission_name = ? WHERE permission_id = ?', [permission_name, permissionId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json({ message: 'Permission updated successfully' });
+  } catch (error) {
+    console.error('Error updating permission:', error);
+    res.status(400).json({ error: 'Error updating permission' });
+  }
+});
+// Delete a specific permission by its permission_id
+router.delete('/permissions/:permissionId', async (req, res) => {
+  const { permissionId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM permissions WHERE permission_id = ?', [permissionId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Permission not found' });
+    }
+    res.status(200).json({ message: 'Permission deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting permission:', error);
+    res.status(400).json({ error: 'Error deleting permission' });
+  }
+});
+
+// ROLE PERMISSION MANAGEMENT
+
+// Fetch all permissions associated with a specific role
+router.get('/roles/:roleId/permissions', async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const [permissions] = await pool.execute(
+      `SELECT p.* 
+       FROM permissions p 
+       JOIN role_permissions rp 
+       ON p.permission_id = rp.permission_id 
+       WHERE rp.role_id = ?`, 
+      [roleId]
+    );
+    res.status(200).json(permissions);
+  } catch (error) {
+    console.error('Error fetching role permissions:', error);
+    res.status(500).json({ error: 'Error fetching role permissions' });
+  }
+});
+
+// Add a permission to a specific role
+router.post('/roles/:roleId/permissions', async (req, res) => {
+  const { roleId } = req.params;
+  const { permission_id } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', 
+      [roleId, permission_id]
+    );
+    res.status(201).json({ message: 'Permission added to role successfully' });
+  } catch (error) {
+    console.error('Error adding permission to role:', error);
+    res.status(400).json({ error: 'Error adding permission to role' });
+  }
+});
+
+// Remove a permission from a specific role
+router.delete('/roles/:roleId/permissions/:permissionId', async (req, res) => {
+  const { roleId, permissionId } = req.params;
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?', 
+      [roleId, permissionId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role or permission not found' });
+    }
+    res.status(200).json({ message: 'Permission removed from role successfully' });
+  } catch (error) {
+    console.error('Error removing permission from role:', error);
+    res.status(400).json({ error: 'Error removing permission from role' });
+  }
+});
+
+// ACTIVITY LOG MANAGEMENT
+
+// Log a new activity (Add an activity log)
+router.post('/activity-logs', async (req, res) => {
+  const { user_id, action, entity_affected } = req.body;
+  const timestamp = new Date(); // Get current timestamp
+  try {
+    const query = 'INSERT INTO activity_logs (user_id, action, timestamp, entity_affected) VALUES (?, ?, ?, ?)';
+    const [result] = await pool.execute(query, [user_id, action, timestamp, entity_affected]);
+    res.status(201).json({ message: 'Activity logged successfully', log_id: result.insertId });
+  } catch (error) {
+    console.error('Error logging activity:', error);
+    res.status(500).json({ error: 'Error logging activity' });
+  }
+});
+
+// Get all activity logs
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const [logs] = await pool.query('SELECT * FROM activity_logs');
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    res.status(500).json({ error: 'Error fetching activity logs' });
+  }
+});
+
+// Get an activity log by log ID
+router.get('/activity-logs/:logId', async (req, res) => {
+  const { logId } = req.params;
+  try {
+    const [log] = await pool.execute('SELECT * FROM activity_logs WHERE log_id = ?', [logId]);
+    if (log.length === 0) {
+      return res.status(404).json({ message: 'Activity log not found' });
+    }
+    res.status(200).json(log[0]);
+  } catch (error) {
+    console.error('Error fetching activity log:', error);
+    res.status(500).json({ error: 'Error fetching activity log' });
+  }
+});
+
+// Get all activity logs for a specific user by user ID
+router.get('/activity-logs/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const [logs] = await pool.execute('SELECT * FROM activity_logs WHERE user_id = ?', [userId]);
+    res.status(200).json(logs);
+  } catch (error) {
+    console.error('Error fetching activity logs for user:', error);
+    res.status(500).json({ error: 'Error fetching activity logs for user' });
+  }
+});
 
 
 module.exports = router;
