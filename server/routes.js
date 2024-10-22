@@ -1367,10 +1367,6 @@ router.delete('/permissions/:permissionId', async (req, res) => {
 
 // ROLE PERMISSION MANAGEMENT
 
-const express = require('express');
-const router = express.Router();
-const pool = require('./db/connection');
-
 // Fetch all permissions associated with a specific role
 router.get('/roles/:roleId/permissions', async (req, res) => {
   const { roleId } = req.params;
