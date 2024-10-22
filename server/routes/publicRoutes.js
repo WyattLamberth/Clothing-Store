@@ -1,9 +1,9 @@
-// publicRoutes.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/connection');
+const { authMiddleware } = require('../middleware/passport-auth');
 
 // =============================================
 // PUBLIC ROUTES (No Authentication Required)
@@ -124,70 +124,82 @@ router.get('/categories/:categoryId', async (req, res) => {
 // CUSTOMER ROUTES (Role ID: 1)
 // =============================================
 // Customer Profile Management (Permission: 3004)
-router.get('/users/:userId', async (req, res) => {
-  try {
-    const [user] = await pool.execute(
-      'SELECT user_id, first_name, last_name, username, email, phone_number, role_id FROM users WHERE user_id = ?',
-      [req.params.userId]
-    );
-    if (!user.length) return res.status(404).json({ message: 'User not found' });
-    res.json(user[0]);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error: error.message });
-  }
+router.get('/users/:userId', 
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    try {
+      const [user] = await pool.execute(
+        'SELECT user_id, first_name, last_name, username, email, phone_number, role_id FROM users WHERE user_id = ?',
+        [req.params.userId]
+      );
+      if (!user.length) return res.status(404).json({ message: 'User not found' });
+      res.json(user[0]);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching user', error: error.message });
+    }
 });
 
 // Shopping Cart Management (Permission: 3002)
-router.post('/cart', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const {customer_id, created_at, running_total} = req.body;
-    const [result] = await connection.execute(
-      'INSERT INTO shopping_cart (customer_id, created_at, running_total) VALUES (?, ?, ?)',
-      [customer_id, created_at, running_total]
-    );
-    await connection.commit();
-    res.status(201).json({ message: 'Cart created successfully', cart_id: result.insertId});
-  } catch (error) {
-    await connection.rollback();
-    res.status(400).json({ error: 'Error creating Cart' });
-  } finally {
-    connection.release();
-  }
+router.post('/cart', 
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const {customer_id, created_at, running_total} = req.body;
+      const [result] = await connection.execute(
+        'INSERT INTO shopping_cart (customer_id, created_at, running_total) VALUES (?, ?, ?)',
+        [customer_id, created_at, running_total]
+      );
+      await connection.commit();
+      res.status(201).json({ message: 'Cart created successfully', cart_id: result.insertId});
+    } catch (error) {
+      await connection.rollback();
+      res.status(400).json({ error: 'Error creating Cart' });
+    } finally {
+      connection.release();
+    }
 });
 
 // Order Management (Permission: 3003)
-router.post('/orders', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const {customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
-    const [result] = await connection.execute(
-      'INSERT INTO orders (customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
-    );
-    await connection.commit();
-    res.status(201).json({ message: 'Order created successfully', order_id: result.insertId });
-  } catch (error) {
-    await connection.rollback();
-    res.status(400).json({ error: 'Error creating order' });
-  } finally {
-    connection.release();
-  }
+router.post('/orders', 
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const {customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
+      const [result] = await connection.execute(
+        'INSERT INTO orders (customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
+      );
+      await connection.commit();
+      res.status(201).json({ message: 'Order created successfully', order_id: result.insertId });
+    } catch (error) {
+      await connection.rollback();
+      res.status(400).json({ error: 'Error creating order' });
+    } finally {
+      connection.release();
+    }
 });
 
 // View Order History (Permission: 3005)
-router.get('/users/:userId/orders', async (req, res) => {
-  try {
-    const [orders] = await pool.execute(
-      'SELECT * FROM orders WHERE customer_id = ?',
-      [req.params.userId]
-    );
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching orders', error: error.message });
-  }
+router.get('/users/:userId/orders', 
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    try {
+      const [orders] = await pool.execute(
+        'SELECT * FROM orders WHERE customer_id = ?',
+        [req.params.userId]
+      );
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching orders', error: error.message });
+    }
 });
 
 module.exports = router;

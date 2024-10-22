@@ -1,7 +1,10 @@
-// employeeRoutes.js
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/connection');
+const { authMiddleware } = require('../middleware/passport-auth');
+
+// Apply staffOnly middleware to all routes in this router
+router.use(authMiddleware.staffOnly);
 
 // =============================================
 // EMPLOYEE ROUTES (Role ID: 2)
@@ -156,36 +159,40 @@ router.get('/customers', async (req, res) => {
   }
 });
 
-router.get('/customers/:customerId', async (req, res) => {
-  try {
-    const [customer] = await pool.execute(
-      `SELECT c.*, u.first_name, u.last_name, u.email 
-       FROM customers c 
-       JOIN users u ON c.customer_id = u.user_id 
-       WHERE c.customer_id = ?`,
-      [req.params.customerId]
-    );
-    if (!customer.length) {
-      return res.status(404).json({ message: 'Customer not found' });
+router.get('/customers/:customerId', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    try {
+      const [customer] = await pool.execute(
+        `SELECT c.*, u.first_name, u.last_name, u.email 
+         FROM customers c 
+         JOIN users u ON c.customer_id = u.user_id 
+         WHERE c.customer_id = ?`,
+        [req.params.customerId]
+      );
+      if (!customer.length) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      res.json(customer[0]);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching customer', error: error.message });
     }
-    res.json(customer[0]);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching customer', error: error.message });
-  }
 });
 
 // Process Returns (Permission: 2006 - Process Refunds and Returns)
-router.put('/customers/:customerId', async (req, res) => {
-  const { preferred_payment_id } = req.body;
-  try {
-    await pool.execute(
-      'UPDATE customers SET preferred_payment_id = ? WHERE customer_id = ?',
-      [preferred_payment_id, req.params.customerId]
-    );
-    res.json({ message: 'Customer updated successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error updating customer', error: error.message });
-  }
+router.put('/customers/:customerId', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const { preferred_payment_id } = req.body;
+    try {
+      await pool.execute(
+        'UPDATE customers SET preferred_payment_id = ? WHERE customer_id = ?',
+        [preferred_payment_id, req.params.customerId]
+      );
+      res.json({ message: 'Customer updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating customer', error: error.message });
+    }
 });
 
 // Price and Promotion Management (Permission: 2004 - Set Product Prices and Promotions)
