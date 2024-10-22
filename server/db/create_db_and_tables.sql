@@ -19,7 +19,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   phone_number VARCHAR(20) UNIQUE,
   password_hash VARBINARY(64) NOT NULL,
-  role_id INT NOT NULL,
+  role_id INT NOT NULL DEFAULT 1,
   address_id INT
 );
 

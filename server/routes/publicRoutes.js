@@ -98,6 +98,17 @@ router.get('/products/:productId', async (req, res) => {
   }
 });
 
+router.get('/products/category/:categoryId', async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const [rows] = await pool.execute('SELECT * FROM products WHERE category_id = ?', [categoryId]);
+    if (rows.length === 0) return res.status(404).json({ message: 'No products found for this category' });
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching products by category' });
+  }
+});
+
 router.get('/categories', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM categories');
@@ -123,7 +134,8 @@ router.get('/categories/:categoryId', async (req, res) => {
 // =============================================
 // CUSTOMER ROUTES (Role ID: 1)
 // =============================================
-// Customer Profile Management (Permission: 3004)
+
+// User Profile Management (Permission: 3004)
 router.get('/users/:userId', 
   authMiddleware.authenticate,
   authMiddleware.checkSelfOrHigher,
@@ -141,7 +153,7 @@ router.get('/users/:userId',
 });
 
 // Shopping Cart Management (Permission: 3002)
-router.post('/cart', 
+router.post('/shopping_cart', 
   authMiddleware.authenticate,
   authMiddleware.checkSelfOrHigher,
   async (req, res) => {
@@ -158,6 +170,44 @@ router.post('/cart',
     } catch (error) {
       await connection.rollback();
       res.status(400).json({ error: 'Error creating Cart' });
+    } finally {
+      connection.release();
+    }
+});
+
+router.get('/shopping_cart',
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    const {cart_id} = req.body;
+    try {
+      await connection.beginTransaction();
+      const [cart] = await pool.execute('SELECT * FROM shopping_cart WHERE cart_id = ?', [cart_id]);
+      res.status(200).json(cart[0]);
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      res.status(500).json({ error: 'Failed to fetch cart' });
+    } finally {
+      connection.release();
+    }
+});
+
+router.delete('/shopping_cart',
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    const {cart_id} = req.body;
+    try {
+      await connection.beginTransaction();
+      await pool.execute('DELETE FROM shopping_cart WHERE cart_id = ?', [cart_id]);
+      await connection.commit();
+      res.status(200).json({ message: 'Shopping cart deleted successfully' });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error deleting shopping cart:', error);
+      res.status(500).json({ error: 'Failed to delete shopping cart' });
     } finally {
       connection.release();
     }
@@ -186,7 +236,6 @@ router.post('/orders',
     }
 });
 
-// View Order History (Permission: 3005)
 router.get('/users/:userId/orders', 
   authMiddleware.authenticate,
   authMiddleware.checkSelfOrHigher,
@@ -199,6 +248,28 @@ router.get('/users/:userId/orders',
       res.json(orders);
     } catch (error) {
       res.status(500).json({ message: 'Error fetching orders', error: error.message });
+    }
+});
+
+// Payment Management (Permission: 3007)
+router.get('/payment/:preferred_payment_id',
+  authMiddleware.authenticate,
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      const [paymentResult] = await connection.execute(
+        'SELECT * FROM payment WHERE preferred_payment_id = ?',
+        [req.params.preferred_payment_id]
+      );
+      if (paymentResult.length === 0) {
+        return res.status(404).json({ message: 'No payment method found for this ID.' });
+      }
+      res.status(200).json(paymentResult);
+    } catch (error) {
+      res.status(400).json({ error: 'Error retrieving payment method' });
+    } finally {
+      connection.release();
     }
 });
 
