@@ -1,0 +1,208 @@
+# Employee API Reference
+
+## Authentication
+All routes require a Bearer token with Employee (role_id: 2) or higher permissions:
+`Authorization: Bearer <your_jwt_token>`
+
+## Product Management (Permission: 2001 - Add/Edit/Delete Products)
+
+### Create Product
+```
+POST /api/products
+Description: Create a new product
+Request Body: {
+    "product_name": "string",
+    "category_id": number,
+    "description": "string",
+    "price": number,
+    "stock_quantity": number,
+    "reorder_threshold": number,
+    "size": "string",
+    "color": "string",
+    "brand": "string"
+}
+Response: {
+    "message": "Product created successfully",
+    "productId": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+### Update Product
+```
+PUT /api/products/:productId
+Description: Update an existing product
+Parameters:
+    productId: number (path parameter)
+Request Body: {
+    "product_name": "string",
+    "category_id": number,
+    "description": "string",
+    "price": number,
+    "stock_quantity": number,
+    "reorder_threshold": number,
+    "size": "string",
+    "color": "string",
+    "brand": "string"
+}
+Response: {
+    "message": "Product updated successfully"
+}
+Status Codes:
+    200: Success
+    404: Product not found
+    400: Update failed
+    403: Unauthorized access
+```
+
+## Order Management (Permission: 2002 - View and Manage all Orders)
+
+### Get Order
+```
+GET /api/orders
+Description: Get order details
+Request Body: {
+    "order_id": number
+}
+Response: Order object
+Status Codes:
+    200: Success
+    404: Order not found
+    500: Server error
+    403: Unauthorized access
+```
+
+### Update Order Status
+```
+PUT /api/orders
+Description: Update order status
+Request Body: {
+    "order_id": number,
+    "order_status": "string"
+}
+Response: {
+    "message": "Order status updated successfully"
+}
+Status Codes:
+    200: Success
+    500: Update failed
+    403: Unauthorized access
+```
+
+## Inventory Management (Permission: 2003 - Manage Inventory)
+
+### Create Order Item
+```
+POST /api/order_items
+Description: Create a new order item
+Request Body: {
+    "order_id": number,
+    "product_id": number,
+    "quantity": number,
+    "unit_price": number,
+    "total_item_price": number
+}
+Response: {
+    "message": "Order item created successfully",
+    "order_item_id": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+## Customer Management (Permission: 2005 - Respond to Customer Reviews)
+
+### Get All Customers
+```
+GET /api/customers
+Description: Get list of all customers
+Response: Array of customer objects with user details
+Status Codes:
+    200: Success
+    500: Server error
+    403: Unauthorized access
+```
+
+### Get Customer Details
+```
+GET /api/customers/:customerId
+Description: Get specific customer details
+Parameters:
+    customerId: number (path parameter)
+Response: Customer object with user details
+Status Codes:
+    200: Success
+    404: Customer not found
+    403: Unauthorized access
+```
+
+## Process Returns (Permission: 2006 - Process Refunds and Returns)
+
+### Update Customer Payment Method
+```
+PUT /api/customers/:customerId
+Description: Update customer's preferred payment method
+Parameters:
+    customerId: number (path parameter)
+Request Body: {
+    "preferred_payment_id": number
+}
+Response: {
+    "message": "Customer updated successfully"
+}
+Status Codes:
+    200: Success
+    500: Update failed
+    403: Unauthorized access
+```
+
+## Price and Promotion Management (Permission: 2004)
+
+### Create Category
+```
+POST /api/category
+Description: Create a new category
+Request Body: {
+    "name": "string",
+    "sex": "string"
+}
+Response: {
+    "message": "Category created successfully",
+    "category_id": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+### Update Category
+```
+PUT /api/categories/:categoryId
+Description: Update an existing category
+Parameters:
+    categoryId: number (path parameter)
+Request Body: {
+    "name": "string",
+    "sex": "string"
+}
+Response: {
+    "message": "Category updated successfully"
+}
+Status Codes:
+    200: Success
+    404: Category not found
+    400: Update failed
+    403: Unauthorized access
+```
+
+## Notes
+- All routes require Employee role (role_id: 2) or higher
+- Self-access checks are implemented for customer-related operations
+- Transactions are used for data integrity in create/update operations
+- All operations are logged for audit purposes

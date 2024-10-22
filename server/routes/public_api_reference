@@ -1,0 +1,180 @@
+# Public and Customer API Reference
+
+## Authentication
+Protected routes require a Bearer token in the Authorization header:
+`Authorization: Bearer <your_jwt_token>`
+
+## Public Routes (No Authentication Required)
+
+### User Registration
+```
+POST /api/register
+Description: Register a new user account
+Request Body: {
+    "first_name": "string",
+    "last_name": "string",
+    "username": "string",
+    "email": "string",
+    "phone_number": "string",
+    "password": "string",
+    "role_id": number,
+    "line_1": "string",
+    "line_2": "string",
+    "city": "string",
+    "state": "string",
+    "zip": "string"
+}
+Response: {
+    "message": "User registered successfully",
+    "userId": number
+}
+Status Codes:
+    201: Successfully created
+    400: Registration failed
+```
+
+### User Login
+```
+POST /api/login
+Description: Authenticate user and receive JWT token
+Request Body: {
+    "email": "string",
+    "password": "string"
+}
+Response: {
+    "token": "string",
+    "userId": number,
+    "role": number
+}
+Status Codes:
+    200: Success
+    401: Invalid credentials
+    500: Server error
+```
+
+### Product Browsing
+```
+GET /api/products
+Description: Get all products
+Response: Array of product objects
+Status Codes:
+    200: Success
+    500: Server error
+
+GET /api/products/:productId
+Description: Get specific product details
+Parameters: 
+    productId: number (path parameter)
+Response: Single product object
+Status Codes:
+    200: Success
+    404: Product not found
+    500: Server error
+```
+
+### Category Browsing
+```
+GET /api/categories
+Description: Get all categories
+Response: Array of category objects
+Status Codes:
+    200: Success
+    500: Server error
+
+GET /api/categories/:categoryId
+Description: Get specific category details
+Parameters:
+    categoryId: number (path parameter)
+Response: Single category object
+Status Codes:
+    200: Success
+    404: Category not found
+    500: Server error
+```
+
+## Customer Routes (Authentication Required)
+
+### User Profile Management
+```
+GET /api/users/:userId
+Description: Get user profile details
+Authentication: Required
+Permission: View and Manage Personal Account (3004)
+Parameters:
+    userId: number (path parameter)
+Response: {
+    "user_id": number,
+    "first_name": "string",
+    "last_name": "string",
+    "username": "string",
+    "email": "string",
+    "phone_number": "string",
+    "role_id": number
+}
+Status Codes:
+    200: Success
+    404: User not found
+    403: Unauthorized access
+    500: Server error
+```
+
+### Shopping Cart Management
+```
+POST /api/cart
+Description: Create a new shopping cart
+Authentication: Required
+Permission: Add Products to Cart (3002)
+Request Body: {
+    "customer_id": number,
+    "created_at": "datetime",
+    "running_total": number
+}
+Response: {
+    "message": "Cart created successfully",
+    "cart_id": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+### Order Management
+```
+POST /api/orders
+Description: Create a new order
+Authentication: Required
+Permission: Make Purchase and Place Orders (3003)
+Request Body: {
+    "customer_id": number,
+    "shipping_address_id": number,
+    "order_status": "string",
+    "order_date": "date",
+    "shipping_cost": number,
+    "payment_method": "string",
+    "total_amount": number
+}
+Response: {
+    "message": "Order created successfully",
+    "order_id": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+### Order History
+```
+GET /api/users/:userId/orders
+Description: Get order history for a user
+Authentication: Required
+Permission: View Order History (3005)
+Parameters:
+    userId: number (path parameter)
+Response: Array of order objects
+Status Codes:
+    200: Success
+    403: Unauthorized access
+    500: Server error
+```

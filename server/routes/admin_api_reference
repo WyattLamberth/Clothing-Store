@@ -1,0 +1,301 @@
+# Admin API Reference
+
+## Authentication
+All routes require a Bearer token with Admin (role_id: 3) permissions:
+`Authorization: Bearer <your_jwt_token>`
+
+## User Management (Permission: 1001 - Manage Users)
+
+### Delete User
+```
+DELETE /api/users/:userId
+Description: Delete a user from the system
+Parameters:
+    userId: number (path parameter)
+Response: {
+    "message": "User deleted successfully"
+}
+Status Codes:
+    200: Success
+    500: Deletion failed
+    403: Unauthorized access
+```
+
+## Employee Management
+
+### Get All Employees
+```
+GET /api/employees
+Description: Get list of all employees
+Response: Array of employee objects with user details {
+    "employee_id": number,
+    "job_title": "string",
+    "first_name": "string",
+    "last_name": "string",
+    "email": "string"
+}
+Status Codes:
+    200: Success
+    500: Server error
+    403: Unauthorized access
+```
+
+### Create Employee
+```
+POST /api/employees
+Description: Create a new employee
+Request Body: {
+    "user_id": number,
+    "job_title": "string"
+}
+Response: {
+    "message": "Employee created successfully"
+}
+Status Codes:
+    201: Successfully created
+    500: Creation failed
+    403: Unauthorized access
+```
+
+### Get Employee Details
+```
+GET /api/employees/:employeeId
+Description: Get specific employee details
+Parameters:
+    employeeId: number (path parameter)
+Response: Employee object with user details
+Status Codes:
+    200: Success
+    404: Employee not found
+    500: Server error
+    403: Unauthorized access
+```
+
+### Update Employee
+```
+PUT /api/employees/:employeeId
+Description: Update employee details
+Parameters:
+    employeeId: number (path parameter)
+Request Body: {
+    "job_title": "string"
+}
+Response: {
+    "message": "Employee updated successfully"
+}
+Status Codes:
+    200: Success
+    500: Update failed
+    403: Unauthorized access
+```
+
+### Delete Employee
+```
+DELETE /api/employees/:employeeId
+Description: Delete an employee
+Parameters:
+    employeeId: number (path parameter)
+Response: {
+    "message": "Employee deleted successfully"
+}
+Status Codes:
+    200: Success
+    500: Deletion failed
+    403: Unauthorized access
+```
+
+## Admin Management
+
+### Get All Admins
+```
+GET /api/admins
+Description: Get list of all admins
+Response: Array of admin objects with user details {
+    "admin_id": number,
+    "first_name": "string",
+    "last_name": "string",
+    "email": "string"
+}
+Status Codes:
+    200: Success
+    500: Server error
+    403: Unauthorized access
+```
+
+### Create Admin
+```
+POST /api/admins
+Description: Create a new admin
+Request Body: {
+    "user_id": number
+}
+Response: {
+    "message": "Admin created successfully"
+}
+Status Codes:
+    201: Successfully created
+    500: Creation failed
+    403: Unauthorized access
+```
+
+### Get Admin Details
+```
+GET /api/admins/:adminId
+Description: Get specific admin details
+Parameters:
+    adminId: number (path parameter)
+Response: Admin object with user details
+Status Codes:
+    200: Success
+    404: Admin not found
+    500: Server error
+    403: Unauthorized access
+```
+
+### Delete Admin
+```
+DELETE /api/admins/:adminId
+Description: Delete an admin
+Parameters:
+    adminId: number (path parameter)
+Response: {
+    "message": "Admin deleted successfully"
+}
+Status Codes:
+    200: Success
+    500: Deletion failed
+    403: Unauthorized access
+```
+
+## System Configuration (Permission: 1004)
+
+### Create Activity Log
+```
+POST /api/activity-logs
+Description: Create a new activity log entry
+Request Body: {
+    "user_id": number,
+    "action": "string",
+    "entity_affected": "string"
+}
+Response: {
+    "message": "Activity logged successfully",
+    "log_id": number
+}
+Status Codes:
+    201: Successfully created
+    500: Creation failed
+```
+
+### Get Activity Logs
+```
+GET /api/activity-logs
+Description: Get all activity logs
+Response: Array of activity log objects
+Status Codes:
+    200: Success
+    500: Server error
+```
+
+## Promotions Management (Permission: 1005)
+
+### Create Sale Event
+```
+POST /api/sale-event
+Description: Create a new sale event with category and product
+Request Body: {
+    "name": "string",
+    "sex": "string",
+    "description": "string",
+    "price": number,
+    "stock_quantity": number,
+    "reorder_threshold": number,
+    "size": "string",
+    "color": "string",
+    "brand": "string",
+    "event_name": "string",
+    "start_date": "date",
+    "end_date": "date"
+}
+Response: {
+    "message": "Sale event created successfully",
+    "sale_event_id": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+    403: Unauthorized access
+```
+
+## Role and Permission Management
+
+### Get All Roles
+```
+GET /api/roles
+Description: Get list of all roles
+Response: Array of role objects
+Status Codes:
+    200: Success
+    500: Server error
+```
+
+### Create Role
+```
+POST /api/roles
+Description: Create a new role
+Request Body: {
+    "role_name": "string"
+}
+Response: {
+    "message": "Role created successfully",
+    "roleId": number
+}
+Status Codes:
+    201: Successfully created
+    400: Creation failed
+```
+
+### Get All Permissions
+```
+GET /api/permissions
+Description: Get list of all permissions
+Response: Array of permission objects
+Status Codes:
+    200: Success
+    500: Server error
+```
+
+### Get Role Permissions
+```
+GET /api/roles/:roleId/permissions
+Description: Get permissions for a specific role
+Parameters:
+    roleId: number (path parameter)
+Response: Array of permission objects
+Status Codes:
+    200: Success
+    500: Server error
+```
+
+### Add Permission to Role
+```
+POST /api/roles/:roleId/permissions
+Description: Add a permission to a role
+Parameters:
+    roleId: number (path parameter)
+Request Body: {
+    "permission_id": number
+}
+Response: {
+    "message": "Permission added to role successfully"
+}
+Status Codes:
+    201: Successfully added
+    400: Addition failed
+```
+
+## Notes
+- All routes require Admin role (role_id: 3)
+- All operations are logged automatically
+- Transactions are used for data integrity
+- Some operations may affect multiple database tables
