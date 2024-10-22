@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('./db/connection');
 
-
+// USER AND ROLE MANAGEMENT
 // User registration
 router.post('/register', async (req, res) => {
   const connection = await pool.getConnection();
@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// User login (updated to use Passport)
+// User login 
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -77,6 +77,270 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// User Management Routes
+// get a user
+router.get('/users/:userId', async (req, res) => {
+  try {
+    const [user] = await pool.execute(
+      'SELECT user_id, first_name, last_name, username, email, phone_number, role_id FROM users WHERE user_id = ?',
+      [req.params.userId]
+    );
+    if (!user.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+});
+
+// update a user
+router.put('/users/:userId', async (req, res) => {
+  const { first_name, last_name, email, phone_number } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE users SET first_name = ?, last_name = ?, email = ?, phone_number = ? WHERE user_id = ?',
+      [first_name, last_name, email, phone_number, req.params.userId]
+    );
+    res.json({ message: 'User updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user', error: error.message });
+  }
+});
+
+// delete a user
+router.delete('/users/:userId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM users WHERE user_id = ?', [req.params.userId]);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting user', error: error.message });
+  }
+});
+
+// get all orders under a user
+router.get('/users/:userId/orders', async (req, res) => {
+  try {
+    const [orders] = await pool.execute(
+      'SELECT * FROM orders WHERE customer_id = ?',
+      [req.params.userId]
+    );
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders', error: error.message });
+  }
+});
+
+// get a users cart
+router.get('/users/:userId/cart', async (req, res) => {
+  try {
+    const [cart] = await pool.execute(
+      `SELECT sc.*, ci.product_id, ci.quantity, p.product_name, p.price 
+       FROM shopping_cart sc 
+       LEFT JOIN cart_items ci ON sc.cart_id = ci.cart_id 
+       LEFT JOIN products p ON ci.product_id = p.product_id 
+       WHERE sc.customer_id = ?`,
+      [req.params.userId]
+    );
+    res.json(cart);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching cart', error: error.message });
+  }
+});
+
+// Customer Management Routes
+// get all customers
+router.get('/customers', async (req, res) => {
+  try {
+    const [customers] = await pool.execute(
+      `SELECT c.*, u.first_name, u.last_name, u.email 
+       FROM customers c 
+       JOIN users u ON c.customer_id = u.user_id`
+    );
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching customers', error: error.message });
+  }
+});
+
+// get a customer
+router.get('/customers/:customerId', async (req, res) => {
+  try {
+    const [customer] = await pool.execute(
+      `SELECT c.*, u.first_name, u.last_name, u.email 
+       FROM customers c 
+       JOIN users u ON c.customer_id = u.user_id 
+       WHERE c.customer_id = ?`,
+      [req.params.customerId]
+    );
+    if (!customer.length) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+    res.json(customer[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching customer', error: error.message });
+  }
+});
+
+// update a customer
+router.put('/customers/:customerId', async (req, res) => {
+  const { preferred_payment_id } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE customers SET preferred_payment_id = ? WHERE customer_id = ?',
+      [preferred_payment_id, req.params.customerId]
+    );
+    res.json({ message: 'Customer updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating customer', error: error.message });
+  }
+});
+
+// delete a customer
+router.delete('/customers/:customerId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM customers WHERE customer_id = ?', [req.params.customerId]);
+    res.json({ message: 'Customer deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting customer', error: error.message });
+  }
+});
+
+// Employee Management Routes
+// get all employees
+router.get('/employees', async (req, res) => {
+  try {
+    const [employees] = await pool.execute(
+      `SELECT e.*, u.first_name, u.last_name, u.email 
+       FROM employees e 
+       JOIN users u ON e.employee_id = u.user_id`
+    );
+    res.json(employees);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching employees', error: error.message });
+  }
+});
+
+// create an employee
+router.post('/employees', async (req, res) => {
+  const { user_id, job_title } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO employees (employee_id, job_title) VALUES (?, ?)',
+      [user_id, job_title]
+    );
+    res.status(201).json({ message: 'Employee created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating employee', error: error.message });
+  }
+});
+
+// get an employee
+router.get('/employees/:employeeId', async (req, res) => {
+  try {
+    const [employee] = await pool.execute(
+      `SELECT e.*, u.first_name, u.last_name, u.email 
+       FROM employees e 
+       JOIN users u ON e.employee_id = u.user_id 
+       WHERE e.employee_id = ?`,
+      [req.params.employeeId]
+    );
+    if (!employee.length) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+    res.json(employee[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching employee', error: error.message });
+  }
+});
+
+// update an employee
+router.put('/employees/:employeeId', async (req, res) => {
+  const { job_title } = req.body;
+  try {
+    await pool.execute(
+      'UPDATE employees SET job_title = ? WHERE employee_id = ?',
+      [job_title, req.params.employeeId]
+    );
+    res.json({ message: 'Employee updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating employee', error: error.message });
+  }
+});
+
+// delete an employee
+router.delete('/employees/:employeeId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM employees WHERE employee_id = ?', [req.params.employeeId]);
+    res.json({ message: 'Employee deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting employee', error: error.message });
+  }
+});
+
+// Admin Management Routes
+// get all admins
+router.get('/admins', async (req, res) => {
+  try {
+    const [admins] = await pool.execute(
+      `SELECT a.*, u.first_name, u.last_name, u.email 
+       FROM admins a 
+       JOIN users u ON a.admin_id = u.user_id`
+    );
+    res.json(admins);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching admins', error: error.message });
+  }
+});
+
+// create an admin
+router.post('/admins', async (req, res) => {
+  const { user_id } = req.body;
+  try {
+    await pool.execute(
+      'INSERT INTO admins (admin_id) VALUES (?)',
+      [user_id]
+    );
+    res.status(201).json({ message: 'Admin created successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating admin', error: error.message });
+  }
+});
+
+// get an admin
+router.get('/admins/:adminId', async (req, res) => {
+  try {
+    const [admin] = await pool.execute(
+      `SELECT a.*, u.first_name, u.last_name, u.email 
+       FROM admins a 
+       JOIN users u ON a.admin_id = u.user_id 
+       WHERE a.admin_id = ?`,
+      [req.params.adminId]
+    );
+    if (!admin.length) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+    res.json(admin[0]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching admin', error: error.message });
+  }
+});
+
+// update an admin
+router.put('/admins/:adminId', async (req, res) => {
+  // Since admins table doesn't have additional fields, we might update user table information
+  res.status(501).json({ message: 'Admin update functionality not implemented' });
+});
+
+// delete an admin
+router.delete('/admins/:adminId', async (req, res) => {
+  try {
+    await pool.execute('DELETE FROM admins WHERE admin_id = ?', [req.params.adminId]);
+    res.json({ message: 'Admin deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting admin', error: error.message });
+  }
+});
 
 // Order Management
 // Post
