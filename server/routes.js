@@ -1365,5 +1365,65 @@ router.delete('/permissions/:permissionId', async (req, res) => {
   }
 });
 
+// ROLE PERMISSION MANAGEMENT
+
+const express = require('express');
+const router = express.Router();
+const pool = require('./db/connection');
+
+// Fetch all permissions associated with a specific role
+router.get('/roles/:roleId/permissions', async (req, res) => {
+  const { roleId } = req.params;
+  try {
+    const [permissions] = await pool.execute(
+      `SELECT p.* 
+       FROM permissions p 
+       JOIN role_permissions rp 
+       ON p.permission_id = rp.permission_id 
+       WHERE rp.role_id = ?`, 
+      [roleId]
+    );
+    res.status(200).json(permissions);
+  } catch (error) {
+    console.error('Error fetching role permissions:', error);
+    res.status(500).json({ error: 'Error fetching role permissions' });
+  }
+});
+
+// Add a permission to a specific role
+router.post('/roles/:roleId/permissions', async (req, res) => {
+  const { roleId } = req.params;
+  const { permission_id } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)', 
+      [roleId, permission_id]
+    );
+    res.status(201).json({ message: 'Permission added to role successfully' });
+  } catch (error) {
+    console.error('Error adding permission to role:', error);
+    res.status(400).json({ error: 'Error adding permission to role' });
+  }
+});
+
+// Remove a permission from a specific role
+router.delete('/roles/:roleId/permissions/:permissionId', async (req, res) => {
+  const { roleId, permissionId } = req.params;
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?', 
+      [roleId, permissionId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Role or permission not found' });
+    }
+    res.status(200).json({ message: 'Permission removed from role successfully' });
+  } catch (error) {
+    console.error('Error removing permission from role:', error);
+    res.status(400).json({ error: 'Error removing permission from role' });
+  }
+});
+
+module.exports = router;
 
 module.exports = router;
