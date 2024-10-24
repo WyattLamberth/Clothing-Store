@@ -1863,4 +1863,70 @@ router.delete('/returns/:returnId/items/:itemId', async (req, res) => {
   }
 });
 
+// REFUND MANAGEMENT
+
+// POST a new refund
+router.post('/refunds', async (req, res) => {
+  const { return_id, refund_amount, refund_date } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO refunds (return_id, refund_amount, refund_date) VALUES (?, ?, ?)',
+      [return_id, refund_amount, refund_date]
+    );
+    res.status(201).json({ message: 'Refund created successfully', refund_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: 'Error creating refund', details: error.message });
+  }
+});
+
+// GET all refunds
+router.get('/refunds', async (req, res) => {
+  try {
+    const [refunds] = await pool.execute('SELECT * FROM refunds');
+    res.status(200).json(refunds);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching refunds', details: error.message });
+  }
+});
+
+// GET a refund by ID
+router.get('/refunds/:refundId', async (req, res) => {
+  const { refundId } = req.params;
+  try {
+    const [refunds] = await pool.execute('SELECT * FROM refunds WHERE refund_id = ?', [refundId]);
+    if (refunds.length === 0) return res.status(404).json({ message: 'Refund not found' });
+    res.status(200).json(refunds[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching refund', details: error.message });
+  }
+});
+
+// UPDATE a refund by ID
+router.put('/refunds/:refundId', async (req, res) => {
+  const { refundId } = req.params;
+  const { refund_amount, refund_date } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'UPDATE refunds SET refund_amount = ?, refund_date = ? WHERE refund_id = ?',
+      [refund_amount, refund_date, refundId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Refund not found' });
+    res.status(200).json({ message: 'Refund updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating refund', details: error.message });
+  }
+});
+
+// DELETE a refund by ID
+router.delete('/refunds/:refundId', async (req, res) => {
+  const { refundId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM refunds WHERE refund_id = ?', [refundId]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Refund not found' });
+    res.status(200).json({ message: 'Refund deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting refund', details: error.message });
+  }
+});
+
 module.exports = router;
