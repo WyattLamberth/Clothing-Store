@@ -69,10 +69,10 @@ const authMiddleware = {
   authenticate: auth([1, 2, 3]),
   
   // Only allow employees and admins
-  staffOnly: auth([1, 2]),
+  staffOnly: auth([2,3]),
   
   // Only allow admins
-  adminOnly: auth([1]),
+  adminOnly: auth([3]),
   
   // Check if user is accessing their own data
   checkSelfOrHigher: (req, res, next) => {
