@@ -5,6 +5,7 @@ const port = process.env.PORT || 6001;
 const { passport, authMiddleware } = require('./middleware/passport-auth');
 
 const publicRoutes = require('./routes/publicRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
@@ -17,6 +18,7 @@ app.use(authMiddleware.authenticate);
 
 // Use routes
 app.use('/api', publicRoutes);
+app.use('/api', customerRoutes);
 app.use('/api', employeeRoutes);
 app.use('/api', adminRoutes);
 
