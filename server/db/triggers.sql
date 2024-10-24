@@ -18,18 +18,6 @@ BEGIN
   END IF;
 END$$
 
--- Trigger to alert when stock quantity goes below the reorder threshold
-CREATE TRIGGER reorder_alert_after_stock_decrease
-AFTER UPDATE ON products
-FOR EACH ROW
-BEGIN
-  -- If the new stock quantity is below the reorder threshold, create an alert
-  IF NEW.stock_quantity < NEW.reorder_threshold THEN
-    INSERT INTO reorder_alerts (product_id, alert_date, quantity_to_reorder)
-    VALUES (NEW.product_id, CURDATE(), NEW.reorder_threshold);
-  END IF;
-END$$
-
 -- Trigger to log admin/employee actions (INSERT)
 CREATE TRIGGER log_user_action_insert
 AFTER INSERT ON products
