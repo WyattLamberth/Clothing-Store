@@ -1706,4 +1706,88 @@ router.get('/activity-logs/user/:userId', async (req, res) => {
 });
 
 
+// PAST THIS LINE THESE ROUTES HAVE NOT BEEN ADDED INTO THE ROUTES FOLDER
+// RETURNS MANAGEMENT
+
+// POST a new return
+router.post('/returns', async (req, res) => {
+  const { order_id, return_date, return_reason } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO returns (order_id, return_date, return_reason) VALUES (?, ?, ?)',
+      [order_id, return_date, return_reason]
+    );
+    res.status(201).json({ message: 'Return created successfully', return_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: 'Error creating return', details: error.message });
+  }
+});
+
+// GET all returns
+router.get('/returns', async (req, res) => {
+  try {
+    const [returns] = await pool.execute('SELECT * FROM returns');
+    res.status(200).json(returns);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching returns', details: error.message });
+  }
+});
+
+// GET a return by ID
+router.get('/returns/:returnId', async (req, res) => {
+  const { returnId } = req.params;
+  try {
+    const [returns] = await pool.execute('SELECT * FROM returns WHERE return_id = ?', [returnId]);
+    if (returns.length === 0) return res.status(404).json({ message: 'Return not found' });
+    res.status(200).json(returns[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching return', details: error.message });
+  }
+});
+
+// UPDATE a return by ID
+router.put('/returns/:returnId', async (req, res) => {
+  const { returnId } = req.params;
+  const { return_reason } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'UPDATE returns SET return_reason = ? WHERE return_id = ?',
+      [return_reason, returnId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Return not found' });
+    res.status(200).json({ message: 'Return updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating return', details: error.message });
+  }
+});
+
+// DELETE a return by ID
+router.delete('/returns/:returnId', async (req, res) => {
+  const { returnId } = req.params;
+  try {
+    const [result] = await pool.execute('DELETE FROM returns WHERE return_id = ?', [returnId]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Return not found' });
+    res.status(200).json({ message: 'Return deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting return', details: error.message });
+  }
+});
+
+// UPDATE return status by ID
+router.put('/returns/:returnId/status', async (req, res) => {
+  const { returnId } = req.params;
+  const { return_status } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'UPDATE returns SET return_status = ? WHERE return_id = ?',
+      [return_status, returnId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Return not found' });
+    res.status(200).json({ message: 'Return status updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating return status', details: error.message });
+  }
+});
+
+
 module.exports = router;
