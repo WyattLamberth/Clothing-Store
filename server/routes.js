@@ -1789,5 +1789,78 @@ router.put('/returns/:returnId/status', async (req, res) => {
   }
 });
 
+// RETURN ITEM MANAGEMENT
+
+// GET all items in a return
+router.get('/returns/:returnId/items', async (req, res) => {
+  const { returnId } = req.params;
+  try {
+    const [items] = await pool.execute('SELECT * FROM return_items WHERE return_id = ?', [returnId]);
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching return items', details: error.message });
+  }
+});
+
+// POST a new item to a return
+router.post('/returns/:returnId/items', async (req, res) => {
+  const { returnId } = req.params;
+  const { product_id, quantity, reason } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO return_items (return_id, product_id, quantity, reason) VALUES (?, ?, ?, ?)',
+      [returnId, product_id, quantity, reason]
+    );
+    res.status(201).json({ message: 'Return item added successfully', return_item_id: result.insertId });
+  } catch (error) {
+    res.status(500).json({ error: 'Error adding return item', details: error.message });
+  }
+});
+
+// GET a specific return item
+router.get('/returns/:returnId/items/:itemId', async (req, res) => {
+  const { returnId, itemId } = req.params;
+  try {
+    const [items] = await pool.execute(
+      'SELECT * FROM return_items WHERE return_id = ? AND return_item_id = ?',
+      [returnId, itemId]
+    );
+    if (items.length === 0) return res.status(404).json({ message: 'Return item not found' });
+    res.status(200).json(items[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching return item', details: error.message });
+  }
+});
+
+// UPDATE a specific return item
+router.put('/returns/:returnId/items/:itemId', async (req, res) => {
+  const { returnId, itemId } = req.params;
+  const { quantity, reason } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'UPDATE return_items SET quantity = ?, reason = ? WHERE return_id = ? AND return_item_id = ?',
+      [quantity, reason, returnId, itemId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Return item not found' });
+    res.status(200).json({ message: 'Return item updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating return item', details: error.message });
+  }
+});
+
+// DELETE a return item
+router.delete('/returns/:returnId/items/:itemId', async (req, res) => {
+  const { returnId, itemId } = req.params;
+  try {
+    const [result] = await pool.execute(
+      'DELETE FROM return_items WHERE return_id = ? AND return_item_id = ?',
+      [returnId, itemId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Return item not found' });
+    res.status(200).json({ message: 'Return item deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting return item', details: error.message });
+  }
+});
 
 module.exports = router;
