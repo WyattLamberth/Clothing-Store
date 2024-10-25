@@ -404,6 +404,23 @@ router.put('/orders', async (req, res) => {
   }
 });
 
+//Delete
+router.delete('/orders/:orderId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+      await connection.beginTransaction(); 
+      const [result] = await pool.execute('DELETE FROM orders WHERE order_id = ?', [[req.params.orderId]]);
+      await connection.commit(); 
+      res.status(200).json({ message: 'Order deleted successfully' });
+  } catch (error) {
+      await connection.rollback();
+      console.error('Error deleting Order:', error);
+      res.status(500).json({ error: 'Failed to delete Order' });
+  } finally {
+      connection.release(); 
+  }
+  });
+
 // Order Item Management
 // Post
 router.post('/order_items', async (req, res) => {
