@@ -263,4 +263,117 @@ router.delete('/categories/:categoryId', async (req, res) => {
   }
 });
 
+// Transaction management
+// Get all transaction
+router.get('/transactions', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const query = 'SELECT * FROM transactions';
+    const [transactions] = await connection.execute(query);
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  } finally {
+    connection.release(); // Ensure the connection is released
+  }
+});
+
+// Post
+router.post('/transactions', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { order_id, transaction_date, total_amount, payment_status } = req.body;
+    const query = 'INSERT INTO transactions (order_id, transaction_date, total_amount, payment_status) VALUES (?, ?, ?, ?)';
+    const [result] = await connection.execute(query, [order_id, transaction_date, total_amount, payment_status]);
+    await connection.commit(); 
+    const transaction_id = result.insertId;
+    res.status(201).json({ message: 'Transaction created successfully', transaction_id: transaction_id });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating transaction:', error);
+    res.status(500).json({ error: 'Failed to create transaction' }); 
+  } finally {
+    connection.release(); 
+  }
+});
+
+// Get transactions by order ID
+router.get('/transactions/:transaction_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { transaction_id } = req.params;
+  try {
+    await connection.beginTransaction();
+    const query = 'SELECT * FROM transactions WHERE transaction_id = ?';
+    const [transactions] = await connection.execute(query, [transaction_id]);
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching transactions by order ID:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  } finally {
+    connection.release(); 
+  }
+});
+
+// Update transaction
+router.put('/transactions/:transaction_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { transaction_id } = req.params;
+  const { order_id, transaction_date, total_amount, payment_status } = req.body;
+  try {
+    await connection.beginTransaction();
+    const query = 'UPDATE transactions SET order_id = ?, transaction_date = ?, total_amount = ?, payment_status = ? WHERE transaction_id = ?';
+    const [result] = await connection.execute(query, [order_id, transaction_date, total_amount, payment_status, transaction_id]);
+    res.json({ message: 'Transaction updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating transaction:', error);
+    res.status(400).json({ error: 'Failed to update transaction' });
+  } finally {
+    connection.release(); 
+  }
+});
+
+// Delete a transaction
+router.delete('/transactions/:transaction_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { transaction_id } = req.params;
+
+  try {
+    const query = 'DELETE FROM transactions WHERE transaction_id = ?';
+    const [result] = await connection.execute(query, [transaction_id]);
+
+    // Check if any rows were affected
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    res.json({ message: 'Transaction deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ error: 'Failed to delete transaction' });
+  } finally {
+    connection.release(); // Ensure the connection is released
+  }
+});
+
+
+// Get transactions by order ID
+router.get('/transactions/order/:orderId', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { orderId } = req.params;
+  try {
+    await connection.beginTransaction();
+    const query = 'SELECT * FROM transactions WHERE order_id = ?';
+    const [transactions] = await connection.execute(query, [orderId]);
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching transactions by order ID:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  } finally {
+    connection.release();
+  }
+});
+
 module.exports = router;
