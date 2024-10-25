@@ -3,10 +3,18 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
-const ProtectedRoute = ({ element: Component }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute = ({ element: Component, requiredRole }) => {
+  const { isAuthenticated, role } = useAuth();
 
-  return isAuthenticated ? Component : <Navigate to="/signin" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" />;
+  }
+
+  if (requiredRole && role !== requiredRole) {
+    return <Navigate to="/" />; // Redirect to home if role doesn't match
+  }
+
+  return Component;
 };
 
 export default ProtectedRoute;

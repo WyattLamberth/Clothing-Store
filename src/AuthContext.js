@@ -5,21 +5,42 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [role, setRole] = useState(null);
+  const [token, setToken] = useState(null);
 
-  const login = (username, password) => {
-    if (username === 'admin' && password === 'admin') {
-      setIsAuthenticated(true);
-      return true;
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.token);
+        setRole(data.role);
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
+    setToken(null);
+    setRole(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, role, token }}>
       {children}
     </AuthContext.Provider>
   );
