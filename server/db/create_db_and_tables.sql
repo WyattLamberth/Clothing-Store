@@ -137,14 +137,6 @@ CREATE TABLE cart_items (
   CHECK (quantity > 0)
 );
 
--- Reorder Alerts table
-CREATE TABLE reorder_alerts (
-  alert_id INT AUTO_INCREMENT PRIMARY KEY,
-  product_id INT,
-  alert_date DATE NOT NULL,
-  quantity_to_reorder INT NOT NULL,
-  CHECK (quantity_to_reorder > 0)
-);
 
 -- Returns table
 CREATE TABLE returns (
@@ -295,6 +287,3 @@ ADD CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(user_
 ALTER TABLE role_permissions
 ADD CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(role_id),
 ADD CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
-
-ALTER TABLE reorder_alerts
-ADD CONSTRAINT fk_reorder_alert_product FOREIGN KEY (product_id) REFERENCES products(product_id);
