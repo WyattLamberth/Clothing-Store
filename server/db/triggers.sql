@@ -18,6 +18,8 @@ BEGIN
   END IF;
 END$$
 
+-- ACTIVITY LOG FOR PRODUCTS TABLE
+
 -- Trigger to log admin/employee actions (INSERT)
 CREATE TRIGGER log_user_action_insert
 AFTER INSERT ON products
@@ -47,6 +49,8 @@ BEGIN
     INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
     VALUES ('DELETE', NOW(), 'products', (SELECT user_id FROM users WHERE role_id IN (1, 2) LIMIT 1));
 END$$
+
+-- NOTIFICATIONS 
 
 -- Trigger to notify admin about low stock
 CREATE TRIGGER notify_admin_about_low_stock
