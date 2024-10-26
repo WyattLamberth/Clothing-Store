@@ -1002,7 +1002,7 @@ router.get('/sale-events', async (req, res) => {
     // Query to get all sale events
     const saleEventQuery = `
       SELECT *
-      FROM sale_events`; // Correct table name (use underscores, not hyphens)
+      FROM sale_events`; 
 
     const [saleEventResult] = await connection.execute(saleEventQuery);
 
@@ -1704,6 +1704,8 @@ router.get('/activity-logs/user/:userId', async (req, res) => {
     res.status(500).json({ error: 'Error fetching activity logs for user' });
   }
 });
+
+
 
 
 module.exports = router;
