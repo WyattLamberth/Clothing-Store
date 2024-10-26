@@ -3,18 +3,19 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
-const ProtectedRoute = ({ element: Component, requiredRole }) => {
+const ProtectedRoute = ({ element, requiredRole }) => {
   const { isAuthenticated, role } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/signin" />;
   }
 
-  if (requiredRole && role !== requiredRole) {
-    return <Navigate to="/" />; // Redirect to home if role doesn't match
+  const adminRoleId = 3; // Update this ID to match your admin role ID if different
+  if (requiredRole === "admin" && role !== adminRoleId) {
+    return <Navigate to="/" />;
   }
 
-  return Component;
+  return element; // Render `element` directly as it's already JSX
 };
 
 export default ProtectedRoute;
