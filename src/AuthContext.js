@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('http://localhost:5001/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -23,6 +23,8 @@ export const AuthProvider = ({ children }) => {
         setToken(data.token);
         setRole(data.role);
         setIsAuthenticated(true);
+
+        console.log("User role after login:", data.role); // Log the role for debugging
         return true;
       } else {
         return false;
