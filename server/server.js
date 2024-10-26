@@ -1,24 +1,27 @@
 // server.js
 const express = require('express');
 const app = express();
+const cors = require('cors');
 const port = process.env.PORT || 6001;
 const { passport, authMiddleware } = require('./middleware/passport-auth');
-
 const publicRoutes = require('./routes/publicRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-
 require('dotenv').config();
 
-// Middleware to parse JSON bodies and authenticate requests
+// Middleware for all routes
+app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
-app.use(authMiddleware.authenticate);
 
-// Use routes
+// Public routes (no auth required)
 app.use('/api', publicRoutes);
-app.use('/api', employeeRoutes);
-app.use('/api', adminRoutes);
+
+// Protected routes (auth required)
+app.use('/api', authMiddleware.authenticate, customerRoutes);
+app.use('/api', authMiddleware.authenticate, employeeRoutes);
+app.use('/api', authMiddleware.authenticate, adminRoutes);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

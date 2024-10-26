@@ -69,7 +69,7 @@ const authMiddleware = {
   authenticate: auth([1, 2, 3]),
   
   // Only allow employees and admins
-  staffOnly: auth([2, 3]),
+  staffOnly: auth([2,3]),
   
   // Only allow admins
   adminOnly: auth([3]),

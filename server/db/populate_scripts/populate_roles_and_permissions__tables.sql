@@ -1,4 +1,4 @@
-use online_store
+USE online_store;
 
 -- Insert role data
 INSERT INTO roles (role_id, role_name) VALUES
@@ -17,16 +17,20 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 (1, 1007),
 (1, 1008),
 (1, 1009),
-(1, 1010),
+(1, 1010);
+
 -- Employee Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
 (2, 2001),
 (2, 2002),
 (2, 2003),
 (2, 2004),
 (2, 2005),
 (2, 2006),
-(2, 2007),
+(2, 2007);
+
 -- Customer Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
 (3, 3001),
 (3, 3002),
 (3, 3003),
@@ -35,10 +39,8 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 (3, 3006),
 (3, 3007);
 
-
--- Populate permissions table with Admin, Employee, and Customer permissions
+-- Populate permissions table with Admin permissions
 INSERT INTO permissions (permission_id, permission_name) VALUES
--- Admin Permissions (start with 1)
 (1001, 'Manage Users'),
 (1002, 'Manage Products'),
 (1003, 'Manage Orders'),
@@ -48,16 +50,20 @@ INSERT INTO permissions (permission_id, permission_name) VALUES
 (1007, 'Review and Publish Content'),
 (1008, 'Manage Inventory'),
 (1009, 'View Customer Feedback and Reviews'),
-(1010, 'Create/Edit/Delete Page Content'),
--- Employee Permissions (start with 2)
+(1010, 'Create/Edit/Delete Page Content');
+
+-- Populate permissions table with Employee permissions
+INSERT INTO permissions (permission_id, permission_name) VALUES
 (2001, 'Add/Edit/Delete Products'),
 (2002, 'View and Manage all Orders'),
 (2003, 'Manage Inventory'),
 (2004, 'Set Product Prices and Promotions'),
 (2005, 'Respond to Customer Reviews'),
 (2006, 'Process Refunds and Returns'),
-(2007, 'View Customer Reviews and Feedback'),
--- Customer Permissions (start with 3)
+(2007, 'View Customer Reviews and Feedback');
+
+-- Populate permissions table with Customer permissions
+INSERT INTO permissions (permission_id, permission_name) VALUES
 (3001, 'Browse and Search Products'),
 (3002, 'Add Products to Cart'),
 (3003, 'Make Purchase and Place Orders'),
@@ -66,8 +72,11 @@ INSERT INTO permissions (permission_id, permission_name) VALUES
 (3006, 'Submit Product Reviews and Feedback'),
 (3007, 'Manage Shipping Addresses and Payment Information');
 
-SELECT * from roles;
+-- Select all roles
+SELECT * FROM roles;
 
-select * from role_permissions;
+-- Select all role permissions
+SELECT * FROM role_permissions;
 
-select * from permissions;
+-- Select all permissions
+SELECT * FROM permissions;
