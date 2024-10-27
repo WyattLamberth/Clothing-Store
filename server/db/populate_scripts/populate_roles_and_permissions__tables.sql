@@ -6,39 +6,6 @@ INSERT INTO roles (role_id, role_name) VALUES
 (2, 'Employee'),
 (3, 'Admin');
 
--- Admin Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3, 1001),
-(3, 1002),
-(3, 1003),
-(3, 1004),
-(3, 1005),
-(3, 1006),
-(3, 1007),
-(3, 1008),
-(3, 1009),
-(3, 1010);
-
--- Employee Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(2, 2001),
-(2, 2002),
-(2, 2003),
-(2, 2004),
-(2, 2005),
-(2, 2006),
-(2, 2007);
-
--- Customer Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(1, 3001),
-(1, 3002),
-(1, 3003),
-(1, 3004),
-(1, 3005),
-(1, 3006),
-(1, 3007);
-
 -- Populate permissions table with Admin permissions
 INSERT INTO permissions (permission_id, permission_name) VALUES
 (3001, 'Manage Users'),
@@ -72,6 +39,41 @@ INSERT INTO permissions (permission_id, permission_name) VALUES
 (1006, 'Submit Product Reviews and Feedback'),
 (1007, 'Manage Shipping Addresses and Payment Information');
 
+
+-- Admin Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(3, 3001),
+(3, 3002),
+(3, 3003),
+(3, 3004),
+(3, 3005),
+(3, 3006),
+(3, 3007),
+(3, 3008),
+(3, 3009),
+(3, 3010);
+
+-- Employee Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(2, 2001),
+(2, 2002),
+(2, 2003),
+(2, 2004),
+(2, 2005),
+(2, 2006),
+(2, 2007);
+
+-- Customer Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(1, 1001),
+(1, 1002),
+(1, 1003),
+(1, 1004),
+(1, 1005),
+(1, 1006),
+(1, 1007);
+
+
 -- Select all roles
 SELECT * FROM roles;
 
@@ -80,3 +82,8 @@ SELECT * FROM role_permissions;
 
 -- Select all permissions
 SELECT * FROM permissions;
+
+
+
+
+
