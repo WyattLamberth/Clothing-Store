@@ -1,5 +1,42 @@
 USE online_store;
 
+-- Insert Categories into Categories Table
+INSERT INTO categories (name, sex) VALUES
+('Pants', 'M'),
+('Pants', 'F'),
+('Pants', 'K'),
+('Shirts', 'M'),
+('Shirts', 'F'),
+('Shirts', 'K'),
+('Belts', 'M'),
+('Belts', 'F'),
+('Belts', 'K'),
+('Jackets', 'M'),
+('Jackets', 'F'),
+('Jackets', 'K'),
+('Shoes', 'M'),
+('Shoes', 'F'),
+('Shoes', 'K'),
+('Dresses', 'F'),
+('Dresses', 'K'),
+('Skirts', 'F'),
+('Skirts', 'K'),
+('Hats', 'M'),
+('Hats', 'F'),
+('Hats', 'K'),
+('T-shirts', 'M'),
+('T-shirts', 'F'),
+('T-shirts', 'K'),
+('Sweaters', 'M'),
+('Sweaters', 'F'),
+('Sweaters', 'K'),
+('Socks', 'M'),
+('Socks', 'F'),
+('Socks', 'K'),
+('Shorts', 'M'),
+('Shorts', 'F'),
+('Shorts', 'K');
+
 -- Insert products into the products table, aligning with the existing categories
 INSERT INTO products (product_name, category_id, description, price, stock_quantity, reorder_threshold, size, color, brand) VALUES
 ('Blue Jeans', 1, 'Comfortable blue jeans', 49.99, 100, 10, '32', 'Blue', 'DenimX'),
@@ -16,4 +53,6 @@ INSERT INTO products (product_name, category_id, description, price, stock_quant
 ('Cargo Shorts', 32, 'Durable cargo shorts', 44.99, 80, 10, '34', 'Khaki', 'OutdoorPro');
 
 -- Verifying the inserted data
+select * from categories;
+
 SELECT * FROM products;
