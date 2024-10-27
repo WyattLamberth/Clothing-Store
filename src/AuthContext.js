@@ -6,13 +6,13 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   // Initialize state from localStorage if available
   const [isAuthenticated, setIsAuthenticated] = useState(() => 
-    localStorage.getItem('token') ? true : false
+    !!localStorage.getItem('token')
   );
   const [role, setRole] = useState(() => 
-    localStorage.getItem('role')
+    localStorage.getItem('role') || ''
   );
   const [token, setToken] = useState(() => 
-    localStorage.getItem('token')
+    localStorage.getItem('token') || ''
   );
 
   const login = async (email, password) => {
@@ -27,18 +27,17 @@ export const AuthProvider = ({ children }) => {
       
       if (response.ok) {
         const data = await response.json();
-        // Update localStorage
+        // Set token and role in localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('role', data.role);
-        
-        // Update state
         setToken(data.token);
         setRole(data.role);
         setIsAuthenticated(true);
-
-        console.log("User role after login:", data.role); // Log the role for debugging
         return true;
       } else {
+        // Handle response that is not JSON
+        const text = await response.text();
+        console.error("Error response:", text);
         return false;
       }
     } catch (error) {
@@ -46,6 +45,7 @@ export const AuthProvider = ({ children }) => {
       return false;
     }
   };
+  
 
   const register = async (userData) => {
     try {
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
           email: userData.email,
           phone_number: userData.phone_number,
           password: userData.password,
-          role_id: 1,  //default role_id for new users is customer
+          role_id: 1,  // Default role_id for new users is customer
           line_1: userData.line_1,
           line_2: userData.line_2 || null,
           city: userData.city,
@@ -73,8 +73,9 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         return true;
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Registration failed');
+        const errorData = await response.json();
+        console.error('Registration error:', errorData.message || 'Unknown error');
+        throw new Error(errorData.message || 'Registration failed');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -102,7 +103,7 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && !isAuthenticated) {
       setIsAuthenticated(true);
       setToken(storedToken);
-      setRole(localStorage.getItem('role'));
+      setRole(localStorage.getItem('role') || '');
     }
   };
 

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/connection');
 const { authMiddleware } = require('../middleware/passport-auth');
+const bcrypt = require('bcrypt');
 
 // Apply adminOnly middleware to all routes
 router.use(authMiddleware.adminOnly);
@@ -30,6 +31,37 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
+// Create a new address
+router.post('/address', async (req, res) => {
+  const { line_1, line_2, city, state, zip } = req.body;
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)',
+      [line_1, line_2, city, state, zip]
+    );
+    res.status(201).json({ addressId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating address', error: error.message });
+  }
+});
+
+// Modified route to create a new user with address
+router.post('/users', async (req, res) => {
+  const { first_name, last_name, username, email, phone_number, role_id, password, addressId } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  try {
+    const [result] = await pool.execute(
+      'INSERT INTO users (first_name, last_name, username, email, phone_number, password_hash, role_id, address_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [first_name, last_name, username, email, phone_number, hashedPassword, role_id, addressId]
+    );
+    res.status(201).json({ message: 'User created successfully', userId: result.insertId });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating user', error: error.message });
+  }
+});
+
+
+// Update a user
 router.put('/users/:userId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
