@@ -8,16 +8,16 @@ INSERT INTO roles (role_id, role_name) VALUES
 
 -- Admin Role Permissions
 INSERT INTO role_permissions (role_id, permission_id) VALUES
-(1, 1001),
-(1, 1002),
-(1, 1003),
-(1, 1004),
-(1, 1005),
-(1, 1006),
-(1, 1007),
-(1, 1008),
-(1, 1009),
-(1, 1010);
+(3, 1001),
+(3, 1002),
+(3, 1003),
+(3, 1004),
+(3, 1005),
+(3, 1006),
+(3, 1007),
+(3, 1008),
+(3, 1009),
+(3, 1010);
 
 -- Employee Role Permissions
 INSERT INTO role_permissions (role_id, permission_id) VALUES
@@ -31,26 +31,26 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 
 -- Customer Role Permissions
 INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3, 3001),
-(3, 3002),
-(3, 3003),
-(3, 3004),
-(3, 3005),
-(3, 3006),
-(3, 3007);
+(1, 3001),
+(1, 3002),
+(1, 3003),
+(1, 3004),
+(1, 3005),
+(1, 3006),
+(1, 3007);
 
 -- Populate permissions table with Admin permissions
 INSERT INTO permissions (permission_id, permission_name) VALUES
-(1001, 'Manage Users'),
-(1002, 'Manage Products'),
-(1003, 'Manage Orders'),
-(1004, 'Configure System Settings'),
-(1005, 'Manage Promotions and Discounts'),
-(1006, 'Manage Payment and Shipping Settings'),
-(1007, 'Review and Publish Content'),
-(1008, 'Manage Inventory'),
-(1009, 'View Customer Feedback and Reviews'),
-(1010, 'Create/Edit/Delete Page Content');
+(3001, 'Manage Users'),
+(3002, 'Manage Products'),
+(3003, 'Manage Orders'),
+(3004, 'Configure System Settings'),
+(3005, 'Manage Promotions and Discounts'),
+(3006, 'Manage Payment and Shipping Settings'),
+(3007, 'Review and Publish Content'),
+(3008, 'Manage Inventory'),
+(3009, 'View Customer Feedback and Reviews'),
+(3010, 'Create/Edit/Delete Page Content');
 
 -- Populate permissions table with Employee permissions
 INSERT INTO permissions (permission_id, permission_name) VALUES
@@ -64,13 +64,13 @@ INSERT INTO permissions (permission_id, permission_name) VALUES
 
 -- Populate permissions table with Customer permissions
 INSERT INTO permissions (permission_id, permission_name) VALUES
-(3001, 'Browse and Search Products'),
-(3002, 'Add Products to Cart'),
-(3003, 'Make Purchase and Place Orders'),
-(3004, 'View and Manage Personal Account'),
-(3005, 'View Order History'),
-(3006, 'Submit Product Reviews and Feedback'),
-(3007, 'Manage Shipping Addresses and Payment Information');
+(1001, 'Browse and Search Products'),
+(1002, 'Add Products to Cart'),
+(1003, 'Make Purchase and Place Orders'),
+(1004, 'View and Manage Personal Account'),
+(1005, 'View Order History'),
+(1006, 'Submit Product Reviews and Feedback'),
+(1007, 'Manage Shipping Addresses and Payment Information');
 
 -- Select all roles
 SELECT * FROM roles;
