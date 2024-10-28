@@ -1,4 +1,3 @@
-// src/components/Header.js
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut } from 'lucide-react';
@@ -13,10 +12,27 @@ const Header = () => {
     navigate('/');
   };
 
+  const categories = ['New', 'Men', 'Women', 'Kids', 'Sale'];
+
   return (
     <header className="bg-white shadow-md">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold">StyleHub</Link>
+        {/* Left Section - Logo and Categories */}
+        <div className="flex items-center space-x-12">
+          <Link to="/" className="text-2xl font-bold">StyleHub</Link>
+          <nav className="flex space-x-10">
+            {categories.map((category, index) => (
+              <Link 
+                key={index} 
+                to={`/${category.toLowerCase()}`} 
+                className="text-gray-1200 hover:text-gray-1000 font-medium"
+              >
+                {category}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        {/* Right Section - Links */}
         <nav>
           <ul className="flex space-x-4 items-center">
             <li><Link to="/" className="text-gray-600 hover:text-gray-900">Home</Link></li>
@@ -24,7 +40,7 @@ const Header = () => {
             {isAuthenticated && (
               <>
                 <li><Link to="/employee" className="text-gray-600 hover:text-gray-900">Employee Dashboard</Link></li>
-                <li><Link to="/admin" className="text-gray-600 hover:text-gray-900">Admin Dashboard</Link></li> {/* Admin Dashboard Link */}
+                <li><Link to="/admin" className="text-gray-600 hover:text-gray-900">Admin Dashboard</Link></li>
                 <li>
                   <button 
                     onClick={handleLogout} 
