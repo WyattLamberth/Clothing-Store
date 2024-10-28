@@ -20,36 +20,8 @@ CREATE TABLE users (
   phone_number VARCHAR(20) UNIQUE,
   password_hash VARBINARY(64) NOT NULL,
   role_id INT NOT NULL DEFAULT 1,
-  address_id INT
-);
-
--- Customers table
-CREATE TABLE customers (
-  customer_id INT AUTO_INCREMENT PRIMARY KEY,
-  date_joined DATE NOT NULL,
-  preferred_payment_id INT
-);
-
--- Employees table
-CREATE TABLE employees (
-  employee_id INT AUTO_INCREMENT PRIMARY KEY,
-  job_title VARCHAR(100) NOT NULL
-);
-
--- Admins table
-CREATE TABLE admins (
-  admin_id INT AUTO_INCREMENT PRIMARY KEY
-);
-
--- Payment table
-CREATE TABLE payment (
-  preferred_payment_id INT AUTO_INCREMENT PRIMARY KEY,
-  cardholder_name VARCHAR(100) NOT NULL,
-  card_number CHAR(16) UNIQUE,
-  expiration_date CHAR(5) NOT NULL,
-  cvv CHAR(3) UNIQUE,
-  customer_id INT,
-  billing_address_id INT
+  address_id INT,
+  date_joined DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
 -- Address table
@@ -60,6 +32,17 @@ CREATE TABLE address (
   city VARCHAR(100) NOT NULL,
   state VARCHAR(100) NOT NULL,
   zip VARCHAR(10) NOT NULL
+);
+
+-- Payment table
+CREATE TABLE payment (
+  preferred_payment_id INT AUTO_INCREMENT PRIMARY KEY,
+  cardholder_name VARCHAR(100) NOT NULL,
+  card_number CHAR(16) UNIQUE,
+  expiration_date CHAR(5) NOT NULL,
+  cvv CHAR(3) UNIQUE,
+  user_id INT,
+  billing_address_id INT
 );
 
 -- Products table
@@ -88,7 +71,7 @@ CREATE TABLE categories (
 -- Orders table
 CREATE TABLE orders (
   order_id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_id INT,
+  user_id INT,
   shipping_address_id INT,
   order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
   order_date DATE NOT NULL,
@@ -122,7 +105,7 @@ CREATE TABLE transactions (
 -- Shopping Cart table
 CREATE TABLE shopping_cart (
   cart_id INT AUTO_INCREMENT PRIMARY KEY,
-  customer_id INT,
+  user_id INT,
   created_at DATETIME NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   running_total DECIMAL(10,2) NOT NULL
@@ -137,13 +120,12 @@ CREATE TABLE cart_items (
   CHECK (quantity > 0)
 );
 
-
 -- Returns table
 CREATE TABLE returns (
   return_id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT,
   approval BOOL,
-  customer_id INT,
+  user_id INT,
   return_date DATE NOT NULL,
   return_status VARCHAR(20) NOT NULL,
   CHECK (return_status IN ('Pending', 'Approved', 'Completed', 'Rejected'))
@@ -225,25 +207,15 @@ ALTER TABLE users
 ADD CONSTRAINT fk_user_address FOREIGN KEY (address_id) REFERENCES address(address_id),
 ADD CONSTRAINT fk_user_role FOREIGN KEY (role_id) REFERENCES roles(role_id);
 
-ALTER TABLE customers
-ADD CONSTRAINT fk_customer_user FOREIGN KEY (customer_id) REFERENCES users(user_id),
-ADD CONSTRAINT fk_customer_payment FOREIGN KEY (preferred_payment_id) REFERENCES payment(preferred_payment_id);
-
-ALTER TABLE employees
-ADD CONSTRAINT fk_employee_user FOREIGN KEY (employee_id) REFERENCES users(user_id);
-
-ALTER TABLE admins
-ADD CONSTRAINT fk_admin_user FOREIGN KEY (admin_id) REFERENCES users(user_id);
-
 ALTER TABLE payment
-ADD CONSTRAINT fk_payment_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+ADD CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(user_id),
 ADD CONSTRAINT fk_payment_address FOREIGN KEY (billing_address_id) REFERENCES address(address_id);
 
 ALTER TABLE products
 ADD CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES categories(category_id);
 
 ALTER TABLE orders
-ADD CONSTRAINT fk_order_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+ADD CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(user_id),
 ADD CONSTRAINT fk_order_address FOREIGN KEY (shipping_address_id) REFERENCES address(address_id);
 
 ALTER TABLE order_items
@@ -254,7 +226,7 @@ ALTER TABLE transactions
 ADD CONSTRAINT fk_transaction_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
 
 ALTER TABLE shopping_cart
-ADD CONSTRAINT fk_cart_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id);
+ADD CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(user_id);
 
 ALTER TABLE cart_items
 ADD CONSTRAINT fk_cart_item_cart FOREIGN KEY (cart_id) REFERENCES shopping_cart(cart_id),
@@ -262,7 +234,7 @@ ADD CONSTRAINT fk_cart_item_product FOREIGN KEY (product_id) REFERENCES products
 
 ALTER TABLE returns
 ADD CONSTRAINT fk_return_order FOREIGN KEY (order_id) REFERENCES orders(order_id),
-ADD CONSTRAINT fk_return_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id);
+ADD CONSTRAINT fk_return_user FOREIGN KEY (user_id) REFERENCES users(user_id);
 
 ALTER TABLE return_items
 ADD CONSTRAINT fk_return_item_return FOREIGN KEY (return_id) REFERENCES returns(return_id),
@@ -287,3 +259,9 @@ ADD CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(user_
 ALTER TABLE role_permissions
 ADD CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(role_id),
 ADD CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
+
+-- Create indexes for better performance
+CREATE INDEX idx_user_role ON users(role_id);
+CREATE INDEX idx_product_category ON products(category_id);
+CREATE INDEX idx_order_user ON orders(user_id);
+CREATE INDEX idx_order_status ON orders(order_status);
