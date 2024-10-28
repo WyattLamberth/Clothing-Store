@@ -74,16 +74,17 @@ CREATE TRIGGER notify_customer_order_delivered
 AFTER UPDATE ON orders
 FOR EACH ROW
 BEGIN
-  -- Notify customer when the order status is marked as 'delivered'
-  IF NEW.order_status = 'delivered' THEN
+  -- Notify customer when the order status is marked as 'Delivered'
+  IF NEW.order_status = 'Delivered' THEN
     INSERT INTO notifications (user_id, message, notification_date, read_status)
     VALUES (
-      NEW.customer_id,  -- Customer who placed the order
+      NEW.user_id,  -- Customer who placed the order, now referencing user_id
       CONCAT('Your order #', NEW.order_id, ' has been delivered!'),
       NOW(),
       FALSE
     );
   END IF;
 END$$
+
 
 DELIMITER ;

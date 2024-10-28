@@ -1,1 +1,0 @@
-INSERT IGNORE INTO discounts (discount_id, discount_type, discount_percentage, sale_event_id) VALUES
