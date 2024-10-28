@@ -1,71 +1,25 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, Building2, Shield, Briefcase } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Shield, Briefcase } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  // Define role IDs
   const ROLES = {
     CUSTOMER: 1,
     EMPLOYEE: 2,
     ADMIN: 3
   };
 
-  // Categories visible to all users
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   const categories = ['Men', 'Women', 'Kids', 'Sale'];
-
-  // Role-based navigation items
-  const getRoleBasedNavItems = () => {
-    const items = [];
-
-    if (role === ROLES.ADMIN) {
-      items.push({
-        to: '/admin',
-        label: 'Admin Dashboard',
-        icon: Shield,
-        className: 'text-red-600 hover:text-red-800'
-      });
-    }
-
-    if (role === ROLES.ADMIN || role === ROLES.EMPLOYEE) {
-      items.push({
-        to: '/employee',
-        label: 'Employee Dashboard',
-        icon: Briefcase,
-        className: 'text-blue-600 hover:text-blue-800'
-      });
-    }
-
-    return items;
-  };
-
-  // Get role badge configuration
-  const getRoleBadge = () => {
-    if (role === ROLES.ADMIN) {
-      return {
-        label: 'Admin',
-        className: 'bg-red-100 text-red-800 border-red-300'
-      };
-    }
-    if (role === ROLES.EMPLOYEE) {
-      return {
-        label: 'Employee',
-        className: 'bg-blue-100 text-blue-800 border-blue-300'
-      };
-    }
-    return null;
-  };
-
-  const roleBadge = getRoleBadge();
-  const roleBasedNavItems = getRoleBasedNavItems();
+  const userRole = Number(role);
 
   return (
     <header className="bg-white shadow-md">
@@ -99,54 +53,78 @@ const Header = () => {
                 Shop
               </Link>
             </li>
-
-            {/* Role-based Navigation Items */}
-            {isAuthenticated && roleBasedNavItems.map((item, index) => (
-              <li key={index}>
-                <Link 
-                  to={item.to} 
-                  className={`flex items-center space-x-1 ${item.className}`}
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-
-            {/* Authentication Section */}
-            {isAuthenticated ? (
+            
+            {isAuthenticated && (
               <>
-                {/* Role Badge */}
-                {roleBadge && (
+                {/* Employee Dashboard - Show for Employee and Admin */}
+                {(userRole === ROLES.EMPLOYEE || userRole === ROLES.ADMIN) && (
                   <li>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${roleBadge.className}`}>
-                      {roleBadge.label}
+                    <Link 
+                      to="/employee" 
+                      className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"
+                    >
+                      <Briefcase className="h-5 w-5" />
+                      <span>Employee Dashboard</span>
+                    </Link>
+                  </li>
+                )}
+                
+                {/* Admin Dashboard - Show only for Admin */}
+                {userRole === ROLES.ADMIN && (
+                  <li>
+                    <Link 
+                      to="/admin" 
+                      className="flex items-center space-x-1 text-red-600 hover:text-red-800"
+                    >
+                      <Shield className="h-5 w-5" />
+                      <span>Admin Dashboard</span>
+                    </Link>
+                  </li>
+                )}
+
+                {/* Role Badge */}
+                {(userRole === ROLES.ADMIN || userRole === ROLES.EMPLOYEE) && (
+                  <li>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
+                      userRole === ROLES.ADMIN 
+                        ? 'bg-red-100 text-red-800 border-red-300' 
+                        : 'bg-blue-100 text-blue-800 border-blue-300'
+                    }`}>
+                      {userRole === ROLES.ADMIN ? 'Admin' : 'Employee'}
                     </span>
                   </li>
                 )}
+
                 <li>
                   <button
                     onClick={handleLogout}
-                    className="text-gray-600 hover:text-gray-900 flex items-center space-x-1"
+                    className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
                   >
-                    <LogOut size={18} />
+                    <LogOut className="h-5 w-5" />
                     <span>Log Out</span>
                   </button>
                 </li>
               </>
-            ) : (
+            )}
+
+            {!isAuthenticated && (
               <li>
-                <Link to="/signin" className="text-gray-600 hover:text-gray-900 flex items-center space-x-1">
-                  <User size={18} />
+                <Link 
+                  to="/signin" 
+                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
+                >
+                  <User className="h-5 w-5" />
                   <span>Sign In</span>
                 </Link>
               </li>
             )}
 
-            {/* Cart - Always Visible */}
             <li>
-              <Link to="/cart" className="text-gray-600 hover:text-gray-900 flex items-center space-x-1">
-                <ShoppingBag size={18} />
+              <Link 
+                to="/cart" 
+                className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
+              >
+                <ShoppingBag className="h-5 w-5" />
                 <span>Cart</span>
               </Link>
             </li>

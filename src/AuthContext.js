@@ -77,14 +77,33 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/signin';
   };
 
-  // Optional: Function to check if user is authenticated
   const checkAuth = () => {
+    console.log('Checking auth - before:', {
+      isAuthenticated,
+      role,
+      token,
+      localStorage: {
+        token: localStorage.getItem('token'),
+        role: localStorage.getItem('role')
+      }
+    });
+  
     const storedToken = localStorage.getItem('token');
     if (storedToken && !isAuthenticated) {
       setIsAuthenticated(true);
       setToken(storedToken);
       setRole(localStorage.getItem('role') || '');
     }
+  
+    console.log('Checking auth - after:', {
+      isAuthenticated,
+      role,
+      token,
+      localStorage: {
+        token: localStorage.getItem('token'),
+        role: localStorage.getItem('role')
+      }
+    });
   };
 
   // Check auth status when component mounts

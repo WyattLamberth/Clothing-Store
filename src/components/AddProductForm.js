@@ -1,56 +1,56 @@
 import React, { useState } from 'react';
+import api from '../utils/api';
 
 const AddProductForm = ({ onProductAdded }) => {
-  const [productName, setProductName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [stockQuantity, setStockQuantity] = useState('');
-  const [size, setSize] = useState('');
-  const [color, setColor] = useState('');
-  const [brand, setBrand] = useState('');
-  const [demographic, setDemographic] = useState('');
-  const [clothingType, setClothingType] = useState('');
+  const [formData, setFormData] = useState({
+    product_name: '',
+    description: '',
+    price: '',
+    stock_quantity: '',
+    reorder_threshold: '',
+    size: '',
+    color: '',
+    brand: '',
+    category_id: ''
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prevState => ({
+      ...prevState,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newProduct = {
-      name: productName,
-      description,
-      price: parseFloat(price),
-      stock: parseInt(stockQuantity, 10),
-      size,
-      color,
-      brand,
-      categories: [demographic, clothingType]
-    };
-
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newProduct)
+      const response = await api.post('/products', {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock_quantity: parseInt(formData.stock_quantity),
+        reorder_threshold: parseInt(formData.reorder_threshold),
+        category_id: parseInt(formData.category_id)
       });
 
-      if (response.ok) {
-        const addedProduct = await response.json();
-        onProductAdded(addedProduct);
-        // Reset form fields
-        setProductName('');
-        setDescription('');
-        setPrice('');
-        setStockQuantity('');
-        setSize('');
-        setColor('');
-        setBrand('');
-        setDemographic('');
-        setClothingType('');
-      } else {
-        console.error('Failed to add product');
+      if (response.data) {
+        onProductAdded(response.data);
+        // Reset form
+        setFormData({
+          product_name: '',
+          description: '',
+          price: '',
+          stock_quantity: '',
+          reorder_threshold: '',
+          size: '',
+          color: '',
+          brand: '',
+          category_id: ''
+        });
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error adding product:', error);
+      alert('Failed to add product');
     }
   };
 
@@ -60,116 +60,124 @@ const AddProductForm = ({ onProductAdded }) => {
         <label className="block text-sm font-medium text-gray-700">Product Name</label>
         <input
           type="text"
-          value={productName}
-          onChange={(e) => setProductName(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
+          name="product_name"
+          value={formData.product_name}
+          onChange={handleInputChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
           required
         />
       </div>
+
       <div>
         <label className="block text-sm font-medium text-gray-700">Description</label>
         <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+          rows="3"
           required
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Price</label>
-        <input
-          type="number"
-          step="0.01"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Price</label>
+          <input
+            type="number"
+            step="0.01"
+            name="price"
+            value={formData.price}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Stock Quantity</label>
+          <input
+            type="number"
+            name="stock_quantity"
+            value={formData.stock_quantity}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Stock Quantity</label>
-        <input
-          type="number"
-          value={stockQuantity}
-          onChange={(e) => setStockQuantity(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Reorder Threshold</label>
+          <input
+            type="number"
+            name="reorder_threshold"
+            value={formData.reorder_threshold}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Size</label>
+          <input
+            type="text"
+            name="size"
+            value={formData.size}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Size</label>
-        <input
-          type="text"
-          value={size}
-          onChange={(e) => setSize(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Color</label>
+          <input
+            type="text"
+            name="color"
+            value={formData.color}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Brand</label>
+          <input
+            type="text"
+            name="brand"
+            value={formData.brand}
+            onChange={handleInputChange}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+            required
+          />
+        </div>
       </div>
+
       <div>
-        <label className="block text-sm font-medium text-gray-700">Color</label>
-        <input
-          type="text"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Brand</label>
-        <input
-          type="text"
-          value={brand}
-          onChange={(e) => setBrand(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Demographic</label>
+        <label className="block text-sm font-medium text-gray-700">Category ID</label>
         <select
-          value={demographic}
-          onChange={(e) => setDemographic(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
+          name="category_id"
+          value={formData.category_id}
+          onChange={handleInputChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
           required
         >
-          <option value="">Select Demographic</option>
-          <option value="Men">Men</option>
-          <option value="Women">Women</option>
-          <option value="Kids">Kids</option>
+          <option value="">Select Category</option>
+          <option value="1">Men's Clothing</option>
+          <option value="2">Women's Clothing</option>
+          <option value="3">Kid's Clothing</option>
         </select>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Clothing Type</label>
-        <select
-          value={clothingType}
-          onChange={(e) => setClothingType(e.target.value)}
-          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
-          required
-        >
-          <option value="">Select Clothing Type</option>
-          <option value="Shirts">Shirts</option>
-          <option value="T-Shirts">T-Shirts</option>
-          <option value="Blouses">Blouses</option>
-          <option value="Pants">Pants</option>
-          <option value="Jeans">Jeans</option>
-          <option value="Shorts">Shorts</option>
-          <option value="Dresses">Dresses</option>
-          <option value="Skirts">Skirts</option>
-          <option value="Suits">Suits</option>
-          <option value="Jackets">Jackets</option>
-          <option value="Coats">Coats</option>
-          <option value="Sweaters">Sweaters</option>
-          <option value="Hoodies">Hoodies</option>
-          <option value="Underwear">Underwear</option>
-          <option value="Socks">Socks</option>
-          <option value="Swimwear">Swimwear</option>
-        </select>
-      </div>
+
       <button
         type="submit"
-        className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200"
       >
         Add Product
       </button>
