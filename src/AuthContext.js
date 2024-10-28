@@ -1,45 +1,25 @@
 // src/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import api from './utils/api';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // Initialize state from localStorage if available
-  const [isAuthenticated, setIsAuthenticated] = useState(() => 
-    !!localStorage.getItem('token')
-  );
-  const [role, setRole] = useState(() => 
-    localStorage.getItem('role') || ''
-  );
-  const [token, setToken] = useState(() => 
-    localStorage.getItem('token') || ''
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
+  const [role, setRole] = useState(() => localStorage.getItem('role') || '');
+  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await api.post('/login', { email, password });
+      const data = response.data;
       
-      if (response.ok) {
-        const data = await response.json();
-        // Set token and role in localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', data.role);
-        setToken(data.token);
-        setRole(data.role);
-        setIsAuthenticated(true);
-        return true;
-      } else {
-        // Handle response that is not JSON
-        const text = await response.text();
-        console.error("Error response:", text);
-        return false;
-      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', data.role);
+      setToken(data.token);
+      setRole(data.role);
+      setIsAuthenticated(true);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;

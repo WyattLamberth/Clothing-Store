@@ -5,7 +5,7 @@ import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import SignInRegister from './components/SignInRegister';
 import CartPage from './pages/CartPage';
-import EmployeePage from './pages/EmployeePage';
+import EmployeeDashboard from './pages/EmployeeDashboard';
 import AdminPage from './pages/AdminPage';
 import UserManagement from './pages/UserManagement';
 import ProductManagement from './pages/ProductManagement';
@@ -27,7 +27,7 @@ function App() {
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/employee" element={
-                <ProtectedRoute element={<EmployeePage />} requiredRole="employee" />
+                <ProtectedRoute element={<EmployeeDashboard />} requiredRole="employee" />
               } />
               <Route path="/admin" element={
                 <ProtectedRoute element={<AdminPage />} requiredRole="admin" />
