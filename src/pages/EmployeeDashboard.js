@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Package2, ShoppingCart, Tag, RotateCcw } from 'lucide-react';
 // In src/pages/EmployeeDashboard.js
 import InventoryManagement from '../components/InventoryManagement';  // Updated path
+import OrdersManagement from '../components/OrdersManagement';
 
 const EmployeeDashboard = () => {
   const [activeTab, setActiveTab] = useState("inventory");
@@ -39,7 +40,7 @@ const EmployeeDashboard = () => {
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === "inventory" && <InventoryManagement />}
-        {activeTab === "orders" && <div>Orders content goes here</div>}
+        {activeTab === "orders" && <OrdersManagement />}
         {activeTab === "discounts" && <div>Discounts content goes here</div>}
         {activeTab === "returns" && <div>Returns content goes here</div>}
       </div>
