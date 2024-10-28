@@ -21,7 +21,7 @@ CREATE TABLE users (
   password_hash VARBINARY(64) NOT NULL,
   role_id INT NOT NULL DEFAULT 1,
   address_id INT,
-  date_joined DATE NOT NULL DEFAULT CURRENT_DATE
+  date_joined DATE NOT NULL DEFAULT (CURRENT_DATE)
 );
 
 -- Address table
