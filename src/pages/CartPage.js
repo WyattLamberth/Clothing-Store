@@ -1,12 +1,20 @@
-// src/pages/CartPage.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ShoppingCart from '../components/ShoppingCart';
 
 const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
 
-  const handleRemoveItem = (itemId) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId));
+  useEffect(() => {
+    const savedCart = localStorage.getItem('cart');
+    if (savedCart) {
+      setCartItems(JSON.parse(savedCart));
+    }
+  }, []);
+
+  const handleRemoveItem = (productId) => {
+    const updatedCart = cartItems.filter(item => item.product_id !== productId);
+    setCartItems(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
   };
 
   return (

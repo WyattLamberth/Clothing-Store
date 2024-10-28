@@ -1,4 +1,3 @@
-// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
@@ -28,22 +27,22 @@ function App() {
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/employee" element={
-                <ProtectedRoute element={<EmployeePage />} />
+                <ProtectedRoute element={<EmployeePage />} requiredRole="employee" />
               } />
-                <Route path="/admin" element={ // Make sure AdminPage is used here
-                <ProtectedRoute element={<AdminPage />} />
+              <Route path="/admin" element={
+                <ProtectedRoute element={<AdminPage />} requiredRole="admin" />
               } />
-                            <Route path="/admin/users" element={
-                <ProtectedRoute element={<UserManagement />} />
+              <Route path="/admin/users" element={
+                <ProtectedRoute element={<UserManagement />} requiredRole="admin" />
               } />
               <Route path="/admin/products" element={
-                <ProtectedRoute element={<ProductManagement />} />
+                <ProtectedRoute element={<ProductManagement />} requiredRole="admin" />
               } />
               <Route path="/admin/reports" element={
-                <ProtectedRoute element={<SalesReports />} />
+                <ProtectedRoute element={<SalesReports />} requiredRole="admin" />
               } />
               <Route path="/admin/system-maintenance" element={
-                <ProtectedRoute element={<SystemMaintenance />} />
+                <ProtectedRoute element={<SystemMaintenance />} requiredRole="admin" />
               } />
             </Routes>
           </main>

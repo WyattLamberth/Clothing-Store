@@ -1,10 +1,11 @@
-// src/components/ShoppingCart.js
 import React from 'react';
 import { Trash2 } from 'lucide-react';
-import ProductCard from './ProductCard';
 
 const ShoppingCart = ({ cartItems = [], onRemoveItem }) => {
-  const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = cartItems.reduce((sum, item) => {
+    const price = !isNaN(item.price) ? parseFloat(item.price) : 0;
+    return sum + price * item.quantity;
+  }, 0);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -14,17 +15,27 @@ const ShoppingCart = ({ cartItems = [], onRemoveItem }) => {
       ) : (
         <>
           <div className="space-y-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="flex items-center justify-between border-b pb-4">
-                <ProductCard product={item} />
-                <button 
-                  className="text-red-500 hover:text-red-700"
-                  onClick={() => onRemoveItem(item.id)}
-                >
-                  <Trash2 size={20} />
-                </button>
-              </div>
-            ))}
+            {cartItems.map((item) => {
+              const price = !isNaN(item.price) ? parseFloat(item.price).toFixed(2) : 'N/A';
+              return (
+                <div key={item.product_id} className="flex items-center justify-between border-b pb-4">
+                  <div className="flex items-center space-x-4">
+                    <img src={item.image} alt={item.product_name} className="w-16 h-16 object-cover" />
+                    <div>
+                      <h3 className="text-lg font-semibold">{item.product_name}</h3>
+                      <p className="text-gray-600">Price: ${price}</p>
+                      <p className="text-gray-600">Quantity: {item.quantity}</p>
+                    </div>
+                  </div>
+                  <button
+                    className="text-red-500 hover:text-red-700"
+                    onClick={() => onRemoveItem(item.product_id)}
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
           <div className="mt-6">
             <p className="text-xl font-bold">Total: ${total.toFixed(2)}</p>
