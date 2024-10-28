@@ -12,7 +12,7 @@ const Header = () => {
     navigate('/');
   };
 
-  const categories = ['New', 'Men', 'Women', 'Kids', 'Sale'];
+  const categories = ['Men', 'Women', 'Kids', 'Sale'];
 
   return (
     <header className="bg-white shadow-md">
