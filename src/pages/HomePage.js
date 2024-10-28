@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
 import NotificationBar from '../components/NotificationBar';
 import SearchBar from '../components/SearchBar';
-import backgroundImage from '../images/pic1.jpg';
+import backgroundImage from '../images/shoe.gif';
 import TrendingSection from '../components/TrendingSection';
 import t_shirt from  '../images/basic_t_shirt.jpg';
 import slim_fit_jeans from '../images/slim_fit_jeans.jpg';
