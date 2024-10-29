@@ -15,9 +15,9 @@ router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const { 
-      product_name, category_id, description, price, 
-      stock_quantity, reorder_threshold, size, color, brand 
+    const {
+      product_name, category_id, description, price,
+      stock_quantity, reorder_threshold, size, color, brand
     } = req.body;
 
     const query = `
@@ -46,9 +46,9 @@ router.put('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const { 
+    const {
       product_name, category_id, description, price,
-      stock_quantity, reorder_threshold, size, color, brand 
+      stock_quantity, reorder_threshold, size, color, brand
     } = req.body;
 
     const query = `
@@ -119,16 +119,16 @@ router.get('/orders/:orderId', async (req, res) => {
 });
 
 router.put('/orders/:orderId', async (req, res) => {
-  const connection = await pool.getConnection(); 
+  const connection = await pool.getConnection();
   try {
-    await connection.beginTransaction(); 
+    await connection.beginTransaction();
     const [result] = await connection.execute(
       'UPDATE orders SET order_status = ? WHERE order_id = ?',
       [req.body.order_status, req.params.orderId]
     );
-    await connection.commit(); 
+    await connection.commit();
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Order not found' });
-    res.status(200).json({ message: 'Order status updated successfully' }); 
+    res.status(200).json({ message: 'Order status updated successfully' });
   } catch (error) {
     await connection.rollback();
     res.status(500).json({ error: 'Failed to update order status' });
@@ -139,16 +139,16 @@ router.put('/orders/:orderId', async (req, res) => {
 router.delete('/orders/:orderId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-      await connection.beginTransaction(); 
-      const [result] = await connection.execute('DELETE FROM orders WHERE order_id = ?', [req.params.orderId]);
-      await connection.commit(); 
-      res.status(200).json({ message: 'Order deleted successfully' });
+    await connection.beginTransaction();
+    const [result] = await connection.execute('DELETE FROM orders WHERE order_id = ?', [req.params.orderId]);
+    await connection.commit();
+    res.status(200).json({ message: 'Order deleted successfully' });
   } catch (error) {
-      await connection.rollback();
-      console.error('Error deleting Order:', error);
-      res.status(500).json({ error: 'Failed to delete Order' });
+    await connection.rollback();
+    console.error('Error deleting Order:', error);
+    res.status(500).json({ error: 'Failed to delete Order' });
   } finally {
-      connection.release(); 
+    connection.release();
   }
 });
 
@@ -204,7 +204,7 @@ router.get('/customers/:customerId', async (req, res) => {
 });
 
 // Category Management (Permission: 2004)
-router.post('/categories', async(req, res) => {
+router.post('/categories', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -213,9 +213,9 @@ router.post('/categories', async(req, res) => {
       [req.body.name, req.body.sex]
     );
     await connection.commit();
-    res.status(201).json({ 
-      message: 'Category created successfully', 
-      category_id: result.insertId 
+    res.status(201).json({
+      message: 'Category created successfully',
+      category_id: result.insertId
     });
   } catch (error) {
     await connection.rollback();
@@ -287,15 +287,15 @@ router.post('/transactions', async (req, res) => {
     const { order_id, transaction_date, total_amount, payment_status } = req.body;
     const query = 'INSERT INTO transactions (order_id, transaction_date, total_amount, payment_status) VALUES (?, ?, ?, ?)';
     const [result] = await connection.execute(query, [order_id, transaction_date, total_amount, payment_status]);
-    await connection.commit(); 
+    await connection.commit();
     const transaction_id = result.insertId;
     res.status(201).json({ message: 'Transaction created successfully', transaction_id: transaction_id });
   } catch (error) {
     await connection.rollback();
     console.error('Error creating transaction:', error);
-    res.status(500).json({ error: 'Failed to create transaction' }); 
+    res.status(500).json({ error: 'Failed to create transaction' });
   } finally {
-    connection.release(); 
+    connection.release();
   }
 });
 
@@ -312,7 +312,7 @@ router.get('/transactions/:transaction_id', async (req, res) => {
     console.error('Error fetching transactions by order ID:', error);
     res.status(500).json({ error: 'Failed to fetch transactions' });
   } finally {
-    connection.release(); 
+    connection.release();
   }
 });
 
@@ -331,7 +331,7 @@ router.put('/transactions/:transaction_id', async (req, res) => {
     console.error('Error updating transaction:', error);
     res.status(400).json({ error: 'Failed to update transaction' });
   } finally {
-    connection.release(); 
+    connection.release();
   }
 });
 
@@ -384,9 +384,9 @@ router.post('/discount', async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { 
-      discount_type, 
-      discount_percentage, 
+    const {
+      discount_type,
+      discount_percentage,
       sale_event_id // Added sale_event_id to the destructuring
     } = req.body;
 
@@ -528,7 +528,7 @@ router.post('/sale-event', async (req, res) => {
   try {
     await connection.beginTransaction(); // Begin the transaction
 
-    const { 
+    const {
       event_name, start_date, end_date, product_id, category_id // Added product_id and category_id
     } = req.body;
 
@@ -591,7 +591,7 @@ router.get('/sale-events', async (req, res) => {
     // Query to get all sale events
     const saleEventQuery = `
       SELECT *
-      FROM sale_events`; 
+      FROM sale_events`;
 
     const [saleEventResult] = await connection.execute(saleEventQuery);
 
@@ -659,6 +659,64 @@ router.delete('/sale-event/:sale_event_id', async (req, res) => {
     res.status(500).json({ error: 'Error deleting sale event' });
   } finally {
     connection.release(); // release the connection back to the pool
+  }
+});
+
+// Order Item Management
+// Post
+router.post('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { order_id, product_id, quantity, unit_price, total_item_price } = req.body;
+    const OrderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price) VALUES (?, ?, ?, ?, ?)';
+    const [OrderItemsResult] = await connection.execute(OrderItemsQuery, [order_id, product_id, quantity, unit_price, total_item_price]);
+    const order_item_id = OrderItemsResult.insertId;
+    await connection.commit();
+
+    res.status(201).json({ message: 'Order item created successfully', order_item_id: order_item_id });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(400).json({ error: 'Error creating order item' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get all order items
+router.get('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItems] = await connection.execute(`
+      SELECT oi.*, p.category_id
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+    `);
+    res.status(200).json(orderItems);
+  } catch (error) {
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ error: 'Failed to fetch order items' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get order item via order item ID
+router.get('/order_items/:order_item_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItem] = await connection.execute(
+      'SELECT * FROM order_items WHERE order_item_id = ?',
+      [req.params.order_item_id]
+    );
+    if (orderItem.length === 0) return res.status(404).json({ error: 'Order item not found' });
+    res.status(200).json(orderItem[0]);
+  } catch (error) {
+    console.error('Error fetching order item:', error);
+    res.status(500).json({ error: 'Failed to fetch order item' });
+  } finally {
+    connection.release();
   }
 });
 

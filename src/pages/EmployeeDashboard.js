@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
-import { Package2, ShoppingCart, Tag, RotateCcw } from 'lucide-react';
-// In src/pages/EmployeeDashboard.js
-import InventoryManagement from '../components/InventoryManagement';  // Updated path
+import { Package2, ShoppingCart, Tag, BarChart } from 'lucide-react';
+import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
+import SalesReports from '../components/SalesReports';
 
 const EmployeeDashboard = () => {
   const [activeTab, setActiveTab] = useState("inventory");
-
   const sections = [
     { id: "inventory", label: "Inventory", icon: Package2 },
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "discounts", label: "Discounts", icon: Tag },
+    { id: "reports", label: "Reports", icon: BarChart },
   ];
-
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -36,12 +36,12 @@ const EmployeeDashboard = () => {
           </div>
         </div>
       </div>
-
       {/* Tab Content */}
       <div className="mt-6">
         {activeTab === "inventory" && <InventoryManagement />}
         {activeTab === "orders" && <OrdersManagement />}
         {activeTab === "discounts" && <DiscountsManagement />}
+        {activeTab === "reports" && <SalesReports />}
       </div>
     </div>
   );
