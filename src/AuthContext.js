@@ -8,24 +8,29 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
   const [role, setRole] = useState(() => localStorage.getItem('role') || '');
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
+  const [user_id, setUserId] = useState(() => localStorage.getItem('user_id') || '');
 
   const login = async (email, password) => {
     try {
       const response = await api.post('/login', { email, password });
       const data = response.data;
       
+      // Store token, role, and user_id in localStorage and state
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
+      localStorage.setItem('user_id', data.user_id);
+      
       setToken(data.token);
       setRole(data.role);
+      setUserId(data.user_id);
       setIsAuthenticated(true);
+      
       return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
     }
   };
-  
 
   const register = async (userData) => {
     try {
@@ -67,10 +72,12 @@ export const AuthProvider = ({ children }) => {
     // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role');
+    localStorage.removeItem('user_id');
     
     // Clear state
     setToken(null);
     setRole(null);
+    setUserId(null);
     setIsAuthenticated(false);
     
     // Optional: Redirect to login page
@@ -82,9 +89,11 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       role,
       token,
+      user_id,
       localStorage: {
         token: localStorage.getItem('token'),
-        role: localStorage.getItem('role')
+        role: localStorage.getItem('role'),
+        user_id: localStorage.getItem('user_id')
       }
     });
   
@@ -93,15 +102,18 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setToken(storedToken);
       setRole(localStorage.getItem('role') || '');
+      setUserId(localStorage.getItem('user_id') || '');
     }
   
     console.log('Checking auth - after:', {
       isAuthenticated,
       role,
       token,
+      user_id,
       localStorage: {
         token: localStorage.getItem('token'),
-        role: localStorage.getItem('role')
+        role: localStorage.getItem('role'),
+        user_id: localStorage.getItem('user_id')
       }
     });
   };
@@ -118,7 +130,8 @@ export const AuthProvider = ({ children }) => {
       register, 
       logout, 
       role, 
-      token 
+      token,
+      user_id // Provide user_id here
     }}>
       {children}
     </AuthContext.Provider>
