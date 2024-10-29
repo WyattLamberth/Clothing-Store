@@ -163,8 +163,8 @@ END //
 DELIMITER ;
 
 -- Example usage:
--- CALL PopulateSalesAndDiscounts(
---     50,  -- Create 50 sale events
---     CURRENT_DATE,  -- Start from today
---     DATE_ADD(CURRENT_DATE, INTERVAL 90 DAY)  -- Plan sales for next 90 days
--- );
+ CALL PopulateSalesAndDiscounts(
+     50,  -- Create 50 sale events
+     CURRENT_DATE,  -- Start from today
+     DATE_ADD(CURRENT_DATE, INTERVAL 90 DAY)  -- Plan sales for next 90 days
+ );
