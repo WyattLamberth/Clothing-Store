@@ -30,10 +30,6 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 
-function removePathPrefix(filePath) {
-  return filePath.split('\\').pop();
-}
-
 // Product Management (Permission: 2001)
 router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
@@ -43,7 +39,11 @@ router.post('/products', upload.single('image'), async (req, res) => {
       product_name, category_id, description, price,
       stock_quantity, reorder_threshold, size, color, brand
     } = req.body;
-    const image_path = removePathPrefix(req.file.path);
+
+    let image_path = req.file.path;
+    image_path = image_path.split('\\').pop();
+    image_path = image_path.split('/').pop();
+
     const query = `
       INSERT INTO products (
         product_name, category_id, description, price, 
