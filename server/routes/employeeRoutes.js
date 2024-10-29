@@ -1,17 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/connection');
+const multer = require('multer');
+const path = require('path');
+router.use(express.static(path.join(__dirname, './images')));
+router.use(express.json());
+router.use(express.urlencoded({extended:false}));
+
+// Set up storage engine with destination
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      cb(null, 'src/images'); // Ensure this directory exists
+  },
+  filename: (req, file, cb) => {
+      // Set the filename to be the original name
+      cb(null, file.originalname);
+  }
+});
+const upload = multer({ storage: storage });
+
 const { authMiddleware } = require('../middleware/passport-auth');
 
 // Apply staffOnly middleware to all routes
 router.use(authMiddleware.staffOnly);
 
+
 // =============================================
 // EMPLOYEE ROUTES (Role ID: 2)
 // =============================================
 
+
+function removePathPrefix(filePath) {
+  return filePath.split('\\').pop();
+}
+
 // Product Management (Permission: 2001)
-router.post('/products', async (req, res) => {
+router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -19,18 +43,17 @@ router.post('/products', async (req, res) => {
       product_name, category_id, description, price,
       stock_quantity, reorder_threshold, size, color, brand
     } = req.body;
-
+    const image_path = removePathPrefix(req.file.path);
     const query = `
       INSERT INTO products (
         product_name, category_id, description, price, 
-        stock_quantity, reorder_threshold, size, color, brand
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        stock_quantity, reorder_threshold, size, color, brand, image_path
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await connection.execute(query, [
       product_name, category_id, description, price,
-      stock_quantity, reorder_threshold, size, color, brand
-    ]);
+      stock_quantity, reorder_threshold, size, color, brand, image_path]);
 
     await connection.commit();
     res.status(201).json({ message: 'Product created successfully', productId: result.insertId });
