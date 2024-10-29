@@ -13,7 +13,9 @@ import SalesReports from './pages/SalesReports';
 import SystemMaintenance from './pages/SystemMaintenance';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
-
+import MenPage from './pages/MenPage';
+import WomenPage from './pages/WomenPage';
+import KidPage from './pages/KidPage';
 function App() {
   return (
     <AuthProvider>
@@ -24,6 +26,9 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/shop" element={<ShopPage />} />
+              <Route path="/men" element={<MenPage />} />
+              <Route path="/women" element={<WomenPage />} />
+              <Route path="/kids" element={<KidPage />} />
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/employee" element={

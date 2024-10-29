@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, Shield, Briefcase } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
@@ -18,7 +18,11 @@ const Header = () => {
     navigate('/');
   };
 
-  const categories = ['Men', 'Women', 'Kids', 'Sale'];
+  const categories = [
+    { name: 'Men', path: '/men' },
+    { name: 'Women', path: '/women' },
+    { name: 'Kids', path: '/kids' }
+  ];
   const userRole = Number(role);
 
   return (
@@ -28,14 +32,17 @@ const Header = () => {
         <div className="flex items-center space-x-12">
           <Link to="/" className="text-2xl font-bold">StyleHub</Link>
           <nav className="flex space-x-10">
-            {categories.map((category, index) => (
-              <Link
+          {categories.map((category, index) => (
+              <NavLink
                 key={index}
-                to={`/${category.toLowerCase()}`}
-                className="text-gray-700 hover:text-gray-900 font-medium"
+                to={category.path} // Use the path specified in the category object
+                className={({ isActive }) => 
+                  `text-gray-700 hover:text-gray-900 font-medium ${isActive ? 'font-bold' : ''}`
+                }
+                aria-label={`Go to ${category.name} page`}
               >
-                {category}
-              </Link>
+                {category.name}
+              </NavLink>
             ))}
           </nav>
         </div>
