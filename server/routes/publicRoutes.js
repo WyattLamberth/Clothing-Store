@@ -131,4 +131,28 @@ router.get('/categories/:categoryId', async (req, res) => {
   }
 });
 
+router.get('/categories/sex/:sex/products', async (req, res) => {
+  try {
+    const { sex } = req.params;
+
+    const [rows] = await pool.execute(
+      `SELECT p.product_id, p.product_name, p.description, p.price, p.stock_quantity, 
+              p.size, p.color, p.brand, p.image_path 
+       FROM products p
+       JOIN categories c ON p.category_id = c.category_id
+       WHERE c.sex = ?`,
+      [sex]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No products found for the specified sex.' });
+    }
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching products by sex:', error);
+    res.status(500).json({ message: 'An error occurred while fetching products.' });
+  }
+});
+
 module.exports = router;
