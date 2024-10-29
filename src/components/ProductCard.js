@@ -5,7 +5,18 @@ const ProductCard = ({ product, onAddToCart }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <img src={product.image} alt={product.product_name} className="w-full h-64 object-cover" />
+      {product.image_path ? ( // Conditional rendering based on image_path
+        <img
+          src={require(`../images/${product.image_path}`)}
+          alt={product.product_name}
+          onError={(e) => { e.target.src = require('../images/summer_dress.jpg'); }} // Fallback image
+          className="w-full h-64 object-cover"
+        />
+      ) : (
+        <div className="w-full h-64 bg-gray-200 flex items-center justify-center"> {/* Placeholder */}
+          <span className="text-gray-600">No Image Available</span>
+        </div>
+      )}
       <div className="p-4">
         <h3 className="text-lg font-semibold">{product.product_name}</h3>
         <p className="text-gray-600">${price}</p>
