@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 const SignInRegister = () => {
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
@@ -17,7 +18,8 @@ const SignInRegister = () => {
     line_2: '',
     city: '',
     state: '',
-    zip: ''
+    zip: '',
+    role_id: 1
   });
 
   const { login, register } = useAuth();
@@ -38,7 +40,6 @@ const SignInRegister = () => {
       if (isRegistering) {
         const success = await register(formData);
         if (success) {
-          // After successful registration, log them in
           const loginSuccess = await login(formData.email, formData.password);
           if (loginSuccess) {
             navigate('/');
@@ -61,6 +62,13 @@ const SignInRegister = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <button 
+        onClick={() => setShowDebug(!showDebug)}
+        className="text-sm text-gray-500 hover:text-gray-700 mb-4"
+      >
+        Toggle Debug Mode
+      </button>
+
       <h1 className="text-2xl font-bold mb-6">
         {isRegistering ? 'Create Account' : 'Sign In'}
       </h1>
@@ -74,6 +82,24 @@ const SignInRegister = () => {
       <form onSubmit={handleSubmit} className="max-w-md mx-auto">
         {isRegistering && (
           <>
+            {showDebug && (
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Role Selection (Debug)
+                </label>
+                <select
+                  name="role_id"
+                  value={formData.role_id}
+                  onChange={handleInputChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value={1}>Customer</option>
+                  <option value={2}>Employee</option>
+                  <option value={3}>Admin</option>
+                </select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">
