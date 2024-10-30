@@ -16,6 +16,8 @@ import { AuthProvider } from './AuthContext';
 import MenPage from './pages/MenPage';
 import WomenPage from './pages/WomenPage';
 import KidPage from './pages/KidPage';
+import SearchPage from './pages/SearchPage';
+
 function App() {
   return (
     <AuthProvider>
@@ -29,6 +31,7 @@ function App() {
               <Route path="/men" element={<MenPage />} />
               <Route path="/women" element={<WomenPage />} />
               <Route path="/kids" element={<KidPage />} />
+              <Route path="/products/search/search" element={<SearchPage />} />
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/employee" element={
