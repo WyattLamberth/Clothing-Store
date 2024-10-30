@@ -1,46 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
 import NotificationBar from '../components/NotificationBar';
 import SearchBar from '../components/SearchBar';
 import backgroundImage from '../images/shoe.gif';
 import TrendingSection from '../components/TrendingSection';
-import t_shirt from  '../images/basic_t_shirt.jpg';
-import slim_fit_jeans from '../images/slim_fit_jeans.jpg';
-import summer_dress from '../images/summer_dress.jpg';
-import casual_sneaker from '../images/casual_sneaker.jpg';
+import axios from 'axios';
+import ProductCard from '../components/ProductCard';
 
-// Mock product data (replace with actual API call in a real application)
-const productsData = [
-  { id: 1, name: 'Classic T-Shirt', price: 19.99, image: t_shirt },
-  { id: 2, name: 'Slim Fit Jeans', price: 49.99, image: slim_fit_jeans },
-  { id: 3, name: 'Summer Dress', price: 39.99, image: summer_dress },
-  { id: 4, name: 'Casual Sneakers', price: 59.99, image: casual_sneaker },
-];
-
-const ProductCard = ({ product }) => (
-  <div className="bg-white rounded-lg shadow-md overflow-hidden">
-    <img src={product.image} alt={product.name} className="w-full h-64 object-cover" />
-    <div className="p-4">
-      <h3 className="text-lg font-semibold">{product.name}</h3>
-      <p className="text-gray-600">${product.price.toFixed(2)}</p>
-      <button className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-        Add to Cart
-      </button>
-    </div>
-  </div>
-);
-
-const FeaturedProducts = () => (
-  <section className="container mx-auto px-4 py-8">
-    <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {productsData.map(product => (
-        <ProductCard key={product.id} product={product} />
-      ))}
-    </div>
-  </section>
-);
 
 const HeroSection = () => {
   const sectionStyle = {
@@ -77,9 +44,63 @@ const FeatureHighlight = ({ icon: Icon, title, description }) => (
 );
 
 const HomePage = () => {
-  const handleSearch = (query) => {
-    console.log('Searching for:', query);
-    // Add code to perform search, like making an API request
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]); // Initialize with mock data
+  const [cartItems, setCartItems] = useState(() => {
+    const savedCart = localStorage.getItem('cart');
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+
+  const handleSearch = async (query) => {
+    setLoading(false);
+    try {
+      const response = await axios.get('/api/products/search', {
+        params: { query },
+      });
+      setSearchResults(response.data); // Update state with search results
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setSearchResults([]); // Clear search results on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const productIds = [1, 2, 3, 4]; // Replace these with the actual IDs of the first four products
+        const requests = productIds.map(id => axios.get(`/api/products/${id}`));
+        const responses = await Promise.all(requests);
+        setProducts(responses.map(response => response.data));
+      } catch (error) {
+        console.error('Error fetching first four products:', error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  const addItemToCart = (product) => {
+    setCartItems((prevCart) => {
+      const existingItem = prevCart.find(item => item.product_id === product.product_id);
+      let updatedCart;
+
+      if (existingItem) {
+        // Increase quantity if the item is already in the cart
+        updatedCart = prevCart.map(item =>
+          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      } else {
+        // Add new item to cart
+        updatedCart = [...prevCart, { ...product, quantity: 1 }];
+      }
+
+      // Save updated cart to localStorage
+      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      return updatedCart;
+    });
   };
 
   return (
@@ -94,7 +115,19 @@ const HomePage = () => {
       </div>
       <HeroSection />
       <TrendingSection />
-      <FeaturedProducts />
+      <div className="container mx-auto px-4">
+        <h1 className="text-3xl font-bold mb-6">Recommended For You</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {products.map(product => (
+            <ProductCard
+              key={product.product_id}
+              product={product}
+              onAddToCart={addItemToCart}
+              isInCart={!!cartItems.find(item => item.product_id === product.product_id)} // Pass if product is in cart
+            />
+          ))}
+        </div>
+      </div>
       <div className="bg-gray-50 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose StyleHub?</h2>
@@ -120,5 +153,4 @@ const HomePage = () => {
     </div>
   );
 };
-
 export default HomePage;

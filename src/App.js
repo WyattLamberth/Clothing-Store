@@ -13,8 +13,16 @@ import SalesReports from './pages/SalesReports';
 import SystemMaintenance from './pages/SystemMaintenance';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
+<<<<<<< HEAD
 import Checkout from './components/Checkout';
 import ProfilePage from './pages/ProfilePage';
+=======
+import MenPage from './pages/MenPage';
+import WomenPage from './pages/WomenPage';
+import KidPage from './pages/KidPage';
+import SearchPage from './pages/SearchPage';
+
+>>>>>>> bedb62e75e289ac45e03b3bd4627d24578c490ac
 function App() {
   return (
     <AuthProvider>
@@ -25,6 +33,10 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/shop" element={<ShopPage />} />
+              <Route path="/men" element={<MenPage />} />
+              <Route path="/women" element={<WomenPage />} />
+              <Route path="/kids" element={<KidPage />} />
+              <Route path="/products/search/search" element={<SearchPage />} />
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<Checkout />} />

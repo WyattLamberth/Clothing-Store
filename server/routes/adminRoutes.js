@@ -4,6 +4,25 @@ const pool = require('../db/connection');
 const { authMiddleware } = require('../middleware/passport-auth');
 const bcrypt = require('bcrypt');
 
+const multer = require('multer');
+const path = require('path');
+router.use(express.static(path.join(__dirname, './images')));
+router.use(express.json());
+router.use(express.urlencoded({extended:false}));
+
+// Set up storage engine with destination
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      cb(null, 'src/images'); // Ensure this directory exists
+  },
+  filename: (req, file, cb) => {
+      // Set the filename to be the original name
+      cb(null, file.filename);
+  }
+});
+const upload = multer({ storage: storage });
+
+
 // Apply adminOnly middleware to all routes
 router.use(authMiddleware.adminOnly);
 

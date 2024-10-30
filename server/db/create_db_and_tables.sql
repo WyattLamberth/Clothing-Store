@@ -57,6 +57,7 @@ CREATE TABLE products (
   size VARCHAR(50) NOT NULL,
   color VARCHAR(50) NOT NULL,
   brand VARCHAR(50) NOT NULL,
+  image_path VARCHAR(255),
   CHECK (price > 0),
   CHECK (stock_quantity >= 0)
 );
