@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
           email: userData.email,
           phone_number: userData.phone_number,
           password: userData.password,
-          role_id: 1,  // Default role_id for new users is customer
+          role_id: userData.role_id || 1,  // Default role_id for new users is customer
           line_1: userData.line_1,
           line_2: userData.line_2 || null,
           city: userData.city,
