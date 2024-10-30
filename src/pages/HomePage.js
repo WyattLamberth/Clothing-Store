@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
 import NotificationBar from '../components/NotificationBar';
@@ -9,6 +9,7 @@ import t_shirt from  '../images/basic_t_shirt.jpg';
 import slim_fit_jeans from '../images/slim_fit_jeans.jpg';
 import summer_dress from '../images/summer_dress.jpg';
 import casual_sneaker from '../images/casual_sneaker.jpg';
+import axios from 'axios';
 
 // Mock product data (replace with actual API call in a real application)
 const productsData = [
@@ -77,10 +78,37 @@ const FeatureHighlight = ({ icon: Icon, title, description }) => (
 );
 
 const HomePage = () => {
-  const handleSearch = (query) => {
-    console.log('Searching for:', query);
-    // Add code to perform search, like making an API request
+  const [searchResults, setSearchResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState(productsData); // Initialize with mock data
+
+  const handleSearch = async (query) => {
+    setLoading(false);
+    try {
+      const response = await axios.get('/api/products/search', {
+        params: { query },
+      });
+      setSearchResults(response.data); // Update state with search results
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setSearchResults([]); // Clear search results on error
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get('/api/products'); // Fetch all products if necessary
+        setProducts(response.data);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   return (
     <div>
@@ -94,7 +122,7 @@ const HomePage = () => {
       </div>
       <HeroSection />
       <TrendingSection />
-      <FeaturedProducts />
+      <FeaturedProducts products={searchResults.length > 0 ? searchResults : products} /> {/* Display search results if available */}
       <div className="bg-gray-50 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Why Choose StyleHub?</h2>
@@ -120,5 +148,4 @@ const HomePage = () => {
     </div>
   );
 };
-
 export default HomePage;
