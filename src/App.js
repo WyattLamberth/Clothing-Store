@@ -13,7 +13,8 @@ import SalesReports from './pages/SalesReports';
 import SystemMaintenance from './pages/SystemMaintenance';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
-
+import Checkout from './components/Checkout';
+import ProfilePage from './pages/ProfilePage';
 function App() {
   return (
     <AuthProvider>
@@ -26,6 +27,8 @@ function App() {
               <Route path="/shop" element={<ShopPage />} />
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/profile" element={<ProfilePage />} /> 
               <Route path="/employee" element={
                 <ProtectedRoute element={<EmployeeDashboard />} requiredRole="employee" />
               } />
