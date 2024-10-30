@@ -24,6 +24,7 @@
     "mysql2": "^3.11.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "path": "^0.12.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
@@ -36,10 +37,11 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "server": "node server.js"
+    "server": "node server.js",
+    "build": "react-scripts build",
+    "start-server": "node server/server.js"
   },
   "proxy": "http://localhost:6001",
   "eslintConfig": {

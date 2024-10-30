@@ -1,8 +1,8 @@
 -- Create the database (if it doesn't exist)
-CREATE DATABASE IF NOT EXISTS online_store;
+CREATE DATABASE IF NOT EXISTS onlinestore;
 
 -- Use the database
-USE online_store;
+USE onlinestore;
 
 -- Roles table
 CREATE TABLE roles (
