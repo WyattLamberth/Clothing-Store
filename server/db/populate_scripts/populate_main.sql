@@ -1,5 +1,4 @@
 -- Initialize the database
---DROP DATABASE IF EXISTS online_store;
 CREATE DATABASE onlinestore;
 USE onlinestore;
 
@@ -267,29 +266,81 @@ CREATE INDEX idx_product_category ON products(category_id);
 CREATE INDEX idx_order_user ON orders(user_id);
 CREATE INDEX idx_order_status ON orders(order_status);
 
+-- First, populate roles and permissions
+-- Insert role data
+INSERT INTO roles (role_id, role_name) VALUES
+(1, 'Customer'),
+(2, 'Employee'),
+(3, 'Admin');
+
+-- Populate permissions table with Admin permissions
+INSERT INTO permissions (permission_id, permission_name) VALUES
+(3001, 'Manage Users'),
+(3002, 'Manage Products'),
+(3003, 'Manage Orders'),
+(3004, 'Configure System Settings'),
+(3005, 'Manage Promotions and Discounts'),
+(3006, 'Manage Payment and Shipping Settings'),
+(3007, 'Review and Publish Content'),
+(3008, 'Manage Inventory'),
+(3009, 'View Customer Feedback and Reviews'),
+(3010, 'Create/Edit/Delete Page Content');
+
+-- Populate permissions table with Employee permissions
+INSERT INTO permissions (permission_id, permission_name) VALUES
+(2001, 'Add/Edit/Delete Products'),
+(2002, 'View and Manage all Orders'),
+(2003, 'Manage Inventory'),
+(2004, 'Set Product Prices and Promotions'),
+(2005, 'Respond to Customer Reviews'),
+(2006, 'Process Refunds and Returns'),
+(2007, 'View Customer Reviews and Feedback');
+
+-- Populate permissions table with Customer permissions
+INSERT INTO permissions (permission_id, permission_name) VALUES
+(1001, 'Browse and Search Products'),
+(1002, 'Add Products to Cart'),
+(1003, 'Make Purchase and Place Orders'),
+(1004, 'View and Manage Personal Account'),
+(1005, 'View Order History'),
+(1006, 'Submit Product Reviews and Feedback'),
+(1007, 'Manage Shipping Addresses and Payment Information');
+
+
+-- Admin Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(3, 3001),
+(3, 3002),
+(3, 3003),
+(3, 3004),
+(3, 3005),
+(3, 3006),
+(3, 3007),
+(3, 3008),
+(3, 3009),
+(3, 3010);
+
+-- Employee Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(2, 2001),
+(2, 2002),
+(2, 2003),
+(2, 2004),
+(2, 2005),
+(2, 2006),
+(2, 2007);
+
+-- Customer Role Permissions
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+(1, 1001),
+(1, 1002),
+(1, 1003),
+(1, 1004),
+(1, 1005),
+(1, 1006),
+(1, 1007);
+
 DELIMITER //
-
--- Procedure to create initial users
-CREATE PROCEDURE CreateInitialUsers()
-BEGIN
-    -- Create addresses for users
-    INSERT INTO address (line_1, city, state, zip) VALUES
-    ('123 Admin St', 'Admin City', 'AS', '12345'),
-    ('456 Employee St', 'Employee City', 'ES', '23456'),
-    ('789 Customer St', 'Customer City', 'CS', '34567');
-
-    -- Create users with hashed passwords
-    INSERT INTO users (first_name, last_name, username, email, phone_number, password_hash, role_id, address_id, date_joined) VALUES
-    ('Admin', 'User', 'admin', 'admin@admin.com', '1234567890', SHA2('password', 256), 3, 1, CURRENT_DATE),
-    ('Employee', 'User', 'employee', 'employee@employee.com', '2345678901', SHA2('password', 256), 2, 2, CURRENT_DATE),
-    ('Customer', 'User', 'customer', 'customer@customer.com', '3456789012', SHA2('password', 256), 1, 3, CURRENT_DATE);
-    
-    -- Create payment methods for users
-    INSERT INTO payment (cardholder_name, card_number, expiration_date, cvv, user_id, billing_address_id) VALUES
-    ('Admin User', '1111222233334444', '12/25', '123', 1, 1),
-    ('Employee User', '2222333344445555', '12/25', '234', 2, 2),
-    ('Customer User', '3333444455556666', '12/25', '345', 3, 3);
-END //
 
 -- Procedure to populate categories
 CREATE PROCEDURE PopulateCategories()
@@ -334,34 +385,7 @@ BEGIN
     ('Cargo Shorts', 32, 'Durable cargo shorts', 44.99, 80, 10, '34', 'Khaki', 'OutdoorPro');
 END //
 
--- Create shopping carts for users
-CREATE PROCEDURE CreateInitialShoppingCarts()
-BEGIN
-    INSERT INTO shopping_cart (user_id, created_at, running_total)
-    SELECT user_id, CURRENT_TIMESTAMP, 0
-    FROM users;
-    
-    -- Add some items to the customer's cart
-    INSERT INTO cart_items (cart_id, product_id, quantity)
-    VALUES 
-    (3, 1, 1),  -- Adding Classic T-Shirt to customer's cart
-    (3, 4, 1);  -- Adding Casual Sneakers to customer's cart
-    
-    -- Update the running total
-    UPDATE shopping_cart 
-    SET running_total = (
-        SELECT SUM(p.price * ci.quantity)
-        FROM cart_items ci
-        JOIN products p ON ci.product_id = p.product_id
-        WHERE ci.cart_id = 3
-    )
-    WHERE cart_id = 3;
-END //
-
-DELIMITER ;
-
 -- Create a procedure to populate orders and related tables
-DELIMITER //
 
 CREATE PROCEDURE PopulateOrders(
     IN num_orders INT,  -- Number of orders to generate
@@ -673,85 +697,9 @@ DELIMITER ;
 
 -- Execute the population procedures in the correct order
 
--- First, populate roles and permissions
--- Insert role data
-INSERT INTO roles (role_id, role_name) VALUES
-(1, 'Customer'),
-(2, 'Employee'),
-(3, 'Admin');
-
--- Populate permissions table with Admin permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(3001, 'Manage Users'),
-(3002, 'Manage Products'),
-(3003, 'Manage Orders'),
-(3004, 'Configure System Settings'),
-(3005, 'Manage Promotions and Discounts'),
-(3006, 'Manage Payment and Shipping Settings'),
-(3007, 'Review and Publish Content'),
-(3008, 'Manage Inventory'),
-(3009, 'View Customer Feedback and Reviews'),
-(3010, 'Create/Edit/Delete Page Content');
-
--- Populate permissions table with Employee permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(2001, 'Add/Edit/Delete Products'),
-(2002, 'View and Manage all Orders'),
-(2003, 'Manage Inventory'),
-(2004, 'Set Product Prices and Promotions'),
-(2005, 'Respond to Customer Reviews'),
-(2006, 'Process Refunds and Returns'),
-(2007, 'View Customer Reviews and Feedback');
-
--- Populate permissions table with Customer permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(1001, 'Browse and Search Products'),
-(1002, 'Add Products to Cart'),
-(1003, 'Make Purchase and Place Orders'),
-(1004, 'View and Manage Personal Account'),
-(1005, 'View Order History'),
-(1006, 'Submit Product Reviews and Feedback'),
-(1007, 'Manage Shipping Addresses and Payment Information');
-
-
--- Admin Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3, 3001),
-(3, 3002),
-(3, 3003),
-(3, 3004),
-(3, 3005),
-(3, 3006),
-(3, 3007),
-(3, 3008),
-(3, 3009),
-(3, 3010);
-
--- Employee Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(2, 2001),
-(2, 2002),
-(2, 2003),
-(2, 2004),
-(2, 2005),
-(2, 2006),
-(2, 2007);
-
--- Customer Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(1, 1001),
-(1, 1002),
-(1, 1003),
-(1, 1004),
-(1, 1005),
-(1, 1006),
-(1, 1007);
-
 -- Then execute other procedures
-CALL CreateInitialUsers();
 CALL PopulateCategories();
 CALL PopulateProducts();
-CALL CreateInitialShoppingCarts();
 
 -- Generate some initial orders
 CALL PopulateOrders(50, 1, 5);  -- Creates 50 orders with 1-5 items each
