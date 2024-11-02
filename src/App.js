@@ -6,7 +6,7 @@ import ShopPage from './pages/ShopPage';
 import SignInRegister from './components/SignInRegister';
 import CartPage from './pages/CartPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
-import AdminPage from './pages/AdminPage';
+import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import ProductManagement from './pages/ProductManagement';
 import SalesReports from './pages/SalesReports';
@@ -43,7 +43,7 @@ function App() {
                 <ProtectedRoute element={<EmployeeDashboard />} requiredRole="employee" />
               } />
               <Route path="/admin" element={
-                <ProtectedRoute element={<AdminPage />} requiredRole="admin" />
+                <ProtectedRoute element={<AdminDashboard />} requiredRole="admin" />
               } />
               <Route path="/admin/users" element={
                 <ProtectedRoute element={<UserManagement />} requiredRole="admin" />
