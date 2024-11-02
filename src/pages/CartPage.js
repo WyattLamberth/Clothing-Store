@@ -9,7 +9,7 @@ const CartPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    console.log("userId in CartPage useEffect:", userId);
+    console.log("UserId in CartPage useEffect:", userId);
     if (!userId) {
       console.error("User not logged in, userId:", userId);
       setError('User not logged in');
@@ -19,26 +19,28 @@ const CartPage = () => {
     const fetchCart = async () => {
       console.log("Fetching cart with token:", token, "and userId:", userId);
       try {
-        const response = await axios.get(`http://localhost:3000/api/customer/shopping_cart`, {
+        const response = await axios.get('/api/customer/shopping_cart', {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
+
+        console.log("Fetched cart items:", response.data.cartItems);
         setCartItems(response.data.cartItems);
       } catch (error) {
         console.error('Error fetching cart:', error);
         setError('Error fetching cart');
 
-        // Check if error is 404, meaning cart doesn't exist, and create it
         if (error.response && error.response.status === 404) {
+          console.log("Cart not found, attempting to create a new cart...");
           try {
-            const createCartResponse = await axios.post('http://localhost:3000/api/customer/shopping_cart/create', {}, {
+            const createCartResponse = await axios.post('/api/customer/shopping_cart/create', {}, {
               headers: {
                 Authorization: `Bearer ${token}`
               }
             });
             console.log('Cart created:', createCartResponse.data);
-            fetchCart(); // Try fetching the cart again after creation
+            fetchCart(); // Fetch the cart again after creation
           } catch (createError) {
             console.error('Error creating cart:', createError);
             setError('Error creating cart');
@@ -52,7 +54,7 @@ const CartPage = () => {
 
   const handleRemoveItem = async (productId) => {
     try {
-      await axios.delete(`http://localhost:3000/api/customer/cart-items`, {
+      await axios.delete('/api/customer/cart-items', {
         headers: { Authorization: `Bearer ${token}` },
         data: { product_id: productId }
       });

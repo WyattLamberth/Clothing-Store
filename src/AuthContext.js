@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
 
       console.log("Token set on login:", data.token);
       console.log("User ID set on login:", data.userId);
+      console.log("Role set on login:", data.role);
 
       return true;
     } catch (error) {

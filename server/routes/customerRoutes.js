@@ -28,9 +28,8 @@ router.get('/users/:userId',
 });
 
 // Shopping Cart Management
-// Shopping Cart Management
 router.post('/shopping_cart/create', 
-  authMiddleware.checkSelfOrHigher,
+  authMiddleware.customerOnly,
   async (req, res) => {
     const connection = await pool.getConnection();
     const userId = req.user.user_id;
@@ -68,7 +67,7 @@ router.post('/shopping_cart/create',
 
 
 router.get('/shopping_cart', 
-  authMiddleware.checkSelfOrHigher,
+  authMiddleware.customerOnly,
   async (req, res) => {
     const connection = await pool.getConnection();
     const userId = req.user.user_id;
@@ -108,7 +107,7 @@ router.get('/shopping_cart',
 
 
 router.delete('/shopping_cart',
-  authMiddleware.checkSelfOrHigher,
+  authMiddleware.customerOnly,
   async (req, res) => {
     const connection = await pool.getConnection();
     const { cart_id } = req.body;
@@ -129,7 +128,7 @@ router.delete('/shopping_cart',
 
 // Cart Items Management
 router.get('/cart-items', 
-  authMiddleware.checkSelfOrHigher,
+  authMiddleware.customerOnly,
   async (req, res) => {
     try {
       const [items] = await pool.execute(
@@ -143,7 +142,7 @@ router.get('/cart-items',
 });
 
 router.delete('/cart-items', 
-  authMiddleware.checkSelfOrHigher,
+  authMiddleware.customerOnly,
   async (req, res) => {
     const connection = await pool.getConnection();
     const { product_id } = req.body;

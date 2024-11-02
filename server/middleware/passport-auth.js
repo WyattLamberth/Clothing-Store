@@ -43,6 +43,8 @@ const auth = (allowedRoles = []) => {
       if (!user) {
         return res.status(401).json({ message: 'Unauthorized - No valid token' });
       }
+
+      console.log("User role:", user.role_id, "Allowed roles:", allowedRoles);
     
       if (allowedRoles.length && !allowedRoles.includes(user.role_id)) {
         console.log(`Access denied for user with role_id ${user.role_id}`);
@@ -62,7 +64,7 @@ const auth = (allowedRoles = []) => {
 
 const authMiddleware = {
   authenticate: auth([1, 2, 3]),
-  staffOnly: auth([2,3]),
+  staffOnly: auth([1,2,3]),
   adminOnly: auth([3]),
   customerOnly: auth([1]),  // This middleware will only allow role_id of 1
 
