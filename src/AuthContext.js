@@ -14,14 +14,13 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/login', { email, password });
       const data = response.data;
       
-      // Store token, role, and userId in localStorage and state
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
-      localStorage.setItem('userId', data.userId); // Save userId to localStorage
+      localStorage.setItem('userId', data.userId);
 
       setToken(data.token);
       setRole(data.role);
-      setUserId(data.userId); // Ensure userId is set in context
+      setUserId(data.userId);
       setIsAuthenticated(true);
 
       console.log("Token set on login:", data.token);
@@ -35,18 +34,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('userId');
     
-    // Clear state
     setToken(null);
     setRole(null);
     setUserId(null);
     setIsAuthenticated(false);
 
-    // Optional: Redirect to login page
     window.location.href = '/signin';
   };
 
@@ -64,7 +60,7 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && storedUserId) {
       setIsAuthenticated(true);
       setToken(storedToken);
-      setUserId(storedUserId); // Ensure userId is loaded
+      setUserId(storedUserId);
       setRole(storedRole || '');
 
       console.log("Token and userId set from local storage on load:", {
@@ -74,7 +70,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check auth status when component mounts
   useEffect(() => {
     checkAuth();
   }, []);
@@ -86,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       logout, 
       role, 
       token,
-      userId // Provide userId here
+      userId 
     }}>
       {children}
     </AuthContext.Provider>

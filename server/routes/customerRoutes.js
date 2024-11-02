@@ -4,11 +4,7 @@ const pool = require('../db/connection');
 const { authMiddleware } = require('../middleware/passport-auth');
 
 // Apply authentication middleware to all routes
-router.use(authMiddleware.authenticate);
-
-// =============================================
-// CUSTOMER ROUTES (Role ID: 1)
-// =============================================
+router.use(authMiddleware.customerOnly);
 
 // Logout
 router.post('/logout', (req, res) => {
@@ -32,28 +28,8 @@ router.get('/users/:userId',
 });
 
 // Shopping Cart Management
-router.post('/shopping_cart', 
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
-      const {customer_id, created_at, running_total} = req.body;
-      const [result] = await connection.execute(
-        'INSERT INTO shopping_cart (customer_id, created_at, running_total) VALUES (?, ?, ?)',
-        [customer_id, created_at, running_total]
-      );
-      await connection.commit();
-      res.status(201).json({ message: 'Cart created successfully', cart_id: result.insertId});
-    } catch (error) {
-      await connection.rollback();
-      res.status(400).json({ error: 'Error creating Cart' });
-    } finally {
-      connection.release();
-    }
-});
-
-router.get('/shopping_cart', 
+// Shopping Cart Management
+router.post('/shopping_cart/create', 
   authMiddleware.checkSelfOrHigher,
   async (req, res) => {
     const connection = await pool.getConnection();
@@ -62,23 +38,54 @@ router.get('/shopping_cart',
     try {
       await connection.beginTransaction();
 
+      // Check if the user already has a cart
+      const [existingCart] = await connection.execute(
+        'SELECT * FROM shopping_cart WHERE user_id = ?',
+        [userId]
+      );
+
+      if (existingCart.length > 0) {
+        return res.status(409).json({ message: 'Cart already exists for this user' });
+      }
+
+      // Create a new cart
+      const [result] = await connection.execute(
+        'INSERT INTO shopping_cart (user_id, created_at, running_total) VALUES (?, NOW(), 0.00)',
+        [userId]
+      );
+
+      await connection.commit();
+      res.status(201).json({ message: 'Cart created successfully', cart_id: result.insertId });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error creating cart:', error);
+      res.status(500).json({ error: 'Failed to create cart' });
+    } finally {
+      connection.release();
+    }
+  }
+);
+
+
+router.get('/shopping_cart', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    const userId = req.user.user_id;
+
+    try {
       // Check if the cart exists
       const [cart] = await connection.execute(
         'SELECT * FROM shopping_cart WHERE user_id = ?', 
         [userId]
       );
 
-      let cartId;
       if (cart.length === 0) {
-        // Cart does not exist, create a new one
-        const [result] = await connection.execute(
-          'INSERT INTO shopping_cart (user_id, created_at, running_total) VALUES (?, NOW(), 0.00)', 
-          [userId]
-        );
-        cartId = result.insertId;
-      } else {
-        cartId = cart[0].cart_id;
+        // If cart does not exist, return an error prompting to create a cart
+        return res.status(404).json({ message: 'No shopping cart found. Please create a cart first.' });
       }
+
+      const cartId = cart[0].cart_id;
 
       // Fetch cart items
       const [cartItems] = await connection.execute(
@@ -89,12 +96,10 @@ router.get('/shopping_cart',
         [cartId]
       );
 
-      await connection.commit();
       res.status(200).json({ cart_id: cartId, cartItems });
     } catch (error) {
-      await connection.rollback();
-      console.error('Error fetching or creating cart:', error);
-      res.status(500).json({ error: 'Failed to fetch or create cart' });
+      console.error('Error fetching cart:', error);
+      res.status(500).json({ error: 'Failed to fetch cart' });
     } finally {
       connection.release();
     }
@@ -102,12 +107,11 @@ router.get('/shopping_cart',
 );
 
 
-
 router.delete('/shopping_cart',
   authMiddleware.checkSelfOrHigher,
   async (req, res) => {
     const connection = await pool.getConnection();
-    const {cart_id} = req.body;
+    const { cart_id } = req.body;
     try {
       await connection.beginTransaction();
       await pool.execute('DELETE FROM shopping_cart WHERE cart_id = ?', [cart_id]);
@@ -120,7 +124,8 @@ router.delete('/shopping_cart',
     } finally {
       connection.release();
     }
-});
+  }
+);
 
 // Cart Items Management
 router.get('/cart-items', 
@@ -147,7 +152,6 @@ router.delete('/cart-items',
     try {
       await connection.beginTransaction();
 
-      // Retrieve user's cart_id
       const [cart] = await connection.execute(
         'SELECT cart_id FROM shopping_cart WHERE user_id = ?', 
         [userId]
@@ -159,7 +163,6 @@ router.delete('/cart-items',
 
       const cartId = cart[0].cart_id;
 
-      // Remove item from cart
       await connection.execute(
         'DELETE FROM cart_items WHERE cart_id = ? AND product_id = ?', 
         [cartId, product_id]
@@ -185,10 +188,10 @@ router.post('/orders',
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
-      const {customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
+      const {user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
       const [result] = await connection.execute(
-        'INSERT INTO orders (customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [customer_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
+        'INSERT INTO orders (user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
       );
       await connection.commit();
       res.status(201).json({ message: 'Order created successfully', order_id: result.insertId });
@@ -205,7 +208,7 @@ router.get('/users/:userId/orders',
   async (req, res) => {
     try {
       const [orders] = await pool.execute(
-        'SELECT * FROM orders WHERE customer_id = ?',
+        'SELECT * FROM orders WHERE user_id = ?',
         [req.params.userId]
       );
       res.json(orders);

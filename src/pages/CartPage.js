@@ -28,6 +28,22 @@ const CartPage = () => {
       } catch (error) {
         console.error('Error fetching cart:', error);
         setError('Error fetching cart');
+
+        // Check if error is 404, meaning cart doesn't exist, and create it
+        if (error.response && error.response.status === 404) {
+          try {
+            const createCartResponse = await axios.post('http://localhost:3000/api/customer/shopping_cart/create', {}, {
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            console.log('Cart created:', createCartResponse.data);
+            fetchCart(); // Try fetching the cart again after creation
+          } catch (createError) {
+            console.error('Error creating cart:', createError);
+            setError('Error creating cart');
+          }
+        }
       }
     };
 
