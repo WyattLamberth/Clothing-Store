@@ -92,12 +92,3 @@ const ShoppingCart = ({ cartItems = [], onRemoveItem, onUpdateQuantity }) => {
 };
 
 export default ShoppingCart;
-
-
-
-
-
-
-
-
-

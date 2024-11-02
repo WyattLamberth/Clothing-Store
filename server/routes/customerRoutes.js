@@ -53,22 +53,55 @@ router.post('/shopping_cart',
     }
 });
 
-router.get('/shopping_cart',
+router.get('/shopping_cart', 
   authMiddleware.checkSelfOrHigher,
   async (req, res) => {
     const connection = await pool.getConnection();
-    const {cart_id} = req.body;
+    const userId = req.user.user_id;
+
     try {
       await connection.beginTransaction();
-      const [cart] = await pool.execute('SELECT * FROM shopping_cart WHERE cart_id = ?', [cart_id]);
-      res.status(200).json(cart[0]);
+
+      // Check if the cart exists
+      const [cart] = await connection.execute(
+        'SELECT * FROM shopping_cart WHERE user_id = ?', 
+        [userId]
+      );
+
+      let cartId;
+      if (cart.length === 0) {
+        // Cart does not exist, create a new one
+        const [result] = await connection.execute(
+          'INSERT INTO shopping_cart (user_id, created_at, running_total) VALUES (?, NOW(), 0.00)', 
+          [userId]
+        );
+        cartId = result.insertId;
+      } else {
+        cartId = cart[0].cart_id;
+      }
+
+      // Fetch cart items
+      const [cartItems] = await connection.execute(
+        'SELECT ci.cart_item_id, ci.product_id, ci.quantity, p.product_name, p.price, p.image_path ' +
+        'FROM cart_items ci ' +
+        'JOIN products p ON ci.product_id = p.product_id ' +
+        'WHERE ci.cart_id = ?', 
+        [cartId]
+      );
+
+      await connection.commit();
+      res.status(200).json({ cart_id: cartId, cartItems });
     } catch (error) {
-      console.error('Error fetching cart:', error);
-      res.status(500).json({ error: 'Failed to fetch cart' });
+      await connection.rollback();
+      console.error('Error fetching or creating cart:', error);
+      res.status(500).json({ error: 'Failed to fetch or create cart' });
     } finally {
       connection.release();
     }
-});
+  }
+);
+
+
 
 router.delete('/shopping_cart',
   authMiddleware.checkSelfOrHigher,
@@ -103,6 +136,47 @@ router.get('/cart-items',
       res.status(500).json({ error: 'Error fetching cart items' });
     }
 });
+
+router.delete('/cart-items', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    const { product_id } = req.body;
+    const userId = req.user.user_id;
+
+    try {
+      await connection.beginTransaction();
+
+      // Retrieve user's cart_id
+      const [cart] = await connection.execute(
+        'SELECT cart_id FROM shopping_cart WHERE user_id = ?', 
+        [userId]
+      );
+
+      if (cart.length === 0) {
+        return res.status(404).json({ error: 'No shopping cart found for this user' });
+      }
+
+      const cartId = cart[0].cart_id;
+
+      // Remove item from cart
+      await connection.execute(
+        'DELETE FROM cart_items WHERE cart_id = ? AND product_id = ?', 
+        [cartId, product_id]
+      );
+
+      await connection.commit();
+      res.status(200).json({ message: 'Item removed from cart' });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error removing item from cart:', error);
+      res.status(500).json({ error: 'Failed to remove item from cart' });
+    } finally {
+      connection.release();
+    }
+  }
+);
+
 
 // Order Management
 router.post('/orders', 
