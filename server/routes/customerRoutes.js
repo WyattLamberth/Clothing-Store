@@ -129,7 +129,6 @@ router.delete('/shopping_cart',
 // Cart Items Management
 // Add item to cart
 router.post('/cart-items/add', authMiddleware.customerOnly, async (req, res) => {
-  console.log('POST /cart-items/add route hit');
   const connection = await pool.getConnection();
   const { product_id, quantity } = req.body;
   const userId = req.user.user_id;
@@ -137,17 +136,24 @@ router.post('/cart-items/add', authMiddleware.customerOnly, async (req, res) => 
   try {
     await connection.beginTransaction();
 
-    // Get user's cart_id
+    // Check if the user's cart exists
     const [cart] = await connection.execute(
       'SELECT cart_id FROM shopping_cart WHERE user_id = ?',
       [userId]
     );
 
-    if (cart.length === 0) {
-      return res.status(404).json({ message: 'No shopping cart found for this user.' });
-    }
+    let cartId;
 
-    const cartId = cart[0].cart_id;
+    if (cart.length === 0) {
+      // Create a new cart if one doesn't exist
+      const [newCart] = await connection.execute(
+        'INSERT INTO shopping_cart (user_id, created_at, running_total) VALUES (?, NOW(), 0.00)',
+        [userId]
+      );
+      cartId = newCart.insertId;
+    } else {
+      cartId = cart[0].cart_id;
+    }
 
     // Check if the item already exists in the cart
     const [existingItem] = await connection.execute(
@@ -179,6 +185,7 @@ router.post('/cart-items/add', authMiddleware.customerOnly, async (req, res) => 
     connection.release();
   }
 });
+
 
 router.get('/cart-items', authMiddleware.customerOnly, async (req, res) => {
   const userId = req.user.user_id;
