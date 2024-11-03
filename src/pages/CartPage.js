@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import ShoppingCart from '../components/ShoppingCart';
-import axios from 'axios';
+import api from '../utils/api';
 import { useAuth } from '../AuthContext';
 
 const CartPage = () => {
-  const { token, userId } = useAuth();  // Ensure token and userId are available
+  const { userId } = useAuth(); // Fetch userId from AuthContext
   const [cartItems, setCartItems] = useState([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     console.log("UserId in CartPage useEffect:", userId);
+
     if (!userId) {
       console.error("User not logged in, userId:", userId);
       setError('User not logged in');
@@ -17,28 +18,19 @@ const CartPage = () => {
     }
 
     const fetchCart = async () => {
-      console.log("Fetching cart with token:", token, "and userId:", userId);
       try {
-        const response = await axios.get('/api/customer/shopping_cart', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-
+        const response = await api.get('/shopping_cart');
         console.log("Fetched cart items:", response.data.cartItems);
         setCartItems(response.data.cartItems);
       } catch (error) {
         console.error('Error fetching cart:', error);
         setError('Error fetching cart');
 
+        // If cart does not exist (404 error), create a new cart
         if (error.response && error.response.status === 404) {
           console.log("Cart not found, attempting to create a new cart...");
           try {
-            const createCartResponse = await axios.post('/api/customer/shopping_cart/create', {}, {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            });
+            const createCartResponse = await api.post('/shopping_cart/create');
             console.log('Cart created:', createCartResponse.data);
             fetchCart(); // Fetch the cart again after creation
           } catch (createError) {
@@ -50,12 +42,11 @@ const CartPage = () => {
     };
 
     fetchCart();
-  }, [token, userId]);
+  }, [userId]);
 
   const handleRemoveItem = async (productId) => {
     try {
-      await axios.delete('/api/customer/cart-items', {
-        headers: { Authorization: `Bearer ${token}` },
+      await api.delete('/cart-items', {
         data: { product_id: productId }
       });
       setCartItems(prevItems => prevItems.filter(item => item.product_id !== productId));

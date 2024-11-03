@@ -35,18 +35,18 @@ const ShoppingCart = ({ cartItems = [], onRemoveItem, onUpdateQuantity }) => {
               return (
                 <div key={item.product_id} className="flex items-center justify-between border-b pb-4">
                   <div className="flex items-center space-x-4">
-                  {item.image_path ? ( // Conditional rendering based on image_path
-                    <img
-                      src={require(`../images/${item.image_path}`)}
-                      alt={item.product_name}
-                      onError={(e) => { e.target.src = require('../images/summer_dress.jpg'); }} // Fallback image
-                      className="w-full h-64 object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-64 bg-gray-200 flex items-center justify-center"> {/* Placeholder */}
-                      <span className="text-gray-600">No Image Available</span>
-                    </div>
-                  )}
+                    {item.image_path ? (
+                      <img
+                        src={require(`../images/${item.image_path}`)}
+                        alt={item.product_name}
+                        onError={(e) => { e.target.src = require('../images/summer_dress.jpg'); }}
+                        className="w-full h-64 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-600">No Image Available</span>
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-lg font-semibold">{item.product_name}</h3>
                       <p className="text-gray-600">Price: ${price}</p>
@@ -54,7 +54,7 @@ const ShoppingCart = ({ cartItems = [], onRemoveItem, onUpdateQuantity }) => {
                         <button
                           onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
                           className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                          disabled={item.quantity <= 1} // Disable if quantity is 1
+                          disabled={item.quantity <= 1}
                         >
                           -
                         </button>
