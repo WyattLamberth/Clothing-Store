@@ -77,7 +77,7 @@ const ShoppingCart = () => {
                         <button
                           onClick={() => decreaseQuantity(item.product_id)}
                           className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                          disabled={item.quantity <= 1} // Disable if quantity is 1
+                          disabled={item.quantity <= 1}
                         >
                           -
                         </button>
@@ -113,5 +113,4 @@ const ShoppingCart = () => {
     </div>
   );
 };
-
 export default ShoppingCart;
