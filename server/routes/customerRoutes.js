@@ -127,19 +127,88 @@ router.delete('/shopping_cart',
 );
 
 // Cart Items Management
-router.get('/cart-items', 
-  authMiddleware.customerOnly,
-  async (req, res) => {
-    try {
-      const [items] = await pool.execute(
-        'SELECT * FROM cart_items WHERE cart_id = ?',
-        [req.body.cart_id]
-      );
-      res.json(items);
-    } catch (error) {
-      res.status(500).json({ error: 'Error fetching cart items' });
+// Add item to cart
+router.post('/cart-items/add', authMiddleware.customerOnly, async (req, res) => {
+  console.log('POST /cart-items/add route hit');
+  const connection = await pool.getConnection();
+  const { product_id, quantity } = req.body;
+  const userId = req.user.user_id;
+
+  try {
+    await connection.beginTransaction();
+
+    // Get user's cart_id
+    const [cart] = await connection.execute(
+      'SELECT cart_id FROM shopping_cart WHERE user_id = ?',
+      [userId]
+    );
+
+    if (cart.length === 0) {
+      return res.status(404).json({ message: 'No shopping cart found for this user.' });
     }
+
+    const cartId = cart[0].cart_id;
+
+    // Check if the item already exists in the cart
+    const [existingItem] = await connection.execute(
+      'SELECT * FROM cart_items WHERE cart_id = ? AND product_id = ?',
+      [cartId, product_id]
+    );
+
+    if (existingItem.length > 0) {
+      // Update quantity if item already exists
+      await connection.execute(
+        'UPDATE cart_items SET quantity = quantity + ? WHERE cart_id = ? AND product_id = ?',
+        [quantity, cartId, product_id]
+      );
+    } else {
+      // Insert new item if it doesn't exist
+      await connection.execute(
+        'INSERT INTO cart_items (cart_id, product_id, quantity) VALUES (?, ?, ?)',
+        [cartId, product_id, quantity]
+      );
+    }
+
+    await connection.commit();
+    res.status(200).json({ message: 'Item added to cart successfully.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error adding item to cart:', error);
+    res.status(500).json({ error: 'Failed to add item to cart.' });
+  } finally {
+    connection.release();
+  }
 });
+
+router.get('/cart-items', authMiddleware.customerOnly, async (req, res) => {
+  const userId = req.user.user_id;
+
+  try {
+    // Retrieve cart_id using user_id
+    const [cart] = await pool.execute(
+      'SELECT cart_id FROM shopping_cart WHERE user_id = ?',
+      [userId]
+    );
+
+    if (cart.length === 0) {
+      return res.status(404).json({ message: 'No shopping cart found for this user.' });
+    }
+
+    const cartId = cart[0].cart_id;
+
+    // Fetch all items in the cart
+    const [items] = await pool.execute(
+      'SELECT * FROM cart_items WHERE cart_id = ?',
+      [cartId]
+    );
+
+    res.status(200).json({ cart_id: cartId, items });
+  } catch (error) {
+    console.error('Error fetching cart items:', error);
+    res.status(500).json({ error: 'Failed to fetch cart items' });
+  }
+});
+
 
 router.delete('/cart-items', 
   authMiddleware.customerOnly,
