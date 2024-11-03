@@ -248,6 +248,44 @@ router.delete('/cart-items',
   }
 );
 
+router.put('/cart-items/update', authMiddleware.customerOnly, async (req, res) => {
+  const connection = await pool.getConnection();
+  const { product_id, quantity } = req.body;
+  const userId = req.user.user_id;
+
+  try {
+    await connection.beginTransaction();
+
+    // Get user's cart_id
+    const [cart] = await connection.execute(
+      'SELECT cart_id FROM shopping_cart WHERE user_id = ?',
+      [userId]
+    );
+
+    if (cart.length === 0) {
+      return res.status(404).json({ message: 'No shopping cart found for this user.' });
+    }
+
+    const cartId = cart[0].cart_id;
+
+    // Update item quantity
+    await connection.execute(
+      'UPDATE cart_items SET quantity = ? WHERE cart_id = ? AND product_id = ?',
+      [quantity, cartId, product_id]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: 'Item quantity updated successfully.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating item quantity:', error);
+    res.status(500).json({ error: 'Failed to update item quantity.' });
+  } finally {
+    connection.release();
+  }
+});
+
+
 
 // Order Management
 router.post('/orders', 

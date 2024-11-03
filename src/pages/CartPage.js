@@ -56,12 +56,33 @@ const CartPage = () => {
     }
   };
 
+  const handleUpdateQuantity = async (productId, newQuantity) => {
+    try {
+      await api.put('/cart-items/update', {
+        product_id: productId,
+        quantity: newQuantity
+      });
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.product_id === productId ? { ...item, quantity: newQuantity } : item
+        )
+      );
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      setError("Failed to update item quantity");
+    }
+  };
+
   return (
     <div>
       {error ? (
         <p>{error}</p>
       ) : (
-        <ShoppingCart cartItems={cartItems} onRemoveItem={handleRemoveItem} />
+        <ShoppingCart
+          cartItems={cartItems}
+          onRemoveItem={handleRemoveItem}
+          onUpdateQuantity={handleUpdateQuantity} // Pass the function here
+        />
       )}
     </div>
   );
