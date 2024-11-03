@@ -19,6 +19,7 @@ import MenPage from './pages/MenPage';
 import WomenPage from './pages/WomenPage';
 import KidPage from './pages/KidPage';
 import SearchPage from './pages/SearchPage';
+import ProductPage from './pages/ProductPage';
 function App() {
   return (
     <AuthProvider>
@@ -33,6 +34,7 @@ function App() {
               <Route path="/women" element={<WomenPage />} />
               <Route path="/kids" element={<KidPage />} />
               <Route path="/products/search/search" element={<SearchPage />} />
+              <Route path="/product/:id" element={<ProductPage />} />
               <Route path="/signin" element={<SignInRegister />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<Checkout />} />
