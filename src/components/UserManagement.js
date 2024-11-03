@@ -23,51 +23,31 @@ const UserManagement = () => {
         fetchRoles();
     }, []);
 
-    // Fetch users and calculate stats
+    // Simplified fetchUsers function - no need for multiple API calls
     const fetchUsers = async () => {
         try {
-          setLoading(true);
-          const response = await api.get('/admin/users');
-          const usersData = response.data;
-          
-          // Fetch address details for each user
-          const usersWithAddresses = await Promise.all(
-            usersData.map(async (user) => {
-              try {
-                const [userDetails] = await api.get(`/admin/users/${user.user_id}`);
-                // Assuming there's an address_id in the user data
-                if (user.address_id) {
-                  const addressResponse = await api.get(`/admin/address/${user.address_id}`);
-                  return {
-                    ...user,
-                    address: addressResponse.data
-                  };
-                }
-                return user;
-              } catch (error) {
-                console.error(`Error fetching details for user ${user.user_id}:`, error);
-                return user;
-              }
-            })
-          );
-      
-          setUsers(usersWithAddresses);
-          setStats({
-            totalUsers: usersWithAddresses.length,
-            adminUsers: usersWithAddresses.filter(user => user.role_id === 3).length,
-            employeeUsers: usersWithAddresses.filter(user => user.role_id === 2).length,
-            customerUsers: usersWithAddresses.filter(user => user.role_id === 1).length
-          });
-          setError(null);
+            setLoading(true);
+            const response = await api.get('/admin/users');
+            const usersData = response.data;
+            
+            // No need for Promise.all since the addresses are included
+            setUsers(usersData);
+            setStats({
+                totalUsers: usersData.length,
+                adminUsers: usersData.filter(user => user.role_id === 3).length,
+                employeeUsers: usersData.filter(user => user.role_id === 2).length,
+                customerUsers: usersData.filter(user => user.role_id === 1).length
+            });
+            setError(null);
         } catch (err) {
-          setError('Failed to fetch users. Please try again later.');
-          console.error('Error fetching users:', err);
+            setError('Failed to fetch users. Please try again later.');
+            console.error('Error fetching users:', err);
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      };
+    };
 
-    // Fetch roles
+    // Rest of your existing functions remain the same
     const fetchRoles = async () => {
         try {
             const response = await api.get('/admin/roles');
@@ -113,9 +93,9 @@ const UserManagement = () => {
         }
     };
 
-    // Update existing user
     const handleUpdateUser = async (userId, formData) => {
         try {
+            // Update user data
             await api.put(`/admin/users/${userId}`, {
                 first_name: formData.first_name,
                 last_name: formData.last_name,
@@ -123,8 +103,19 @@ const UserManagement = () => {
                 phone_number: formData.phone_number,
                 role_id: formData.role_id
             });
-
-            fetchUsers(); // Refresh user list
+    
+            // If there's an address, update it
+            if (formData.address_id) {
+                await api.put(`/admin/address/${formData.address_id}`, {
+                    line_1: formData.line_1,
+                    line_2: formData.line_2,
+                    city: formData.city,
+                    state: formData.state,
+                    zip: formData.zip
+                });
+            }
+    
+            fetchUsers();
             setShowEditModal(false);
             setSelectedUser(null);
             setError(null);
@@ -148,6 +139,66 @@ const UserManagement = () => {
         }
     };
 
+    const renderUserRow = (user) => (
+        <tr key={user.user_id}>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center">
+                    <div>
+                        <div className="text-sm font-medium text-gray-900">
+                            {user.first_name} {user.last_name}
+                        </div>
+                        <div className="text-sm text-gray-500">@{user.username}</div>
+                    </div>
+                </div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-900">{user.email}</div>
+                <div className="text-sm text-gray-500">{user.phone_number}</div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                    ${user.role_id === 3 ? 'bg-blue-100 text-blue-800' : ''}
+                    ${user.role_id === 2 ? 'bg-green-100 text-green-800' : ''}
+                    ${user.role_id === 1 ? 'bg-purple-100 text-purple-800' : ''}`}
+                >
+                    {roles.find(role => role.role_id === user.role_id)?.role_name || 'Unknown'}
+                </span>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {user.address ? (
+                    <>
+                        {user.address.line_1}
+                        {user.address.line_2 && `, ${user.address.line_2}`}
+                        {user.address.city && `, ${user.address.city}`}
+                        {user.address.state && `, ${user.address.state}`} 
+                        {user.address.zip && ` ${user.address.zip}`}
+                    </>
+                ) : (
+                    <span className="text-gray-400 italic">No address provided</span>
+                )}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => {
+                            setSelectedUser(user);
+                            setShowEditModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-900"
+                    >
+                        <Pencil className="h-5 w-5" />
+                    </button>
+                    <button
+                        onClick={() => handleDelete(user.user_id)}
+                        className="text-red-600 hover:text-red-900"
+                    >
+                        <Trash2 className="h-5 w-5" />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+
     const UserForm = ({ onClose, initialData = null }) => {
         const [formData, setFormData] = useState({
             first_name: initialData?.first_name || '',
@@ -157,6 +208,7 @@ const UserManagement = () => {
             phone_number: initialData?.phone_number || '',
             role_id: initialData?.role_id || '1',
             password: '',
+            address_id: initialData?.address_id || null,  // Add this line
             line_1: initialData?.address?.line_1 || '',
             line_2: initialData?.address?.line_2 || '',
             city: initialData?.address?.city || '',
@@ -440,55 +492,7 @@ const UserManagement = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {users.map((user) => (
-                                        <tr key={user.user_id}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div>
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {user.first_name} {user.last_name}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">@{user.username}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{user.email}</div>
-                                                <div className="text-sm text-gray-500">{user.phone_number}</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${user.role_id === 3 ? 'bg-blue-100 text-blue-800' : ''}
-                          ${user.role_id === 2 ? 'bg-green-100 text-green-800' : ''}
-                          ${user.role_id === 1 ? 'bg-purple-100 text-purple-800' : ''}`}
-                                                >
-                                                    {roles.find(role => role.role_id === user.role_id)?.role_name || 'Unknown'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {user.address?.line_1}, {user.address?.city}, {user.address?.state} {user.address?.zip}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedUser(user);
-                                                            setShowEditModal(true);
-                                                        }}
-                                                        className="text-blue-600 hover:text-blue-900"
-                                                    >
-                                                        <Pencil className="h-5 w-5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(user.user_id)}
-                                                        className="text-red-600 hover:text-red-900"
-                                                    >
-                                                        <Trash2 className="h-5 w-5" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {users.map(renderUserRow)}
                                     {users.length === 0 && (
                                         <tr>
                                             <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
