@@ -20,8 +20,8 @@ const CartPage = () => {
     const fetchCart = async () => {
       try {
         const response = await api.get('/shopping_cart');
-        console.log("Fetched cart items:", response.data.cartItems);
-        setCartItems(response.data.cartItems);
+        console.log("Fetched cart items:", response.data.cartItems); // Log fetched items
+        setCartItems(response.data.cartItems); // Update cartItems with fetched data
       } catch (error) {
         console.error('Error fetching cart:', error);
         setError('Error fetching cart');
