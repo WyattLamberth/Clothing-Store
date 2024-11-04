@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
+import CartOverlay from '../components/CartOverlay';
 
 const ShopPage = () => {
   const [products, setProducts] = useState([]);
@@ -8,6 +9,8 @@ const ShopPage = () => {
     const savedCart = localStorage.getItem('cart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayProduct, setOverlayProduct] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -39,6 +42,10 @@ const ShopPage = () => {
       return updatedCart;
     });
 
+    // Show overlay for the added product
+    setOverlayProduct(product);
+    setShowOverlay(true);
+
     try {
       await api.post('/cart-items/add', {
         product_id: product.product_id,
@@ -63,8 +70,16 @@ const ShopPage = () => {
           />
         ))}
       </div>
+
+      {showOverlay && overlayProduct && (
+        <CartOverlay product={overlayProduct} onClose={() => setShowOverlay(false)} />
+      )}
     </div>
   );
 };
 
 export default ShopPage;
+
+
+
+
