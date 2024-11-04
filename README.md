@@ -30,7 +30,10 @@ Install These:
 
 Once repo is cloned:
 - npm install (installs all required node packages)
-- node server.js (connects to the database)
+- cd server
+- npm install
+- cd ..
+- node server/server.js (connects to the database)
 - npm start (starts the website)
 
 ## Testing and Development
