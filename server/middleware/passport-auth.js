@@ -66,7 +66,7 @@ const authMiddleware = {
   authenticate: auth([1, 2, 3]),
   staffOnly: auth([1,2,3]),
   adminOnly: auth([3]),
-  customerOnly: auth([1]),  // This middleware will only allow role_id of 1
+  customerOnly: auth([1,2,3]),  // This middleware will only allow role_id of 1
 
   checkSelfOrHigher: (req, res, next) => {
     const userId = req.params.userId || req.params.customerId;
