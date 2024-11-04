@@ -8,21 +8,21 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('token'));
   const [role, setRole] = useState(() => localStorage.getItem('role') || '');
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
-  const [user_id, setUserId] = useState(() => localStorage.getItem('user_id') || '');
+  const [userId, setUserId] = useState(() => localStorage.getItem('userId') || '');
 
   const login = async (email, password) => {
     try {
       const response = await api.post('/login', { email, password });
       const data = response.data;
       
-      // Store token, role, and user_id in localStorage and state
+      // Store token, role, and userId in localStorage and state
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
-      localStorage.setItem('user_id', data.user_id);
+      localStorage.setItem('userId', data.userId);
       
       setToken(data.token);
       setRole(data.role);
-      setUserId(data.user_id);
+      setUserId(data.userId);
       setIsAuthenticated(true);
       
       return true;
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
     // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    localStorage.removeItem('user_id');
+    localStorage.removeItem('userId');
     
     // Clear state
     setToken(null);
@@ -89,31 +89,33 @@ export const AuthProvider = ({ children }) => {
       isAuthenticated,
       role,
       token,
-      user_id,
+      userId,
       localStorage: {
         token: localStorage.getItem('token'),
         role: localStorage.getItem('role'),
-        user_id: localStorage.getItem('user_id')
+        userId: localStorage.getItem('userId')
       }
     });
   
     const storedToken = localStorage.getItem('token');
+    const storedUserId = localStorage.getItem('userId');
+
     if (storedToken && !isAuthenticated) {
       setIsAuthenticated(true);
       setToken(storedToken);
       setRole(localStorage.getItem('role') || '');
-      setUserId(localStorage.getItem('user_id') || '');
+      setUserId(storedUserId || '');
     }
   
     console.log('Checking auth - after:', {
       isAuthenticated,
       role,
       token,
-      user_id,
+      userId,
       localStorage: {
         token: localStorage.getItem('token'),
         role: localStorage.getItem('role'),
-        user_id: localStorage.getItem('user_id')
+        userId: localStorage.getItem('userId')
       }
     });
   };
@@ -131,7 +133,7 @@ export const AuthProvider = ({ children }) => {
       logout, 
       role, 
       token,
-      user_id // Provide user_id here
+      userId // Provide userId here
     }}>
       {children}
     </AuthContext.Provider>
