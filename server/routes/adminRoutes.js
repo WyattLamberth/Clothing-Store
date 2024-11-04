@@ -545,4 +545,70 @@ router.get('/activity-logs/user/:userId', async (req, res) => {
   }
 });
 
+// REPORTS
+
+// In adminRoutes.js
+router.get('/reports/inventory', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+      // Get stock levels and value
+      const [stockLevels] = await connection.execute(`
+          SELECT p.product_id, p.product_name, p.stock_quantity, p.price,
+                 p.reorder_threshold, c.name as category_name,
+                 (p.stock_quantity * p.price) as stock_value
+          FROM products p
+          JOIN categories c ON p.category_id = c.category_id
+      `);
+
+      // Get return rates
+      const [returnRates] = await connection.execute(`
+          SELECT p.product_id, p.product_name, 
+                 COUNT(ri.return_item_id) as return_count,
+                 COUNT(oi.order_item_id) as order_count,
+                 (COUNT(ri.return_item_id) * 100.0 / NULLIF(COUNT(oi.order_item_id), 0)) as return_rate
+          FROM products p
+          LEFT JOIN order_items oi ON p.product_id = oi.product_id
+          LEFT JOIN returns r ON oi.order_id = r.order_id
+          LEFT JOIN return_items ri ON r.return_id = ri.return_id
+          GROUP BY p.product_id
+      `);
+
+      // Get low stock items
+      const [lowStock] = await connection.execute(`
+          SELECT p.*, c.name as category_name
+          FROM products p
+          JOIN categories c ON p.category_id = c.category_id
+          WHERE p.stock_quantity <= p.reorder_threshold
+      `);
+
+      // Get category totals
+      const [categoryTotals] = await connection.execute(`
+          SELECT c.name as category_name,
+                 SUM(p.stock_quantity) as total_items,
+                 SUM(p.stock_quantity * p.price) as total_value
+          FROM products p
+          JOIN categories c ON p.category_id = c.category_id
+          GROUP BY c.category_id
+      `);
+
+      res.json({
+          stockLevels,
+          returnRates,
+          lowStock,
+          categoryTotals,
+          summary: {
+              totalProducts: stockLevels.length,
+              totalValue: stockLevels.reduce((sum, item) => sum + item.stock_value, 0),
+              lowStockCount: lowStock.length,
+              averageReturnRate: returnRates.reduce((sum, item) => sum + (item.return_rate || 0), 0) / returnRates.length
+          }
+      });
+  } catch (error) {
+      console.error('Error generating inventory report:', error);
+      res.status(500).json({ message: 'Error generating inventory report', error: error.message });
+  } finally {
+      connection.release();
+  }
+});
+
 module.exports = router;
