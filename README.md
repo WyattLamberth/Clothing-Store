@@ -25,7 +25,7 @@ Install These:
 - DB_HOST=localhost
 - DB_USER=your-db-user
 - DB_PASSWORD=your-db-password
-- DB_NAME=online_store
+- DB_NAME=onlinestore
 - JWT_SECRET=some-random-string
 
 Once repo is cloned:
