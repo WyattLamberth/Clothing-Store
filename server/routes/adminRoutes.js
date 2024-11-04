@@ -8,16 +8,16 @@ const multer = require('multer');
 const path = require('path');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
-router.use(express.urlencoded({extended:false}));
+router.use(express.urlencoded({ extended: false }));
 
 // Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-      cb(null, 'src/images'); // Ensure this directory exists
+    cb(null, 'src/images'); // Ensure this directory exists
   },
   filename: (req, file, cb) => {
-      // Set the filename to be the original name
-      cb(null, file.filename);
+    // Set the filename to be the original name
+    cb(null, file.filename);
   }
 });
 const upload = multer({ storage: storage });
@@ -268,7 +268,7 @@ router.post('/address', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const {line_1, line_2, city, state, zip} = req.body;
+    const { line_1, line_2, city, state, zip } = req.body;
 
     // Insert address
     const addressQuery = 'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)';
@@ -278,7 +278,7 @@ router.post('/address', async (req, res) => {
     // Commit transaction
     await connection.commit();
 
-    res.status(201).json({ message: 'Address created successfully', address_id: address_id } );
+    res.status(201).json({ message: 'Address created successfully', address_id: address_id });
   } catch (error) {
     // Rollback in case of error
     await connection.rollback();
@@ -551,8 +551,8 @@ router.get('/activity-logs/user/:userId', async (req, res) => {
 router.get('/reports/inventory', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-      // Get stock levels and value
-      const [stockLevels] = await connection.execute(`
+    // Get stock levels and value
+    const [stockLevels] = await connection.execute(`
           SELECT p.product_id, p.product_name, p.stock_quantity, p.price,
                  p.reorder_threshold, c.name as category_name,
                  (p.stock_quantity * p.price) as stock_value
@@ -560,8 +560,8 @@ router.get('/reports/inventory', async (req, res) => {
           JOIN categories c ON p.category_id = c.category_id
       `);
 
-      // Get return rates
-      const [returnRates] = await connection.execute(`
+    // Get return rates
+    const [returnRates] = await connection.execute(`
           SELECT p.product_id, p.product_name, 
                  COUNT(ri.return_item_id) as return_count,
                  COUNT(oi.order_item_id) as order_count,
@@ -573,16 +573,16 @@ router.get('/reports/inventory', async (req, res) => {
           GROUP BY p.product_id
       `);
 
-      // Get low stock items
-      const [lowStock] = await connection.execute(`
+    // Get low stock items
+    const [lowStock] = await connection.execute(`
           SELECT p.*, c.name as category_name
           FROM products p
           JOIN categories c ON p.category_id = c.category_id
           WHERE p.stock_quantity <= p.reorder_threshold
       `);
 
-      // Get category totals
-      const [categoryTotals] = await connection.execute(`
+    // Get category totals
+    const [categoryTotals] = await connection.execute(`
           SELECT c.name as category_name,
                  SUM(p.stock_quantity) as total_items,
                  SUM(p.stock_quantity * p.price) as total_value
@@ -591,23 +591,113 @@ router.get('/reports/inventory', async (req, res) => {
           GROUP BY c.category_id
       `);
 
-      res.json({
-          stockLevels,
-          returnRates,
-          lowStock,
-          categoryTotals,
-          summary: {
-              totalProducts: stockLevels.length,
-              totalValue: stockLevels.reduce((sum, item) => sum + item.stock_value, 0),
-              lowStockCount: lowStock.length,
-              averageReturnRate: returnRates.reduce((sum, item) => sum + (item.return_rate || 0), 0) / returnRates.length
-          }
-      });
+    res.json({
+      stockLevels,
+      returnRates,
+      lowStock,
+      categoryTotals,
+      summary: {
+        totalProducts: stockLevels.length,
+        totalValue: stockLevels.reduce((sum, item) => sum + item.stock_value, 0),
+        lowStockCount: lowStock.length,
+        averageReturnRate: returnRates.reduce((sum, item) => sum + (item.return_rate || 0), 0) / returnRates.length
+      }
+    });
   } catch (error) {
-      console.error('Error generating inventory report:', error);
-      res.status(500).json({ message: 'Error generating inventory report', error: error.message });
+    console.error('Error generating inventory report:', error);
+    res.status(500).json({ message: 'Error generating inventory report', error: error.message });
   } finally {
-      connection.release();
+    connection.release();
+  }
+});
+
+// In adminRoutes.js
+router.get('/reports/sales-analytics', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Get total sales and stats
+    const [salesStats] = await connection.execute(`
+          SELECT 
+              COUNT(DISTINCT o.order_id) as total_orders,
+              SUM(o.total_amount) as total_revenue,
+              AVG(o.total_amount) as average_order_value,
+              COUNT(DISTINCT o.user_id) as unique_customers
+          FROM orders o
+          WHERE o.order_status != 'Cancelled'
+      `);
+
+    // Get sales by category
+    const [categoryStats] = await connection.execute(`
+          SELECT 
+              c.name as category_name,
+              COUNT(DISTINCT o.order_id) as order_count,
+              SUM(oi.total_item_price) as revenue
+          FROM categories c
+          JOIN products p ON c.category_id = p.category_id
+          JOIN order_items oi ON p.product_id = oi.product_id
+          JOIN orders o ON oi.order_id = o.order_id
+          WHERE o.order_status != 'Cancelled'
+          GROUP BY c.category_id
+      `);
+
+    // Get top selling products
+    const [topProducts] = await connection.execute(`
+          SELECT 
+              p.product_name,
+              p.product_id,
+              COUNT(DISTINCT o.order_id) as times_ordered,
+              SUM(oi.quantity) as total_quantity,
+              SUM(oi.total_item_price) as total_revenue
+          FROM products p
+          JOIN order_items oi ON p.product_id = oi.product_id
+          JOIN orders o ON oi.order_id = o.order_id
+          WHERE o.order_status != 'Cancelled'
+          GROUP BY p.product_id
+          ORDER BY total_revenue DESC
+          LIMIT 5
+      `);
+
+    // Get monthly revenue trend
+    const [monthlyRevenue] = await connection.execute(`
+          SELECT 
+              DATE_FORMAT(o.order_date, '%Y-%m') as month,
+              COUNT(DISTINCT o.order_id) as order_count,
+              SUM(o.total_amount) as revenue
+          FROM orders o
+          WHERE o.order_status != 'Cancelled'
+          GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
+          ORDER BY month DESC
+          LIMIT 12
+      `);
+
+    // Get returns data
+    // Get returns data - Updated Query
+    const [returnsData] = await connection.execute(`
+      SELECT 
+          COUNT(*) as total_returns,
+          AVG(ref.refund_amount) as average_refund  -- Changed from r.refund_amount to ref.refund_amount
+      FROM returns r
+      JOIN refunds ref ON r.return_id = ref.return_id
+      WHERE r.return_status = 'Completed'
+    `);
+
+    res.json({
+      summary: {
+          ...salesStats[0],
+          total_returns: returnsData[0].total_returns,
+          average_refund: returnsData[0].average_refund,
+          total_refunds: returnsData[0].total_refunds
+      },
+      categoryStats,
+      topProducts,
+      monthlyRevenue
+  });
+
+  } catch (error) {
+    console.error('Error generating sales report:', error);
+    res.status(500).json({ message: 'Error generating sales report', error: error.message });
+  } finally {
+    connection.release();
   }
 });
 

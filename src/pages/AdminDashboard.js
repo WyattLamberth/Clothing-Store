@@ -3,7 +3,7 @@ import { Package2, ShoppingCart, Tag, BarChart, Users, Shield, ActivitySquare, S
 import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
-import SalesReports from '../components/SalesReports';
+import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryReport from '../components/InventoryReport';
 import UserManagement from '../components/UserManagement';
 
@@ -22,7 +22,7 @@ const AdminDashboard = () => {
   ];
 
   const reports = [
-    { id: "sales", label: "Sales Report" },
+    { id: "sales-analytics", label: "Sales Analytics" },
     { id: "inventory", label: "Inventory Health" },
     // We'll add more reports here later
   ];
@@ -91,7 +91,7 @@ const AdminDashboard = () => {
         {activeTab === "discounts" && <DiscountsManagement />}
         {activeTab === "reports" && (
           <>
-            {activeReport === "sales" && <SalesReports />}
+            {activeReport === "sales-analytics" && <SalesAnalytics />}
             {activeReport === "inventory" && <InventoryReport />}
           </>
         )}
