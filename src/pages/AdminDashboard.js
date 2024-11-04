@@ -4,10 +4,12 @@ import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
 import SalesReports from '../components/SalesReports';
+import InventoryReport from '../components/InventoryReport';
 import UserManagement from '../components/UserManagement';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
+  const [activeReport, setActiveReport] = useState("sales"); // Track active report
   
   const sections = [
     { id: "users", label: "Users & Access", icon: Users },
@@ -15,9 +17,14 @@ const AdminDashboard = () => {
     { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "discounts", label: "Discounts", icon: Tag },
     { id: "reports", label: "Reports", icon: BarChart },
-    { id: "roles", label: "Roles", icon: Shield },
     { id: "activity", label: "Activity Logs", icon: ActivitySquare },
     { id: "settings", label: "Settings", icon: Settings },
+  ];
+
+  const reports = [
+    { id: "sales", label: "Sales Report" },
+    { id: "inventory", label: "Inventory Health" },
+    // We'll add more reports here later
   ];
   
   return (
@@ -35,7 +42,12 @@ const AdminDashboard = () => {
             {sections.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
-                onClick={() => setActiveTab(id)}
+                onClick={() => {
+                  setActiveTab(id);
+                  if (id === "reports") {
+                    setActiveReport("sales"); // Default to sales report when clicking Reports tab
+                  }
+                }}
                 className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm transition-colors
                   ${activeTab === id
                     ? "border-blue-500 text-blue-600"
@@ -50,21 +62,38 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Reports Sub-Navigation (only show when reports tab is active) */}
+      {activeTab === "reports" && (
+        <div className="mb-6">
+          <div className="bg-gray-100 rounded-lg p-2 flex gap-2">
+            {reports.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setActiveReport(id)}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors
+                  ${activeReport === id
+                    ? "bg-white text-blue-600 shadow"
+                    : "text-gray-600 hover:bg-white/50"
+                  }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tab Content */}
       <div className="mt-6">
-        {/* Existing Employee Dashboard Components */}
+        {activeTab === "users" && <UserManagement />}
         {activeTab === "inventory" && <InventoryManagement />}
         {activeTab === "orders" && <OrdersManagement />}
         {activeTab === "discounts" && <DiscountsManagement />}
-        {activeTab === "reports" && <SalesReports />}
-        
-        {/* Admin-specific sections - placeholders for now */}
-        {activeTab === "users" && <UserManagement />}
-        {activeTab === "roles" && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Roles & Permissions</h2>
-            <p className="text-gray-600">Role management component will be implemented here</p>
-          </div>
+        {activeTab === "reports" && (
+          <>
+            {activeReport === "sales" && <SalesReports />}
+            {activeReport === "inventory" && <InventoryReport />}
+          </>
         )}
         {activeTab === "activity" && (
           <div className="bg-white p-6 rounded-lg shadow">
