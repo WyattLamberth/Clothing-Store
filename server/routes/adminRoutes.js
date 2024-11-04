@@ -268,7 +268,7 @@ router.post('/address', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const {line_1, line_2, city, state, zip} = req.body;
+    const { line_1, line_2, city, state, zip } = req.body;
 
     // Insert address
     const addressQuery = 'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)';
@@ -278,7 +278,7 @@ router.post('/address', async (req, res) => {
     // Commit transaction
     await connection.commit();
 
-    res.status(201).json({ message: 'Address created successfully', address_id: address_id } );
+    res.status(201).json({ message: 'Address created successfully', address_id: address_id });
   } catch (error) {
     // Rollback in case of error
     await connection.rollback();
