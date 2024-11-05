@@ -29,7 +29,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                 onClick={() => toggleSection(title)}
                 className="flex justify-between items-center w-full py-3 px-4 text-left"
             >
-                <span className="font-medium text-lg">{title}</span>
+                <span className="font-medium text-lg mr-10">{title}</span>
                 {expandedSections[title] ? (
                     <ChevronUp className="w-4 h-4" />
                 ) : (
@@ -158,7 +158,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                             type="range"
                             name="min"
                             min="0"
-                            max="300"
+                            max="200"
                             value={priceRange.min}
                             onChange={handlePriceChange}
                             className="w-full"
@@ -170,7 +170,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                             type="range"
                             name="max"
                             min="0"
-                            max="300"
+                            max="200"
                             value={priceRange.max}
                             onChange={handlePriceChange}
                             className="w-full"
