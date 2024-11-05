@@ -19,6 +19,7 @@ const ShopPage = () => {
   // Initialize selectedCategories and selectedGender as empty arrays
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedGender, setSelectedGender] = useState([]);
+  const [priceRange, setPriceRange] = useState({ min: priceMin, max: priceMax });
 
   useEffect(() => {
     const fetchCategoriesName = async () => {
@@ -49,7 +50,7 @@ const ShopPage = () => {
         console.log('Selected Categories:', selectedCategories);
         console.log('Selected Genders:', selectedGender);
 
-        const response = await api.get(`/filter/${categoryName}/${sex}/${priceMin}/${priceMax}/products`);
+        const response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products`);
         setProducts(response.data);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -59,7 +60,7 @@ const ShopPage = () => {
     if (categories_name.length > 0) {
       fetchProducts();
     }
-  }, [categories_name, selectedCategories, selectedGender, categories_gender, priceMin, priceMax]);
+  }, [categories_name, selectedCategories, selectedGender, categories_gender, priceRange]);
 
   const addItemToCart = async (product) => {
     setCartItems((prevCart) => {
@@ -100,6 +101,8 @@ const ShopPage = () => {
             setSelectedCategories={setSelectedCategories}
             selectedGender={selectedGender}
             setSelectedGender={setSelectedGender}
+            priceRange={priceRange}
+            setPriceRange={setPriceRange}
           />
         </div>
         
