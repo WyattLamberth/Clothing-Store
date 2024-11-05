@@ -612,90 +612,189 @@ router.get('/reports/inventory', async (req, res) => {
 });
 
 // In adminRoutes.js
+// In adminRoutes.js or a separate analytics route file
+
 router.get('/reports/sales-analytics', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    // Get total sales and stats
-    const [salesStats] = await connection.execute(`
-          SELECT 
-              COUNT(DISTINCT o.order_id) as total_orders,
-              SUM(o.total_amount) as total_revenue,
-              AVG(o.total_amount) as average_order_value,
-              COUNT(DISTINCT o.user_id) as unique_customers
-          FROM orders o
-          WHERE o.order_status != 'Cancelled'
-      `);
+    const { timeRange, category, startDate, endDate } = req.query;
 
-    // Get sales by category
-    const [categoryStats] = await connection.execute(`
-          SELECT 
-              c.name as category_name,
-              COUNT(DISTINCT o.order_id) as order_count,
-              SUM(oi.total_item_price) as revenue
-          FROM categories c
-          JOIN products p ON c.category_id = p.category_id
-          JOIN order_items oi ON p.product_id = oi.product_id
-          JOIN orders o ON oi.order_id = o.order_id
-          WHERE o.order_status != 'Cancelled'
-          GROUP BY c.category_id
-      `);
+    // Build date condition
+    let dateCondition = '';
+    let dateParams = [];
+    if (startDate && endDate) {
+      dateCondition = 'WHERE o.order_date BETWEEN ? AND ?';
+      dateParams = [startDate, endDate];
+    } else {
+      // Default date range based on timeRange
+      const endDate = new Date();
+      let startDate = new Date();
 
-    // Get top selling products
-    const [topProducts] = await connection.execute(`
-          SELECT 
-              p.product_name,
-              p.product_id,
-              COUNT(DISTINCT o.order_id) as times_ordered,
-              SUM(oi.quantity) as total_quantity,
-              SUM(oi.total_item_price) as total_revenue
-          FROM products p
-          JOIN order_items oi ON p.product_id = oi.product_id
-          JOIN orders o ON oi.order_id = o.order_id
-          WHERE o.order_status != 'Cancelled'
-          GROUP BY p.product_id
-          ORDER BY total_revenue DESC
-          LIMIT 5
-      `);
+      switch (timeRange) {
+        case '7d':
+          startDate.setDate(endDate.getDate() - 7);
+          break;
+        case '90d':
+          startDate.setDate(endDate.getDate() - 90);
+          break;
+        case '1y':
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+        default: // 30d is default
+          startDate.setDate(endDate.getDate() - 30);
+      }
+
+      dateCondition = 'WHERE o.order_date BETWEEN ? AND ?';
+      dateParams = [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]];
+    }
+
+    // Build category condition
+    let categoryCondition = '';
+    let categoryParam = [];
+    if (category && category !== 'all') {
+      categoryCondition = 'AND c.name = ?';
+      categoryParam = [category];
+    }
+
+    // Get summary statistics
+    const summaryQuery = `
+  SELECT 
+    main_stats.total_orders,
+    main_stats.total_revenue,
+    main_stats.average_order_value,
+    main_stats.unique_customers,
+    COALESCE(return_stats.total_returns, 0) as total_returns,
+    COALESCE(return_stats.average_refund, 0) as average_refund
+  FROM (
+    SELECT 
+      COUNT(DISTINCT o.order_id) as total_orders,
+      SUM(o.total_amount) as total_revenue,
+      AVG(o.total_amount) as average_order_value,
+      COUNT(DISTINCT o.user_id) as unique_customers
+    FROM orders o
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.product_id
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    ${dateCondition}
+    ${categoryCondition}
+    AND o.order_status != 'Cancelled'
+  ) as main_stats,
+  (
+    SELECT 
+      COUNT(*) as total_returns,
+      AVG(ref.refund_amount) as average_refund
+    FROM returns r 
+    JOIN refunds ref ON r.return_id = ref.return_id
+    JOIN orders o ON r.order_id = o.order_id
+    LEFT JOIN order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN products p ON oi.product_id = p.product_id
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    WHERE o.order_date BETWEEN ? AND ?
+    ${categoryCondition}
+    AND r.return_status = 'Completed'
+  ) as return_stats
+`;
+
+
+    // Get category statistics
+    const categoryQuery = `
+      SELECT 
+        c.name as category_name,
+        COUNT(DISTINCT o.order_id) as order_count,
+        SUM(oi.total_item_price) as revenue
+      FROM categories c
+      JOIN products p ON c.category_id = p.category_id
+      JOIN order_items oi ON p.product_id = oi.product_id
+      JOIN orders o ON oi.order_id = o.order_id
+      ${dateCondition}
+      ${categoryCondition}
+      AND o.order_status != 'Cancelled'
+      GROUP BY c.category_id
+      ORDER BY revenue DESC
+    `;
+
+    // Get top products
+    const topProductsQuery = `
+      SELECT 
+        p.product_name,
+        p.product_id,
+        COUNT(DISTINCT o.order_id) as times_ordered,
+        SUM(oi.quantity) as total_quantity,
+        SUM(oi.total_item_price) as total_revenue
+      FROM products p
+      JOIN order_items oi ON p.product_id = oi.product_id
+      JOIN orders o ON oi.order_id = o.order_id
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      ${dateCondition}
+      ${categoryCondition}
+      AND o.order_status != 'Cancelled'
+      GROUP BY p.product_id
+      ORDER BY total_revenue DESC
+      LIMIT 10
+    `;
 
     // Get monthly revenue trend
-    const [monthlyRevenue] = await connection.execute(`
-          SELECT 
-              DATE_FORMAT(o.order_date, '%Y-%m') as month,
-              COUNT(DISTINCT o.order_id) as order_count,
-              SUM(o.total_amount) as revenue
-          FROM orders o
-          WHERE o.order_status != 'Cancelled'
-          GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
-          ORDER BY month DESC
-          LIMIT 12
-      `);
-
-    // Get returns data
-    // Get returns data - Updated Query
-    const [returnsData] = await connection.execute(`
+    const revenueQuery = `
       SELECT 
-          COUNT(*) as total_returns,
-          AVG(ref.refund_amount) as average_refund  -- Changed from r.refund_amount to ref.refund_amount
-      FROM returns r
-      JOIN refunds ref ON r.return_id = ref.return_id
-      WHERE r.return_status = 'Completed'
-    `);
+        DATE_FORMAT(o.order_date, '%Y-%m') as month,
+        COUNT(DISTINCT o.order_id) as order_count,
+        SUM(o.total_amount) as revenue
+      FROM orders o
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.product_id
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      ${dateCondition}
+      ${categoryCondition}
+      AND o.order_status != 'Cancelled'
+      GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
+      ORDER BY month ASC
+    `;
 
+    // Execute all queries
+    const queryParams = [...dateParams, ...categoryParam];
+    const summaryParams = [...dateParams, ...categoryParam, ...dateParams, ...categoryParam];
+    const [summaryResults] = await connection.execute(summaryQuery, summaryParams);
+    const [categoryStats] = await connection.execute(categoryQuery, queryParams);
+    const [topProducts] = await connection.execute(topProductsQuery, queryParams);
+    const [monthlyRevenue] = await connection.execute(revenueQuery, queryParams);
+
+    // Format and validate the data
+    const summary = {
+      total_revenue: Number(summaryResults[0]?.total_revenue) || 0,
+      total_orders: Number(summaryResults[0]?.total_orders) || 0,
+      average_order_value: Number(summaryResults[0]?.average_order_value) || 0,
+      unique_customers: Number(summaryResults[0]?.unique_customers) || 0,
+      total_returns: Number(summaryResults[0]?.total_returns) || 0,
+      average_refund: Number(summaryResults[0]?.average_refund) || 0
+    };
+
+    // Send the response
     res.json({
-      summary: {
-          ...salesStats[0],
-          total_returns: returnsData[0].total_returns,
-          average_refund: returnsData[0].average_refund,
-          total_refunds: returnsData[0].total_refunds
-      },
-      categoryStats,
-      topProducts,
-      monthlyRevenue
-  });
+      summary,
+      categoryStats: categoryStats.map(cat => ({
+        ...cat,
+        revenue: Number(cat.revenue) || 0,
+        order_count: Number(cat.order_count) || 0
+      })),
+      topProducts: topProducts.map(prod => ({
+        ...prod,
+        total_revenue: Number(prod.total_revenue) || 0,
+        total_quantity: Number(prod.total_quantity) || 0,
+        times_ordered: Number(prod.times_ordered) || 0
+      })),
+      monthlyRevenue: monthlyRevenue.map(month => ({
+        ...month,
+        revenue: Number(month.revenue) || 0,
+        order_count: Number(month.order_count) || 0
+      }))
+    });
 
   } catch (error) {
     console.error('Error generating sales report:', error);
-    res.status(500).json({ message: 'Error generating sales report', error: error.message });
+    res.status(500).json({
+      message: 'Error generating sales report',
+      error: error.message
+    });
   } finally {
     connection.release();
   }

@@ -1,35 +1,24 @@
+// SalesAnalytics.js
 import React, { useState, useEffect } from 'react';
 import {
-    LineChart,
-    Line,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell
+    LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
-import {
-    DollarSign,
-    ShoppingBag,
-    Users,
-    ArrowUpRight,
-    TrendingDown,
-    Filter,
-    X
-} from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
 import api from '../utils/api';
 
 const SalesAnalytics = () => {
+    const [timeRange, setTimeRange] = useState('30d');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [viewType, setViewType] = useState('chart');
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        end: new Date().toISOString().split('T')[0]
+    });
     const [data, setData] = useState({
         summary: {
-            total_orders: 0,
             total_revenue: 0,
+            total_orders: 0,
             average_order_value: 0,
             unique_customers: 0,
             total_returns: 0,
@@ -41,46 +30,30 @@ const SalesAnalytics = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState('overview');
-    const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
-    });
-    const [selectedCategory, setSelectedCategory] = useState('all');
-    const [timeFrame, setTimeFrame] = useState('monthly'); // daily, weekly, monthly, yearly
-    const [sortBy, setSortBy] = useState('revenue'); // revenue, quantity, orders
-    const [expandedProduct, setExpandedProduct] = useState(null);
-    const [viewMode, setViewMode] = useState('chart'); // chart, table
 
     const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-    const formatCurrency = (value) => {
-        const num = Number(value);
-        return isNaN(num) ? '$0.00' : `$${num.toFixed(2)}`;
-    };
-
     useEffect(() => {
-        fetchSalesAnalytics();
-    }, [dateRange, selectedCategory, timeFrame, sortBy]); // Add dependencies to trigger refetch
+        fetchAnalyticsData();
+    }, [timeRange, categoryFilter, dateRange]);
 
-    const fetchSalesAnalytics = async () => {
+    const fetchAnalyticsData = async () => {
         try {
             setLoading(true);
             const response = await api.get('/admin/reports/sales-analytics', {
                 params: {
+                    timeRange,
+                    category: categoryFilter,
                     startDate: dateRange.start,
-                    endDate: dateRange.end,
-                    category: selectedCategory,
-                    timeFrame,
-                    sortBy
+                    endDate: dateRange.end
                 }
             });
+
             if (response.data) {
-                // Process numeric values
                 const processedData = {
                     summary: {
-                        total_orders: Number(response.data.summary.total_orders) || 0,
                         total_revenue: Number(response.data.summary.total_revenue) || 0,
+                        total_orders: Number(response.data.summary.total_orders) || 0,
                         average_order_value: Number(response.data.summary.average_order_value) || 0,
                         unique_customers: Number(response.data.summary.unique_customers) || 0,
                         total_returns: Number(response.data.summary.total_returns) || 0,
@@ -94,7 +67,8 @@ const SalesAnalytics = () => {
                     topProducts: response.data.topProducts.map(prod => ({
                         ...prod,
                         total_revenue: Number(prod.total_revenue) || 0,
-                        total_quantity: Number(prod.total_quantity) || 0
+                        total_quantity: Number(prod.total_quantity) || 0,
+                        times_ordered: Number(prod.times_ordered) || 0
                     })),
                     monthlyRevenue: response.data.monthlyRevenue.map(month => ({
                         ...month,
@@ -106,17 +80,53 @@ const SalesAnalytics = () => {
             }
             setError(null);
         } catch (err) {
-            setError('Failed to fetch sales report');
-            console.error('Error:', err);
+            console.error('Error fetching analytics:', err);
+            setError('Failed to fetch sales analytics data');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleQuickDateRange = (range) => {
+        const end = new Date();
+        let start = new Date();
+
+        switch (range) {
+            case '7d':
+                start.setDate(end.getDate() - 7);
+                break;
+            case '30d':
+                start.setDate(end.getDate() - 30);
+                break;
+            case '90d':
+                start.setDate(end.getDate() - 90);
+                break;
+            case '1y':
+                start.setFullYear(end.getFullYear() - 1);
+                break;
+            default:
+                break;
+        }
+
+        setDateRange({
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0]
+        });
+        setTimeRange(range);
+    };
+
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(value);
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="text-gray-600">Loading sales report...</div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-2">Loading analytics...</span>
             </div>
         );
     }
@@ -129,221 +139,132 @@ const SalesAnalytics = () => {
         );
     }
 
-    const FilterControls = () => (
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-            <div className="flex flex-wrap gap-4 items-center">
+    const MetricCard = ({ title, value, trend, icon: Icon, trendValue }) => (
+        <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center justify-between">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Date Range</label>
-                    <div className="flex gap-2 mt-1">
-                        <input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                            className="rounded-md border-gray-300 shadow-sm"
-                        />
-                        <span className="self-center">to</span>
-                        <input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                            className="rounded-md border-gray-300 shadow-sm"
-                        />
+                    <p className="text-sm text-gray-500 mb-1">{title}</p>
+                    <h3 className="text-2xl font-bold">{value}</h3>
+                    <div className="flex items-center mt-2">
+                        {trend === 'up' ? (
+                            <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
+                        ) : (
+                            <ArrowDownRight className="w-4 h-4 text-red-500 mr-1" />
+                        )}
+                        <span className={`text-sm ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                            {trendValue}
+                        </span>
                     </div>
                 </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Category</label>
-                    <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                    >
-                        <option value="all">All Categories</option>
-                        {data.categoryStats?.map(cat => (
-                            <option key={cat.category_name} value={cat.category_name}>
-                                {cat.category_name}
-                            </option>
-                        ))}
-                    </select>
+                <div className="p-3 bg-blue-50 rounded-full">
+                    <Icon className="w-6 h-6 text-blue-500" />
                 </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Time Frame</label>
-                    <select
-                        value={timeFrame}
-                        onChange={(e) => setTimeFrame(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                    >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Sort Products By</label>
-                    <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                    >
-                        <option value="revenue">Revenue</option>
-                        <option value="quantity">Quantity Sold</option>
-                        <option value="orders">Number of Orders</option>
-                    </select>
-                </div>
-
-                <button
-                    onClick={() => setViewMode(viewMode === 'chart' ? 'table' : 'chart')}
-                    className="ml-auto px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                    Toggle View
-                </button>
             </div>
         </div>
     );
 
-    const ProductDetailsModal = ({ product, onClose }) => {
-        const salesTrend = product.salesTrend || data.monthlyRevenue.map(month => ({
-            date: month.month,
-            sales: (Math.random() * product.total_revenue / data.monthlyRevenue.length).toFixed(2)
-        }));
-
-        return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg max-w-2xl w-full p-6">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-medium">{product.product_name}</h3>
-                        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                            <X className="h-6 w-6" />
-                        </button>
-                    </div>
-
-                    <div className="h-64 mb-6">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={salesTrend}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => formatCurrency(value)} />
-                                <Legend />
-                                <Line type="monotone" dataKey="sales" stroke="#3B82F6" name="Sales" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    {/* Product Performance Metrics */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-sm text-gray-500">Total Revenue</p>
-                            <p className="text-xl font-bold">{formatCurrency(product.total_revenue)}</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-sm text-gray-500">Units Sold</p>
-                            <p className="text-xl font-bold">{product.total_quantity}</p>
-                        </div>
-                    </div>
-
-                    {/* Sales Trend Graph */}
-                    <div className="h-64 mb-6">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={product.salesTrend}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Line type="monotone" dataKey="sales" stroke="#3B82F6" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    {/* Additional Details */}
-                    <div className="space-y-4">
-                        <div>
-                            <h4 className="font-medium mb-2">Customer Demographics</h4>
-                            <p className="text-sm text-gray-600">Show demographics of customers who bought this product</p>
-                        </div>
-                        <div>
-                            <h4 className="font-medium mb-2">Related Products</h4>
-                            <p className="text-sm text-gray-600">Products often purchased together</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-
-
-
     return (
         <div className="space-y-6">
-            <FilterControls />
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Sales Performance Report</h2>
-                <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                    Export Report
-                </button>
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-lg shadow mb-6">
+                <div className="flex flex-wrap gap-4 items-end">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Quick Range</label>
+                        <select
+                            value={timeRange}
+                            onChange={(e) => handleQuickDateRange(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        >
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Custom Date Range</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="date"
+                                value={dateRange.start}
+                                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                className="mt-1 block rounded-md border-gray-300 shadow-sm"
+                            />
+                            <span className="self-center">to</span>
+                            <input
+                                type="date"
+                                value={dateRange.end}
+                                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                className="mt-1 block rounded-md border-gray-300 shadow-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Category</label>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        >
+                            <option value="all">All Categories</option>
+                            {data.categoryStats.map(cat => (
+                                <option key={cat.category_name} value={cat.category_name}>
+                                    {cat.category_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <button
+                            onClick={() => setViewType(viewType === 'chart' ? 'table' : 'chart')}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                        >
+                            {viewType === 'chart' ? 'Show Table' : 'Show Chart'}
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* Summary Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="bg-white p-6 rounded-lg shadow col-span-2">
-                    <div className="flex items-center">
-                        <DollarSign className="h-8 w-8 text-green-500" />
-                        <div className="ml-4">
-                            <p className="text-sm text-gray-500">Total Revenue</p>
-                            <p className="text-2xl font-bold">{formatCurrency(data.summary.total_revenue)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex items-center">
-                        <ShoppingBag className="h-8 w-8 text-blue-500" />
-                        <div className="ml-4">
-                            <p className="text-sm text-gray-500">Orders</p>
-                            <p className="text-2xl font-bold">{data.summary.total_orders}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex items-center">
-                        <Users className="h-8 w-8 text-purple-500" />
-                        <div className="ml-4">
-                            <p className="text-sm text-gray-500">Customers</p>
-                            <p className="text-2xl font-bold">{data.summary.unique_customers}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex items-center">
-                        <ArrowUpRight className="h-8 w-8 text-indigo-500" />
-                        <div className="ml-4">
-                            <p className="text-sm text-gray-500">Avg Order Value</p>
-                            <p className="text-2xl font-bold">{formatCurrency(data.summary.average_order_value)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <div className="flex items-center">
-                        <TrendingDown className="h-8 w-8 text-red-500" />
-                        <div className="ml-4">
-                            <p className="text-sm text-gray-500">Returns</p>
-                            <p className="text-2xl font-bold">{data.summary.total_returns}</p>
-                        </div>
-                    </div>
-                </div>
+            {/* Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricCard
+                    title="Total Revenue"
+                    value={formatCurrency(data.summary.total_revenue)}
+                    trend="up"
+                    trendValue="12.5% vs last period"
+                    icon={DollarSign}
+                />
+                <MetricCard
+                    title="Total Orders"
+                    value={data.summary.total_orders.toLocaleString()}
+                    trend="up"
+                    trendValue="8.2% vs last period"
+                    icon={ShoppingBag}
+                />
+                <MetricCard
+                    title="Average Order Value"
+                    value={formatCurrency(data.summary.average_order_value)}
+                    trend="down"
+                    trendValue="3.1% vs last period"
+                    icon={TrendingUp}
+                />
+                <MetricCard
+                    title="Returns"
+                    value={data.summary.total_returns.toLocaleString()}
+                    trend="down"
+                    trendValue="2.5% vs last period"
+                    icon={ArrowDownRight}
+                />
             </div>
-            {/* Revenue Trend Chart */}
+
+            {/* Revenue Chart */}
             <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium mb-4">Monthly Revenue Trend</h3>
-                {viewMode === 'chart' ? (
-                    <div className="h-80">
+                <h3 className="text-lg font-medium mb-4">Revenue Trend</h3>
+                {viewType === 'chart' ? (
+                    <div className="h-96">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data.monthlyRevenue}>
                                 <CartesianGrid strokeDasharray="3 3" />
@@ -351,7 +272,22 @@ const SalesAnalytics = () => {
                                 <YAxis />
                                 <Tooltip formatter={(value) => formatCurrency(value)} />
                                 <Legend />
-                                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" name="Revenue" />
+                                <Line
+                                    type="monotone"
+                                    dataKey="revenue"
+                                    stroke="#0088FE"
+                                    name="Revenue"
+                                    strokeWidth={2}
+                                    dot={{ r: 4 }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="order_count"
+                                    stroke="#00C49F"
+                                    name="Orders"
+                                    strokeWidth={2}
+                                    dot={{ r: 4 }}
+                                />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
@@ -360,17 +296,17 @@ const SalesAnalytics = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.monthlyRevenue.map((month) => (
-                                    <tr key={month.month}>
-                                        <td className="px-6 py-4 whitespace-nowrap">{month.month}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(month.revenue)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{month.order_count}</td>
+                                {data.monthlyRevenue.map((item, index) => (
+                                    <tr key={index} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4">{item.month}</td>
+                                        <td className="px-6 py-4">{formatCurrency(item.revenue)}</td>
+                                        <td className="px-6 py-4">{item.order_count}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -379,43 +315,11 @@ const SalesAnalytics = () => {
                 )}
             </div>
 
-
-            {/* Top Products Table */}
-            <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="text-lg font-medium mb-4">Top Selling Products</h3>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {data.topProducts.map((product) => (
-                                <tr
-                                    key={product.product_id}
-                                    onClick={() => setExpandedProduct(product)}
-                                    className="cursor-pointer hover:bg-gray-50"
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap">{product.product_name}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{product.times_ordered}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{product.total_quantity}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(product.total_revenue)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             {/* Category Performance */}
             <div className="bg-white p-6 rounded-lg shadow">
                 <h3 className="text-lg font-medium mb-4">Category Performance</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="h-64">
+                    <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -440,7 +344,10 @@ const SalesAnalytics = () => {
                         {data.categoryStats.map((category, index) => (
                             <div key={category.category_name} className="flex justify-between items-center">
                                 <div className="flex items-center">
-                                    <div className={`w-3 h-3 rounded-full mr-2`} style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                    <div
+                                        className="w-3 h-3 rounded-full mr-2"
+                                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                                    />
                                     <span>{category.category_name}</span>
                                 </div>
                                 <span className="font-medium">{formatCurrency(category.revenue)}</span>
@@ -449,12 +356,66 @@ const SalesAnalytics = () => {
                     </div>
                 </div>
             </div>
-            {expandedProduct && (
-                <ProductDetailsModal
-                    product={expandedProduct}
-                    onClose={() => setExpandedProduct(null)}
-                />
-            )}
+
+            {/* Top Products */}
+            <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-medium mb-4">Top Products</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {data.topProducts.map((product, index) => (
+                                <tr key={product.product_id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm font-medium text-gray-900">{product.product_name}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-500">{product.times_ordered}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-500">{product.total_quantity}</div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="text-sm text-gray-900">{formatCurrency(product.total_revenue)}</div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Print-only Summary Section */}
+            <div className="hidden print:block mt-8">
+                <h2 className="text-xl font-bold mb-4">Sales Analytics Summary</h2>
+                <div className="space-y-4">
+                    <div>
+                        <h3 className="font-medium">Report Period</h3>
+                        <p>{dateRange.start} to {dateRange.end}</p>
+                    </div>
+                    <div>
+                        <h3 className="font-medium">Key Metrics</h3>
+                        <ul className="list-disc pl-5">
+                            <li>Total Revenue: {formatCurrency(data.summary.total_revenue)}</li>
+                            <li>Total Orders: {data.summary.total_orders}</li>
+                            <li>Average Order Value: {formatCurrency(data.summary.average_order_value)}</li>
+                            <li>Total Returns: {data.summary.total_returns}</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 className="font-medium">Generated On</h3>
+                        <p>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
