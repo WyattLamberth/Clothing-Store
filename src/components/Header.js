@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
+import api from '../utils/api';
 
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const ROLES = {
     CUSTOMER: 1,
@@ -16,6 +19,34 @@ const Header = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchNotifications();
+    }
+  }, [isAuthenticated]);
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await api.put(`/notifications/${notificationId}/read`);
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notif) =>
+          notif.notification_id === notificationId ? { ...notif, read_status: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   const categories = [
@@ -101,6 +132,40 @@ const Header = () => {
                     </span>
                   </li>
                 )}
+
+                <li>
+                  {/* Notification Bell */}
+                  <div className="relative">
+                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900">
+                      <Bell className="h-5 w-5" />
+                      {notifications.some((notif) => !notif.read_status) && (
+                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute top-0 right-0">
+                          {notifications.filter((notif) => !notif.read_status).length}
+                        </span>
+                      )}
+                    </button>
+
+                    {showNotifications && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50">
+                        <h3 className="text-sm font-bold mb-2">Notifications</h3>
+                        <ul>
+                          {notifications.map((notif) => (
+                            <li key={notif.notification_id} className={`p-2 ${notif.read_status ? 'bg-gray-100' : 'bg-white'}`}>
+                              <div className="text-xs text-gray-500">{new Date(notif.notification_date).toLocaleString()}</div>
+                              <div className="text-sm">{notif.message}</div>
+                              {!notif.read_status && (
+                                <button onClick={() => markAsRead(notif.notification_id)} className="text-blue-600 text-xs mt-1">
+                                  Mark as read
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                        {notifications.length === 0 && <p className="text-gray-500 text-sm">No notifications</p>}
+                      </div>
+                    )}
+                  </div>
+                </li>
 
                 <li>
                   <button
