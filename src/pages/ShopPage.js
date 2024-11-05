@@ -41,8 +41,10 @@ const ShopPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const categoryName = selectedCategories.length > 0 ? selectedCategories.join(',') : categories_name.join(',');
-        const sex = selectedGender.length > 0 ? selectedGender.join(',') : categories_gender.join(',');
+        let categoryName;
+        let sex;
+        categoryName = selectedCategories.length > 0 ? selectedCategories.join(',') : categories_name.join(',');
+        sex = selectedGender.length > 0 ? selectedGender.join(',') : categories_gender.join(',');
 
         console.log('Selected Categories:', selectedCategories);
         console.log('Selected Genders:', selectedGender);
