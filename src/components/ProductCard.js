@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onProductAdded }) => {
   const price = !isNaN(product.price) ? parseFloat(product.price).toFixed(2) : 'N/A';
 
   const addItemToCart = async () => {
@@ -29,6 +29,9 @@ const ProductCard = ({ product }) => {
         quantity: 1,
       });
       console.log('Item added to cart in database');
+      
+      // Trigger the overlay by calling the callback
+      onProductAdded(product);
     } catch (error) {
       console.error('Error adding item to cart:', error);
     }
