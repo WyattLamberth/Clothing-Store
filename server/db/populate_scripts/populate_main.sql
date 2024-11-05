@@ -163,7 +163,7 @@ CREATE TABLE activity_logs (
 -- Notifications table
 CREATE TABLE notifications (
   notification_id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT,
+  user_id INT NULL,
   message TEXT NOT NULL,
   notification_date DATETIME NOT NULL,
   read_status BOOLEAN NOT NULL DEFAULT FALSE

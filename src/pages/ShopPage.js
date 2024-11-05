@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
+import CartOverlay from '../components/CartOverlay';
 
 const ShopPage = () => {
   const [products, setProducts] = useState([]);
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [overlayProduct, setOverlayProduct] = useState(null);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -22,32 +21,9 @@ const ShopPage = () => {
     fetchProducts();
   }, []);
 
-  const addItemToCart = async (product) => {
-    setCartItems((prevCart) => {
-      const existingItem = prevCart.find(item => item.product_id === product.product_id);
-      let updatedCart;
-
-      if (existingItem) {
-        updatedCart = prevCart.map(item =>
-          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        updatedCart = [...prevCart, { ...product, quantity: 1 }];
-      }
-
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-      return updatedCart;
-    });
-
-    try {
-      await api.post('/cart-items/add', {
-        product_id: product.product_id,
-        quantity: 1,
-      });
-      console.log('Item added to cart in database');
-    } catch (error) {
-      console.error('Error adding item to cart:', error);
-    }
+  const handleAddToCartOverlay = (product) => {
+    setOverlayProduct(product);
+    setShowOverlay(true);
   };
 
   return (
@@ -58,11 +34,13 @@ const ShopPage = () => {
           <ProductCard
             key={product.product_id}
             product={product}
-            onAddToCart={addItemToCart}
-            isInCart={!!cartItems.find(item => item.product_id === product.product_id)}
           />
         ))}
       </div>
+
+      {showOverlay && overlayProduct && (
+        <CartOverlay product={overlayProduct} onClose={() => setShowOverlay(false)} />
+      )}
     </div>
   );
 };

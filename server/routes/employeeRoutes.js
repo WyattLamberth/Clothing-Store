@@ -4,6 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const pool = require('../db/connection');  // Add this line
 const { authMiddleware } = require('../middleware/passport-auth');
+const pool = require('../db/connection');  // Add this line
+const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
@@ -11,13 +13,18 @@ router.use(express.urlencoded({extended:false}));
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
+    cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
   },
   filename: (req, file, cb) => {
     // Keep original filename but make it unique with timestamp
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + file.originalname);
+    // Keep original filename but make it unique with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
+
 
 const upload = multer({ storage: storage });
 
@@ -32,25 +39,85 @@ router.use(authMiddleware.staffOnly);
 // In employeeRoutes.js
 
 router.post('/products', async (req, res) => {
+// In employeeRoutes.js
+
+router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
+    
+    // Log the incoming request body
+    console.log('Request body:', req.body);
+
     
     // Log the incoming request body
     console.log('Request body:', req.body);
 
     const {
       product_name,
+     
       category_id,
+     
       description,
+     
       price,
       stock_quantity,
+     
       reorder_threshold,
+     
       size,
+     
       color,
+     
       brand
     } = req.body;
 
+    // Validate all required fields are present
+    if (!product_name || !category_id || !description || !price || 
+        !stock_quantity || !reorder_threshold || !size || !color || !brand) {
+      console.log('Missing required fields:', {
+        product_name,
+        category_id,
+        description,
+        price,
+        stock_quantity,
+        reorder_threshold,
+        size,
+        color,
+        brand
+      });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        requiredFields: {
+          product_name: !!product_name,
+          category_id: !!category_id,
+          description: !!description,
+          price: !!price,
+          stock_quantity: !!stock_quantity,
+          reorder_threshold: !!reorder_threshold,
+          size: !!size,
+          color: !!color,
+          brand: !!brand
+        }
+      });
+    }
+
+    // Convert values to appropriate types
+    const values = [
+      product_name,
+      parseInt(category_id),
+      description,
+      parseFloat(price),
+      parseInt(stock_quantity),
+      parseInt(reorder_threshold),
+      size,
+      color,
+      brand
+    ];
+
+    // Log the values being passed to the query
+    console.log('Values to insert:', values);
     // Validate all required fields are present
     if (!product_name || !category_id || !description || !price || 
         !stock_quantity || !reorder_threshold || !size || !color || !brand) {
@@ -102,11 +169,55 @@ router.post('/products', async (req, res) => {
         product_name, category_id, description, price, 
         stock_quantity, reorder_threshold, size, color, brand
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        stock_quantity, reorder_threshold, size, color, brand
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await connection.execute(query, values);
+    const [result] = await connection.execute(query, values);
 
     await connection.commit();
+    res.status(201).json({ 
+      message: 'Product created successfully', 
+      productId: result.insertId 
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating product:', error);
+    // Send more detailed error information
+    res.status(500).json({ 
+      error: 'Error creating product',
+      details: error.message,
+      requestBody: req.body
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    // First check if the product exists
+    const [product] = await connection.execute(
+      'SELECT * FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    if (product.length === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Delete the product
+    const [result] = await connection.execute(
+      'DELETE FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: 'Product deleted successfully' });
     res.status(201).json({ 
       message: 'Product created successfully', 
       productId: result.insertId 
@@ -152,6 +263,8 @@ router.delete('/products/:productId', async (req, res) => {
     await connection.rollback();
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Error deleting product' });
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Error deleting product' });
   } finally {
     connection.release();
   }
@@ -160,13 +273,15 @@ router.delete('/products/:productId', async (req, res) => {
 router.put('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
-    const {
-      product_name, category_id, description, price,
-      stock_quantity, reorder_threshold, size, color, brand
+
+    const { 
+      product_name, category_id, description, price, 
+      stock_quantity, reorder_threshold, size, color, brand 
     } = req.body;
 
-    const query = `
+    const updateProductQuery = `
       UPDATE products 
       SET product_name = ?, category_id = ?, description = ?, 
           price = ?, stock_quantity = ?, reorder_threshold = ?, 
@@ -174,7 +289,7 @@ router.put('/products/:productId', async (req, res) => {
       WHERE product_id = ?
     `;
 
-    const [result] = await connection.execute(query, [
+    const [result] = await connection.execute(updateProductQuery, [
       product_name, category_id, description, price,
       stock_quantity, reorder_threshold, size, color, brand,
       req.params.productId
@@ -186,6 +301,27 @@ router.put('/products/:productId', async (req, res) => {
   } catch (error) {
     await connection.rollback();
     res.status(400).json({ error: 'Error updating product' });
+  } finally {
+    connection.release();
+  }
+});
+
+
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
+    await connection.beginTransaction();
+    const [result] = await connection.execute(
+      'DELETE FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+    await connection.commit();
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ error: 'Error deleting product' });
   } finally {
     connection.release();
   }
@@ -232,6 +368,7 @@ router.put('/orders/:orderId', async (req, res) => {
     connection.release();
   }
 });
+
 router.delete('/orders/:orderId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -622,6 +759,7 @@ router.delete('/discount/:discount_id', async (req, res) => {
 router.post('/sale-event', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction(); // Begin the transaction
 
     const {
@@ -739,6 +877,7 @@ router.put('/sale-event/:sale_event_id', async (req, res) => {
 router.delete('/sale-event/:sale_event_id', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     const { sale_event_id } = req.params;
 
     // Query to delete the sale event by sale_event_id
