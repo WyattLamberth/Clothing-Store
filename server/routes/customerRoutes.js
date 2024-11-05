@@ -27,6 +27,110 @@ router.get('/users/:userId',
     }
 });
 
+// User Profile Update
+router.put('/users/:userId', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    try {
+      const { first_name, last_name, username, email, phone_number } = req.body;
+      const [result] = await pool.execute(
+        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, phone_number = ? WHERE user_id = ?',
+        [first_name, last_name, username, email, phone_number, req.params.userId]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'User profile updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating user profile', error: error.message });
+    }
+});
+
+
+// Order Management
+router.post('/orders', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const {user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
+      const [result] = await connection.execute(
+        'INSERT INTO orders (user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
+      );
+      await connection.commit();
+      res.status(201).json({ message: 'Order created successfully', order_id: result.insertId });
+    } catch (error) {
+      await connection.rollback();
+      res.status(400).json({ error: 'Error creating order' });
+    } finally {
+      connection.release();
+    }
+});
+
+router.get('/users/:userId/orders', 
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    try {
+      const [orders] = await pool.execute(
+        'SELECT * FROM orders WHERE user_id = ?',
+        [req.params.userId]
+      );
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching orders', error: error.message });
+    }
+});
+
+// Payment Management
+router.get('/payment/:preferred_payment_id',
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      const [paymentResult] = await connection.execute(
+        'SELECT * FROM payment WHERE preferred_payment_id = ?',
+        [req.params.preferred_payment_id]
+      );
+      if (paymentResult.length === 0) {
+        return res.status(404).json({ message: 'No payment method found for this ID.' });
+      }
+      res.status(200).json(paymentResult);
+    } catch (error) {
+      res.status(400).json({ error: 'Error retrieving payment method' });
+    } finally {
+      connection.release();
+    }
+});
+
+// Payment Method Update
+router.put('/payment/:preferred_payment_id',
+  authMiddleware.checkSelfOrHigher,
+  async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+      const { payment_type, provider, account_number, expiry_date } = req.body;
+      const [result] = await connection.execute(
+        'UPDATE payment SET payment_type = ?, provider = ?, account_number = ?, expiry_date = ? WHERE preferred_payment_id = ?',
+        [payment_type, provider, account_number, expiry_date, req.params.preferred_payment_id]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Payment method not found' });
+      }
+
+      res.status(200).json({ message: 'Payment method updated successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating payment method', error: error.message });
+    } finally {
+      connection.release();
+    }
+});
+
+
 // Shopping Cart Management
 router.post('/shopping_cart/create', 
   authMiddleware.customerOnly,
@@ -294,61 +398,6 @@ router.put('/cart-items/update', authMiddleware.customerOnly, async (req, res) =
 
 
 
-// Order Management
-router.post('/orders', 
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
-      const {user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount} = req.body;
-      const [result] = await connection.execute(
-        'INSERT INTO orders (user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [user_id, shipping_address_id, order_status, order_date, shipping_cost, payment_method, total_amount]
-      );
-      await connection.commit();
-      res.status(201).json({ message: 'Order created successfully', order_id: result.insertId });
-    } catch (error) {
-      await connection.rollback();
-      res.status(400).json({ error: 'Error creating order' });
-    } finally {
-      connection.release();
-    }
-});
 
-router.get('/users/:userId/orders', 
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    try {
-      const [orders] = await pool.execute(
-        'SELECT * FROM orders WHERE user_id = ?',
-        [req.params.userId]
-      );
-      res.json(orders);
-    } catch (error) {
-      res.status(500).json({ message: 'Error fetching orders', error: error.message });
-    }
-});
-
-// Payment Management
-router.get('/payment/:preferred_payment_id',
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-      const [paymentResult] = await connection.execute(
-        'SELECT * FROM payment WHERE preferred_payment_id = ?',
-        [req.params.preferred_payment_id]
-      );
-      if (paymentResult.length === 0) {
-        return res.status(404).json({ message: 'No payment method found for this ID.' });
-      }
-      res.status(200).json(paymentResult);
-    } catch (error) {
-      res.status(400).json({ error: 'Error retrieving payment method' });
-    } finally {
-      connection.release();
-    }
-});
 
 module.exports = router;

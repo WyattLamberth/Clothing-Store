@@ -20,7 +20,7 @@ const Checkout = () => {
     expDate: '',
     cvv: '',
   });
-  
+
   const [errors, setErrors] = useState({
     delivery: {},
     payment: {},
@@ -89,7 +89,9 @@ const Checkout = () => {
   const handlePlaceOrder = () => {
     // Handle order placement logic here
     console.log('Order placed!', { deliveryInfo, paymentInfo, cartItems });
-    navigate('/'); // Redirect to home or order confirmation page
+    
+    // Navigate to the profile page or dashboard after placing the order
+    navigate('/profile'); // Adjust the path as needed
   };
 
   return (
@@ -168,4 +170,5 @@ const Checkout = () => {
 };
 
 export default Checkout;
+
 

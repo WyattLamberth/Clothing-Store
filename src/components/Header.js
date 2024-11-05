@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, Shield, Briefcase } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
 
 const Header = () => {
@@ -32,10 +32,10 @@ const Header = () => {
         <div className="flex items-center space-x-12">
           <Link to="/" className="text-2xl font-bold">StyleHub</Link>
           <nav className="flex space-x-10">
-          {categories.map((category, index) => (
+            {categories.map((category, index) => (
               <NavLink
                 key={index}
-                to={category.path} // Use the path specified in the category object
+                to={category.path}
                 className={({ isActive }) => 
                   `text-gray-700 hover:text-gray-900 font-medium ${isActive ? 'font-bold' : ''}`
                 }
@@ -135,6 +135,19 @@ const Header = () => {
                 <span>Cart</span>
               </Link>
             </li>
+
+            {/* Profile Icon */}
+            {isAuthenticated && (
+              <li>
+                <Link 
+                  to="/profile" 
+                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  <span>Profile</span>
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
