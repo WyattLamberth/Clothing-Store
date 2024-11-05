@@ -1,54 +1,54 @@
-USE online_store;
+USE onlinestore;
 
 DELIMITER $$
 
--- Trigger to update stock quantity when an order is placed
-CREATE TRIGGER update_stock_after_order
-AFTER INSERT ON order_items
-FOR EACH ROW
-BEGIN
-  -- Update stock quantity after an order is placed
-  UPDATE products
-  SET stock_quantity = stock_quantity - NEW.quantity
-  WHERE product_id = NEW.product_id;
+-- ACTIVITY LOG TO MONITOR EMPLOYEES ACTIONS
 
-  -- Ensure stock does not go below zero
-  IF (SELECT stock_quantity FROM products WHERE product_id = NEW.product_id) < 0 THEN
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Insufficient stock for product.';
-  END IF;
-END$$
-
--- ACTIVITY LOG FOR PRODUCTS TABLE
-
--- Trigger to log admin/employee actions (INSERT)
-CREATE TRIGGER log_user_action_insert
+-- Trigger for INSERT action on products table
+CREATE TRIGGER log_user_action_insert_product
 AFTER INSERT ON products
 FOR EACH ROW
 BEGIN
-    -- Insert the admin/employee action into activity_logs with the user_id
     INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
-    VALUES ('INSERT', NOW(), 'products', (SELECT user_id FROM users WHERE role_id IN (1, 2) LIMIT 1)); -- Assuming role_id 1 is Admin, 2 is Employee
+    VALUES ('INSERT', NOW(), 'products', @current_user_id);
 END$$
 
--- Trigger to log admin/employee actions (UPDATE)
-CREATE TRIGGER log_user_action_update
+-- Trigger for UPDATE action on products table
+CREATE TRIGGER log_user_action_update_product
 AFTER UPDATE ON products
 FOR EACH ROW
 BEGIN
-    -- Insert the admin/employee action into activity_logs with the user_id
     INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
-    VALUES ('UPDATE', NOW(), 'products', (SELECT user_id FROM users WHERE role_id IN (1, 2) LIMIT 1));
+    VALUES ('UPDATE', NOW(), 'products', @current_user_id);
 END$$
 
--- Trigger to log admin/employee actions (DELETE)
-CREATE TRIGGER log_user_action_delete
+-- Trigger for DELETE action on products table
+CREATE TRIGGER log_user_action_delete_product
 AFTER DELETE ON products
 FOR EACH ROW
 BEGIN
-    -- Insert the admin/employee action into activity_logs with the user_id
     INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
-    VALUES ('DELETE', NOW(), 'products', (SELECT user_id FROM users WHERE role_id IN (1, 2) LIMIT 1));
+    VALUES ('DELETE', NOW(), 'products', @current_user_id);
 END$$
+
+-- Trigger for INSERT action on sale_events table
+CREATE TRIGGER log_user_action_insert_sale_event
+AFTER INSERT ON sale_events
+FOR EACH ROW
+BEGIN
+    INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+    VALUES ('INSERT', NOW(), 'sale_events', @current_user_id);
+END$$
+
+-- Trigger for DELETE action on sale_events table
+CREATE TRIGGER log_user_action_delete_sale_event
+AFTER DELETE ON sale_events
+FOR EACH ROW
+BEGIN
+    INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+    VALUES ('DELETE', NOW(), 'sale_events', @current_user_id);
+END$$
+
 
 -- NOTIFICATIONS 
 
@@ -84,6 +84,20 @@ BEGIN
       FALSE
     );
   END IF;
+END$$
+
+-- MISCELLANEOUS TRIGGERS
+
+-- Trigger to update stock quantity when an order is placed
+CREATE TRIGGER update_stock_after_order
+AFTER INSERT ON order_items
+FOR EACH ROW
+BEGIN
+  -- Update stock quantity after an order is placed
+  UPDATE products
+  SET stock_quantity = stock_quantity - NEW.quantity
+  WHERE product_id = NEW.product_id;
+ 
 END$$
 
 

@@ -34,6 +34,7 @@ router.use(authMiddleware.staffOnly);
 router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     const {
       product_name, category_id, description, price,
@@ -68,13 +69,15 @@ router.post('/products', upload.single('image'), async (req, res) => {
 router.put('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
-    const {
-      product_name, category_id, description, price,
-      stock_quantity, reorder_threshold, size, color, brand
+
+    const { 
+      product_name, category_id, description, price, 
+      stock_quantity, reorder_threshold, size, color, brand 
     } = req.body;
 
-    const query = `
+    const updateProductQuery = `
       UPDATE products 
       SET product_name = ?, category_id = ?, description = ?, 
           price = ?, stock_quantity = ?, reorder_threshold = ?, 
@@ -82,7 +85,7 @@ router.put('/products/:productId', async (req, res) => {
       WHERE product_id = ?
     `;
 
-    const [result] = await connection.execute(query, [
+    const [result] = await connection.execute(updateProductQuery, [
       product_name, category_id, description, price,
       stock_quantity, reorder_threshold, size, color, brand,
       req.params.productId
@@ -99,9 +102,11 @@ router.put('/products/:productId', async (req, res) => {
   }
 });
 
+
 router.delete('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     const [result] = await connection.execute(
       'DELETE FROM products WHERE product_id = ?',
@@ -549,6 +554,7 @@ router.delete('/discount/:discount_id', async (req, res) => {
 router.post('/sale-event', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction(); // Begin the transaction
 
     const {
@@ -666,6 +672,7 @@ router.put('/sale-event/:sale_event_id', async (req, res) => {
 router.delete('/sale-event/:sale_event_id', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     const { sale_event_id } = req.params;
 
     // Query to delete the sale event by sale_event_id
