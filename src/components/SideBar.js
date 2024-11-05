@@ -93,6 +93,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                         onClick={() => {
                             setSelectedCategories([]);
                             setSelectedGender([]);
+                            setPriceRange({ min: 0, max: 200 });
                         }}
                         className="block text-lg font-medium hover:text-gray-600"
                     >
