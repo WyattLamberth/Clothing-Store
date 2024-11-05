@@ -2,7 +2,7 @@ USE onlinestore;
 
 DELIMITER $$
 
--- ACTIVITY LOG TRIGGERS TO MONITOR EMPLOYEES ACTIONS
+-- ACTIVITY LOG TO MONITOR EMPLOYEES ACTIONS
 
 -- Trigger for INSERT action on products table
 CREATE TRIGGER log_user_action_insert_product

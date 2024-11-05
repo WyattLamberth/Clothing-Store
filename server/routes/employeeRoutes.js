@@ -32,7 +32,6 @@ router.use(authMiddleware.staffOnly);
 router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
-
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     
@@ -190,6 +189,43 @@ router.put('/products/:productId', upload.single('image'), async (req, res) => {
     connection.release();
   }
 });
+
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
+    await connection.beginTransaction();
+
+    const { 
+      product_name, category_id, description, price, 
+      stock_quantity, reorder_threshold, size, color, brand 
+    } = req.body;
+
+    const updateProductQuery = `
+      UPDATE products 
+      SET product_name = ?, category_id = ?, description = ?, 
+          price = ?, stock_quantity = ?, reorder_threshold = ?, 
+          size = ?, color = ?, brand = ?
+      WHERE product_id = ?
+    `;
+
+    const [result] = await connection.execute(updateProductQuery, [
+      product_name, category_id, description, price,
+      stock_quantity, reorder_threshold, size, color, brand,
+      req.params.productId
+    ]);
+
+    await connection.commit();
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ error: 'Error deleting product' });
+  } finally {
+    connection.release();
+  }
+});
+
 
 router.delete('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
