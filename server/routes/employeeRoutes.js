@@ -8,6 +8,7 @@ router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
+// Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
@@ -29,8 +30,6 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
-// In employeeRoutes.js
-
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
