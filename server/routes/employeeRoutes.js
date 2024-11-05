@@ -2,11 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-<<<<<<< HEAD
-const pool = require('../db/connection');  // Add this line
-=======
 const pool = require('../db/connection');
->>>>>>> f460640 (fixing syntax errors from merge.)
 const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
@@ -34,11 +30,6 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
-<<<<<<< HEAD
-// In employeeRoutes.js
-
-=======
->>>>>>> f460640 (fixing syntax errors from merge.)
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -140,6 +131,88 @@ router.post('/products', async (req, res) => {
   }
 });
 
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    // First check if the product exists
+    const [product] = await connection.execute(
+      'SELECT * FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    if (product.length === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Delete the product
+    const [result] = await connection.execute(
+      'DELETE FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: 'Product deleted successfully' });
+    res.status(201).json({ 
+      message: 'Product created successfully', 
+      productId: result.insertId 
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating product:', error);
+    // Send more detailed error information
+    res.status(500).json({ 
+      error: 'Error creating product',
+      details: error.message,
+      requestBody: req.body
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+router.delete('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    // First check if the product exists
+    const [product] = await connection.execute(
+      'SELECT * FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    if (product.length === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Delete the product
+    const [result] = await connection.execute(
+      'DELETE FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    await connection.commit();
+    
+    res.status(201).json({ 
+      message: 'Product created successfully', 
+      productId: result.insertId 
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating product:', error);
+    // Send more detailed error information
+    res.status(500).json({ 
+      error: 'Error creating product',
+      details: error.message,
+      requestBody: req.body
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 router.put('/products/:productId', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -193,6 +266,10 @@ router.put('/products/:productId', upload.single('image'), async (req, res) => {
     res.status(200).json({ message: 'Product updated successfully' });
   } catch (error) {
     await connection.rollback();
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Error deleting product' });
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Error deleting product' });
     console.error('Error updating product:', error); // Log error for debugging
     res.status(400).json({ error: 'Error updating product' });
   } finally {
