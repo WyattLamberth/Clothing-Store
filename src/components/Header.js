@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle, Bell } from 'lucide-react'; // Import UserCircle for the profile icon
+import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
 
@@ -49,6 +49,11 @@ const Header = () => {
     }
   };
 
+  const categories = [
+    { name: 'Men', path: '/men' },
+    { name: 'Women', path: '/women' },
+    { name: 'Kids', path: '/kids' }
+  ];
   const userRole = Number(role);
 
   return (
@@ -57,6 +62,20 @@ const Header = () => {
         {/* Left Section - Logo and Categories */}
         <div className="flex items-center space-x-12">
           <Link to="/" className="text-2xl font-bold">StyleHub</Link>
+          <nav className="flex space-x-10">
+            {categories.map((category, index) => (
+              <NavLink
+                key={index}
+                to={category.path}
+                className={({ isActive }) => 
+                  `text-gray-700 hover:text-gray-900 font-medium ${isActive ? 'font-bold' : ''}`
+                }
+                aria-label={`Go to ${category.name} page`}
+              >
+                {category.name}
+              </NavLink>
+            ))}
+          </nav>
         </div>
 
         {/* Right Section - Links */}
@@ -114,19 +133,20 @@ const Header = () => {
                   </li>
                 )}
 
+                <li>
                   {/* Notification Bell */}
-                  <li className="relative">
-                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900 relative">
+                  <div className="relative">
+                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900">
                       <Bell className="h-5 w-5" />
                       {notifications.some((notif) => !notif.read_status) && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute -top-2 -right-2">
+                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute top-0 right-0">
                           {notifications.filter((notif) => !notif.read_status).length}
                         </span>
                       )}
                     </button>
 
                     {showNotifications && (
-                      <div className="absolute right-0 mt-2 w-64 max-h-96 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50 overflow-y-auto">
+                      <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50">
                         <h3 className="text-sm font-bold mb-2">Notifications</h3>
                         <ul>
                           {notifications.map((notif) => (
@@ -144,8 +164,8 @@ const Header = () => {
                         {notifications.length === 0 && <p className="text-gray-500 text-sm">No notifications</p>}
                       </div>
                     )}
-                  </li>
-
+                  </div>
+                </li>
 
                 <li>
                   <button
