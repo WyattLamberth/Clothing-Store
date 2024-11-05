@@ -13,7 +13,7 @@ const ShopPage = () => {
 
   // Set Default
   const priceMin = 0;
-  const priceMax = 20000;
+  const priceMax = 300;
   const [categories_gender, setCategoriesGender] = useState(['M', 'F', 'K']);
 
   // Initialize selectedCategories and selectedGender as empty arrays
