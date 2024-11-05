@@ -13,7 +13,11 @@ const InventoryReport = () => {
             totalProducts: 0,
             totalValue: 0,
             lowStockCount: 0,
-            averageReturnRate: 0
+            averageReturnRate: 0,
+            inventoryTurnover: 0,
+            daysOfStock: 0,
+            storageUtilization: 0,
+            deadStock: 0
         }
     });
     const [loading, setLoading] = useState(true);
@@ -78,6 +82,34 @@ const InventoryReport = () => {
             </div>
         );
     }
+
+    const filteredProducts = data.stockLevels
+        .filter(product =>
+            (selectedCategory === 'all' || product.category_name === selectedCategory) &&
+            (!filterLowStock || (Number(product.stock_quantity) <= Number(product.reorder_threshold)))
+        )
+        .sort((a, b) => (Number(b[sortBy]) || 0) - (Number(a[sortBy]) || 0));
+
+    const MetricCard = ({ title, value, icon: Icon, alert, subValue, trend }) => (
+        <div className={`bg-white p-6 rounded-lg shadow ${alert ? 'border-l-4 border-red-500' : ''}`}>
+            <div className="flex justify-between items-start">
+                <div>
+                    <p className="text-sm text-gray-500 mb-1">{title}</p>
+                    <h3 className="text-2xl font-bold">{value}</h3>
+                    {subValue && <p className="text-sm text-gray-500 mt-1">{subValue}</p>}
+                    {trend && (
+                        <div className={`text-sm ${trend > 0 ? 'text-green-500' : 'text-red-500'} mt-1`}>
+                            {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% vs last period
+                        </div>
+                    )}
+                </div>
+                <div className={`p-3 rounded-full ${alert ? 'bg-red-50' : 'bg-blue-50'}`}>
+                    <Icon className={`w-6 h-6 ${alert ? 'text-red-500' : 'text-blue-500'}`} />
+                </div>
+            </div>
+        </div>
+    );
+
 
     return (
         <div className="space-y-6">
