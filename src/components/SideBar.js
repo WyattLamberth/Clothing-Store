@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../utils/api';
 
-const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, setSelectedGender }) => {
+const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, setSelectedGender, priceRange, setPriceRange }) => {
     const [categories, setCategories] = useState([]);
     const [expandedSections, setExpandedSections] = useState({
         'Categories': false,
@@ -60,6 +60,14 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                 ? prev.filter(selected => selected !== name)
                 : [...prev, name]
         );
+    };
+
+    const handlePriceChange = (e) => {
+        const { name, value } = e.target;
+        setPriceRange(prev => ({
+            ...prev,
+            [name]: Number(value),
+        }));
     };
 
     // Fetch categories from API
@@ -144,31 +152,30 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
 
                 {/* Shop by Price Section */}
                 <SidebarSection title="Shop by Price">
-                    <div className="space-y-2">
-                        <label className="flex items-center space-x-2 pl-6">
-                            <input
-                                type="checkbox"
-                                checked={priceRanges['0-50']}
-                                onChange={() => setPriceRanges(prev => ({
-                                    ...prev,
-                                    '0-50': !prev['0-50']
-                                }))}
-                                className="rounded"
-                            />
-                            <span>$0 - $50</span>
-                        </label>
-                        <label className="flex items-center space-x-2 pl-6">
-                            <input
-                                type="checkbox"
-                                checked={priceRanges['50+']}
-                                onChange={() => setPriceRanges(prev => ({
-                                    ...prev,
-                                    '50+': !prev['50+']
-                                }))}
-                                className="rounded"
-                            />
-                            <span>$50+</span>
-                        </label>
+                    <div className="px-4 space-y-2">
+                        <label className="block text-sm font-medium">Min Price</label>
+                        <input
+                            type="range"
+                            name="min"
+                            min="0"
+                            max="200"
+                            value={priceRange.min}
+                            onChange={handlePriceChange}
+                            className="w-full"
+                        />
+                        <span className="text-sm">${priceRange.min}</span>
+
+                        <label className="block text-sm font-medium mt-2">Max Price</label>
+                        <input
+                            type="range"
+                            name="max"
+                            min="0"
+                            max="200"
+                            value={priceRange.max}
+                            onChange={handlePriceChange}
+                            className="w-full"
+                        />
+                        <span className="text-sm">${priceRange.max}</span>
                     </div>
                 </SidebarSection>
             </nav>
