@@ -2,12 +2,17 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+<<<<<<< HEAD
 const pool = require('../db/connection');  // Add this line
+=======
+const pool = require('../db/connection');
+>>>>>>> f460640 (fixing syntax errors from merge.)
 const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
+// Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
@@ -29,8 +34,11 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
+<<<<<<< HEAD
 // In employeeRoutes.js
 
+=======
+>>>>>>> f460640 (fixing syntax errors from merge.)
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -115,7 +123,6 @@ router.post('/products', async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Error creating product:', error);
-    // Send more detailed error information
     res.status(500).json({ 
       error: 'Error creating product',
       details: error.message,
