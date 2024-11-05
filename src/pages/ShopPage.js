@@ -5,10 +5,6 @@ import CartOverlay from '../components/CartOverlay';
 
 const ShopPage = () => {
   const [products, setProducts] = useState([]);
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayProduct, setOverlayProduct] = useState(null);
 
@@ -25,36 +21,9 @@ const ShopPage = () => {
     fetchProducts();
   }, []);
 
-  const addItemToCart = async (product) => {
-    setCartItems((prevCart) => {
-      const existingItem = prevCart.find(item => item.product_id === product.product_id);
-      let updatedCart;
-
-      if (existingItem) {
-        updatedCart = prevCart.map(item =>
-          item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        updatedCart = [...prevCart, { ...product, quantity: 1 }];
-      }
-
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
-      return updatedCart;
-    });
-
-    // Show overlay for the added product
+  const handleAddToCartOverlay = (product) => {
     setOverlayProduct(product);
     setShowOverlay(true);
-
-    try {
-      await api.post('/cart-items/add', {
-        product_id: product.product_id,
-        quantity: 1,
-      });
-      console.log('Item added to cart in database');
-    } catch (error) {
-      console.error('Error adding item to cart:', error);
-    }
   };
 
   return (
@@ -65,8 +34,6 @@ const ShopPage = () => {
           <ProductCard
             key={product.product_id}
             product={product}
-            onAddToCart={addItemToCart}
-            isInCart={!!cartItems.find(item => item.product_id === product.product_id)}
           />
         ))}
       </div>
@@ -79,7 +46,3 @@ const ShopPage = () => {
 };
 
 export default ShopPage;
-
-
-
-
