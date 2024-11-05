@@ -15,9 +15,6 @@ import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
 import Checkout from './components/Checkout';
 import ProfilePage from './pages/ProfilePage';
-import MenPage from './pages/MenPage';
-import WomenPage from './pages/WomenPage';
-import KidPage from './pages/KidPage';
 import SearchPage from './pages/SearchPage';
 import ProductPage from './pages/ProductPage';
 function App() {
@@ -30,9 +27,6 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/shop" element={<ShopPage />} />
-              <Route path="/men" element={<MenPage />} />
-              <Route path="/women" element={<WomenPage />} />
-              <Route path="/kids" element={<KidPage />} />
               <Route path="/products/search/search" element={<SearchPage />} />
               <Route path="/product/:id" element={<ProductPage />} />
               <Route path="/signin" element={<SignInRegister />} />
