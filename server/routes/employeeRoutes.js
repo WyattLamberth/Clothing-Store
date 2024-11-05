@@ -2,23 +2,27 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const pool = require('../db/connection');
+const pool = require('../db/connection');  // Add this line
 const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
-// Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
     cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
   },
   filename: (req, file, cb) => {
     // Keep original filename but make it unique with timestamp
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + file.originalname);
+    // Keep original filename but make it unique with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
+
 
 const upload = multer({ storage: storage });
 
@@ -30,6 +34,8 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
+// In employeeRoutes.js
+
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -39,7 +45,20 @@ router.post('/products', async (req, res) => {
     // Log the incoming request body
     console.log('Request body:', req.body);
 
+    
+    // Log the incoming request body
+    console.log('Request body:', req.body);
+
     const {
+      product_name,
+      category_id,
+      description,
+      price,
+      stock_quantity,
+      reorder_threshold,
+      size,
+      color,
+      brand
       product_name,
       category_id,
       description,
@@ -96,57 +115,65 @@ router.post('/products', async (req, res) => {
 
     // Log the values being passed to the query
     console.log('Values to insert:', values);
+    // Validate all required fields are present
+    if (!product_name || !category_id || !description || !price || 
+        !stock_quantity || !reorder_threshold || !size || !color || !brand) {
+      console.log('Missing required fields:', {
+        product_name,
+        category_id,
+        description,
+        price,
+        stock_quantity,
+        reorder_threshold,
+        size,
+        color,
+        brand
+      });
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        requiredFields: {
+          product_name: !!product_name,
+          category_id: !!category_id,
+          description: !!description,
+          price: !!price,
+          stock_quantity: !!stock_quantity,
+          reorder_threshold: !!reorder_threshold,
+          size: !!size,
+          color: !!color,
+          brand: !!brand
+        }
+      });
+    }
+
+    // Convert values to appropriate types
+    const values = [
+      product_name,
+      parseInt(category_id),
+      description,
+      parseFloat(price),
+      parseInt(stock_quantity),
+      parseInt(reorder_threshold),
+      size,
+      color,
+      brand
+    ];
+
+    // Log the values being passed to the query
+    console.log('Values to insert:', values);
 
     const query = `
       INSERT INTO products (
         product_name, category_id, description, price, 
         stock_quantity, reorder_threshold, size, color, brand
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        stock_quantity, reorder_threshold, size, color, brand
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await connection.execute(query, values);
+    const [result] = await connection.execute(query, values);
 
     await connection.commit();
-    res.status(201).json({ 
-      message: 'Product created successfully', 
-      productId: result.insertId 
-    });
-  } catch (error) {
-    await connection.rollback();
-    console.error('Error creating product:', error);
-    res.status(500).json({ 
-      error: 'Error creating product',
-      details: error.message,
-      requestBody: req.body
-    });
-  } finally {
-    connection.release();
-  }
-});
-
-router.delete('/products/:productId', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    
-    // First check if the product exists
-    const [product] = await connection.execute(
-      'SELECT * FROM products WHERE product_id = ?',
-      [req.params.productId]
-    );
-
-    if (product.length === 0) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-
-    // Delete the product
-    const [result] = await connection.execute(
-      'DELETE FROM products WHERE product_id = ?',
-      [req.params.productId]
-    );
-
-    await connection.commit();
-    res.status(200).json({ message: 'Product deleted successfully' });
     res.status(201).json({ 
       message: 'Product created successfully', 
       productId: result.insertId 
@@ -190,8 +217,6 @@ router.delete('/products/:productId', async (req, res) => {
     res.status(200).json({ message: 'Product deleted successfully' });
   } catch (error) {
     await connection.rollback();
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Error deleting product' });
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Error deleting product' });
   } finally {
