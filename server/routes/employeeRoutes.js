@@ -2,12 +2,17 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+<<<<<<< HEAD
+const pool = require('../db/connection');  // Add this line
+=======
 const pool = require('../db/connection');
+>>>>>>> f460640 (fixing syntax errors from merge.)
 const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
+// Set up storage engine with destination
 // Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,7 +34,12 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
-router.post('/products', upload.single('image'), async (req, res) => {
+<<<<<<< HEAD
+// In employeeRoutes.js
+
+=======
+>>>>>>> f460640 (fixing syntax errors from merge.)
+router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
