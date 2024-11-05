@@ -112,27 +112,6 @@ router.put('/users/:userId', async (req, res) => {
   }
 });
 
-// User Profile Update
-router.put('/users/:userId',
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    try {
-      const { first_name, last_name, username, email, phone_number } = req.body;
-      const [result] = await pool.execute(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, phone_number = ? WHERE user_id = ?',
-        [first_name, last_name, username, email, phone_number, req.params.userId]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.status(200).json({ message: 'User profile updated successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Error updating user profile', error: error.message });
-    }
-  });
-
 
 // Order Management
 router.post('/orders',
