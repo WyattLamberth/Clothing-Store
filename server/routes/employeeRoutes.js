@@ -2,22 +2,23 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const pool = require('../db/connection');
+const pool = require('../db/connection');  // Add this line
 const { authMiddleware } = require('../middleware/passport-auth');
 router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
-// Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-      cb(null, 'src/images'); // Ensure this directory exists
+    cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
   },
   filename: (req, file, cb) => {
-      // Set the filename to be the original name
-      cb(null, file.originalname);
+    // Keep original filename but make it unique with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
+
 
 const upload = multer({ storage: storage });
 
@@ -29,7 +30,8 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
-router.post('/products', upload.single('image'), async (req, res) => {
+
+router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
 
@@ -38,6 +40,20 @@ router.post('/products', upload.single('image'), async (req, res) => {
     
     // Log the incoming request body
     console.log('Request body:', req.body);
+
+    // Convert values to appropriate types
+    const values = [
+      product_name,
+      parseInt(category_id),
+      description,
+      parseFloat(price),
+      parseInt(stock_quantity),
+      parseInt(reorder_threshold),
+      size,
+      color,
+      brand,
+      image_path
+    ];
 
     const {
       product_name,
@@ -57,6 +73,8 @@ router.post('/products', upload.single('image'), async (req, res) => {
       image_path = path.basename(req.file.path)
     }
 
+    // Log the values being passed to the query
+    console.log('Values to insert:', values);
     // Validate all required fields are present
     if (!product_name || !category_id || !description || !price || 
         !stock_quantity || !reorder_threshold || !size || !color || !brand) {
@@ -87,26 +105,13 @@ router.post('/products', upload.single('image'), async (req, res) => {
       });
     }
 
-    // Convert values to appropriate types
-    const values = [
-      product_name,
-      parseInt(category_id),
-      description,
-      parseFloat(price),
-      parseInt(stock_quantity),
-      parseInt(reorder_threshold),
-      size,
-      color,
-      brand,
-      image_path
-    ];
-
     // Log the values being passed to the query
     console.log('Values to insert:', values);
 
     const query = `
       INSERT INTO products (
         product_name, category_id, description, price, 
+
         stock_quantity, reorder_threshold, size, color, brand, image_path
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
@@ -121,6 +126,7 @@ router.post('/products', upload.single('image'), async (req, res) => {
   } catch (error) {
     await connection.rollback();
     console.error('Error creating product:', error);
+    // Send more detailed error information
     res.status(500).json({ 
       error: 'Error creating product',
       details: error.message,
@@ -131,10 +137,41 @@ router.post('/products', upload.single('image'), async (req, res) => {
   }
 });
 
-router.put('/products/:productId', upload.single('image'), async (req, res) => {
+router.delete('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    // Set current user for auditing, if required
+    await connection.beginTransaction();
+    
+    // First check if the product exists
+    const [product] = await connection.execute(
+      'SELECT * FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    if (product.length === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Delete the product
+    const [result] = await connection.execute(
+      'DELETE FROM products WHERE product_id = ?',
+      [req.params.productId]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: 'Product deleted successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Error deleting product' });
+  } finally {
+    connection.release();
+  }
+});
+
+router.put('/products/:productId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
 
