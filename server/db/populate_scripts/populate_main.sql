@@ -710,14 +710,3 @@ CALL PopulateSalesAndDiscounts(
     CURRENT_DATE,  -- Start from today
     DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY)  -- Plan sales for next 30 days
 );
-
--- Quick verification
-SELECT 'Users' as table_name, COUNT(*) as record_count FROM users
-UNION ALL
-SELECT 'Products', COUNT(*) FROM products
-UNION ALL
-SELECT 'Categories', COUNT(*) FROM categories
-UNION ALL
-SELECT 'Orders', COUNT(*) FROM orders
-UNION ALL
-SELECT 'Sale Events', COUNT(*) FROM sale_events;

@@ -25,32 +25,58 @@ const AddProductForm = ({ onProductAdded }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Log the form data before sending
+      console.log('Submitting form data:', formData);
+  
+      // Validate required fields
+      const requiredFields = [
+        'product_name',
+        'category_id',
+        'description',
+        'price',
+        'stock_quantity',
+        'reorder_threshold',
+        'size',
+        'color',
+        'brand'
+      ];
+  
+      const missingFields = requiredFields.filter(field => !formData[field]);
+      if (missingFields.length > 0) {
+        alert(`Missing required fields: ${missingFields.join(', ')}`);
+        return;
+      }
+  
       const response = await api.post('/products', {
-        ...formData,
+        product_name: formData.product_name,
+        category_id: parseInt(formData.category_id),
+        description: formData.description,
         price: parseFloat(formData.price),
         stock_quantity: parseInt(formData.stock_quantity),
         reorder_threshold: parseInt(formData.reorder_threshold),
-        category_id: parseInt(formData.category_id)
+        size: formData.size,
+        color: formData.color,
+        brand: formData.brand
       });
-
+  
       if (response.data) {
         onProductAdded(response.data);
         // Reset form
         setFormData({
           product_name: '',
+          category_id: '',
           description: '',
           price: '',
           stock_quantity: '',
           reorder_threshold: '',
           size: '',
           color: '',
-          brand: '',
-          category_id: ''
+          brand: ''
         });
       }
     } catch (error) {
-      console.error('Error adding product:', error);
-      alert('Failed to add product');
+      console.error('Error adding product:', error.response?.data || error);
+      alert(error.response?.data?.error || 'Failed to add product');
     }
   };
 

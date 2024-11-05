@@ -11,20 +11,105 @@ router.post('/logout', (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 });
 
-// User Profile Management
-router.get('/users/:userId', 
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    try {
-      const [user] = await pool.execute(
-        'SELECT user_id, first_name, last_name, username, email, phone_number, role_id FROM users WHERE user_id = ?',
-        [req.params.userId]
-      );
-      if (!user.length) return res.status(404).json({ message: 'User not found' });
-      res.json(user[0]);
-    } catch (error) {
-      res.status(500).json({ message: 'Error fetching user', error: error.message });
+// Get single user with address (your existing modified route)
+router.get('/users/:userId', async (req, res) => {
+  try {
+    const [users] = await pool.execute(`
+      SELECT u.*, 
+             a.line_1, a.line_2, a.city, a.state, a.zip
+      FROM users u
+      LEFT JOIN address a ON u.address_id = a.address_id
+      WHERE u.user_id = ?
+    `, [req.params.userId]);
+
+    if (!users.length) {
+      return res.status(404).json({ message: 'User not found' });
     }
+
+    const user = users[0];
+    const response = {
+      user_id: user.user_id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      username: user.username,
+      email: user.email,
+      phone_number: user.phone_number,
+      role_id: user.role_id,
+      address_id: user.address_id,
+      date_joined: user.date_joined,
+      address: user.address_id ? {
+        line_1: user.line_1,
+        line_2: user.line_2,
+        city: user.city,
+        state: user.state,
+        zip: user.zip
+      } : null
+    };
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error: error.message });
+  }
+});
+
+// Update user and address
+router.put('/users/:userId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { first_name, last_name, email, phone_number, role_id, address } = req.body;
+
+    // Update user information
+    const [userResult] = await connection.execute(
+      'UPDATE users SET first_name = ?, last_name = ?, email = ?, phone_number = ?, role_id = ? WHERE user_id = ?',
+      [first_name, last_name, email, phone_number, role_id, req.params.userId]
+    );
+
+    // Update address if provided
+    if (address) {
+      await connection.execute(
+        'UPDATE address SET line_1 = ?, line_2 = ?, city = ?, state = ?, zip = ? WHERE address_id = (SELECT address_id FROM users WHERE user_id = ?)',
+        [address.line_1, address.line_2, address.city, address.state, address.zip, req.params.userId]
+      );
+    }
+
+    // Fetch updated user with address
+    const [users] = await connection.execute(`
+      SELECT u.*, 
+             a.line_1, a.line_2, a.city, a.state, a.zip
+      FROM users u
+      LEFT JOIN address a ON u.address_id = a.address_id
+      WHERE u.user_id = ?
+    `, [req.params.userId]);
+
+    await connection.commit();
+
+    if (userResult.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updatedUser = users[0];
+    const response = {
+      message: 'User updated successfully',
+      user: {
+        ...updatedUser,
+        address: updatedUser.address_id ? {
+          line_1: updatedUser.line_1,
+          line_2: updatedUser.line_2,
+          city: updatedUser.city,
+          state: updatedUser.state,
+          zip: updatedUser.zip
+        } : null
+      }
+    };
+
+    res.json(response);
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ message: 'Error updating user', error: error.message });
+  } finally {
+    connection.release();
+  }
 });
 
 // Shopping Cart Management
