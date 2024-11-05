@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../utils/api';
 
-const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, setSelectedGender, priceRange, setPriceRange }) => {
+const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, setSelectedGender, priceRange, setPriceRange, sortOption, setSortOption }) => {
     const [categories, setCategories] = useState([]);
     const [expandedSections, setExpandedSections] = useState({
         'Categories': false,
@@ -94,6 +94,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                             setSelectedCategories([]);
                             setSelectedGender([]);
                             setPriceRange({ min: 0, max: 200 });
+                            setSortOption('default');
                         }}
                         className="block text-lg font-medium hover:text-gray-600"
                     >
