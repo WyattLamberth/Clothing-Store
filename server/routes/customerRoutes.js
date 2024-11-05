@@ -956,4 +956,37 @@ router.put('/cart-items/update', authMiddleware.customerOnly, async (req, res) =
 
 
 
+// NOTIFICATION MANAGEMENT
+
+// Fetch notifications for the logged-in user
+router.get('/notifications', authMiddleware.customerOnly, async (req, res) => {
+  const userId = req.user.user_id;
+  try {
+    const [notifications] = await pool.execute(
+      `SELECT * FROM notifications WHERE user_id = ? ORDER BY notification_date DESC`,
+      [userId]
+    );
+    res.status(200).json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// Mark a notification as read
+router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.execute(
+      `UPDATE notifications SET read_status = TRUE WHERE notification_id = ?`,
+      [id]
+    );
+    res.status(200).json({ message: 'Notification marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+
 module.exports = router;
