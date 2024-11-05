@@ -15,6 +15,7 @@ const ShopPage = () => {
   const priceMin = 0;
   const priceMax = 200;
   const [categories_gender, setCategoriesGender] = useState(['M', 'F', 'K']);
+  const [sortOption, setSortOption] = useState('default');
 
   // Initialize selectedCategories and selectedGender as empty arrays
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -47,10 +48,15 @@ const ShopPage = () => {
         categoryName = selectedCategories.length > 0 ? selectedCategories.join(',') : categories_name.join(',');
         sex = selectedGender.length > 0 ? selectedGender.join(',') : categories_gender.join(',');
 
-        console.log('Selected Categories:', selectedCategories);
-        console.log('Selected Genders:', selectedGender);
-
-        const response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products`);
+        let response;
+        if (sortOption === "highToLow"){
+          response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products/HightoLow`);
+        } else if (sortOption === "lowToHigh"){
+          response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products/LowtoHigh`);
+        } else{
+          response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products`);
+        }
+        
         setProducts(response.data);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -60,7 +66,8 @@ const ShopPage = () => {
     if (categories_name.length > 0) {
       fetchProducts();
     }
-  }, [categories_name, selectedCategories, selectedGender, categories_gender, priceRange]);
+  }, [categories_name, selectedCategories, selectedGender, categories_gender, priceRange, sortOption]);
+
 
   const addItemToCart = async (product) => {
     setCartItems((prevCart) => {
@@ -92,7 +99,23 @@ const ShopPage = () => {
 
   return (
     <div className="container mx-auto px-4">
-      <h1 className="text-2xl font-bold mb-6">Recommended For You</h1>
+      <h1 className="text-2xl font-bold mb-6"></h1>
+
+            {/* Sort Bar */}
+        <div className="flex items-center justify-end mb-4">
+          <label htmlFor="sort" className="font-medium mr-2">Sort by:</label>
+          <select
+            id="sort"
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1"
+          >
+            <option value="default">Default</option>
+            <option value="lowToHigh">Price: Low to High</option>
+            <option value="highToLow">Price: High to Low</option>
+          </select>
+        </div>
+      
       <div className="flex">
         {/* Sidebar */}
         <div className="w-1/4 pr-4">
@@ -103,6 +126,8 @@ const ShopPage = () => {
             setSelectedGender={setSelectedGender}
             priceRange={priceRange}
             setPriceRange={setPriceRange}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
           />
         </div>
         
