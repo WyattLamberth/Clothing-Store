@@ -8,7 +8,6 @@ router.use(express.static(path.join(__dirname, './images')));
 router.use(express.json());
 router.use(express.urlencoded({extended:false}));
 
-// Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
@@ -30,6 +29,8 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
+// In employeeRoutes.js
+
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -192,8 +193,6 @@ router.delete('/products/:productId', async (req, res) => {
     await connection.rollback();
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Error deleting product' });
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Error deleting product' });
   } finally {
     connection.release();
   }
@@ -230,27 +229,6 @@ router.put('/products/:productId', async (req, res) => {
   } catch (error) {
     await connection.rollback();
     res.status(400).json({ error: 'Error updating product' });
-  } finally {
-    connection.release();
-  }
-});
-
-
-router.delete('/products/:productId', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
-    await connection.beginTransaction();
-    const [result] = await connection.execute(
-      'DELETE FROM products WHERE product_id = ?',
-      [req.params.productId]
-    );
-    await connection.commit();
-    if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
-    res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    await connection.rollback();
-    res.status(500).json({ error: 'Error deleting product' });
   } finally {
     connection.release();
   }
