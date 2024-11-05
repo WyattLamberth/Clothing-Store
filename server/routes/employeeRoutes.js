@@ -259,6 +259,7 @@ router.put('/orders/:orderId', async (req, res) => {
     connection.release();
   }
 });
+
 router.delete('/orders/:orderId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
