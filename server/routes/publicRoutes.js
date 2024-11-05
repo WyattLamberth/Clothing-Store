@@ -157,10 +157,6 @@ router.get('/filter/:name/:sex/:priceMin/:priceMax/products', async (req, res) =
     const params = [...sexArray, ...nameArray, parseFloat(priceMin), parseFloat(priceMax)]; // Spread nameArray correctly
     const [rows] = await pool.execute(query, params);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No products found for the specified criteria.' });
-    }
-
     res.json(rows);
   } catch (error) {
     console.error('Error fetching products by filter:', error);
