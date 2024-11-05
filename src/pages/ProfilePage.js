@@ -33,6 +33,10 @@ const ProfilePage = () => {
     ]
   };
 
+  // get user id from local storage
+  // do api call to get user data
+  // something like this -> const profileData = await api.get('');
+
   const [profileData, setProfileData] = useState(initialProfileData);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddressOpen, setIsAddressOpen] = useState(false);
