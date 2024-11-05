@@ -133,13 +133,12 @@ const Header = () => {
                   </li>
                 )}
 
-                <li>
                   {/* Notification Bell */}
-                  <div className="relative">
-                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900">
+                  <li className="relative">
+                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900 relative">
                       <Bell className="h-5 w-5" />
                       {notifications.some((notif) => !notif.read_status) && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute top-0 right-0">
+                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute -top-2 -right-2">
                           {notifications.filter((notif) => !notif.read_status).length}
                         </span>
                       )}
@@ -164,8 +163,8 @@ const Header = () => {
                         {notifications.length === 0 && <p className="text-gray-500 text-sm">No notifications</p>}
                       </div>
                     )}
-                  </div>
-                </li>
+                  </li>
+
 
                 <li>
                   <button

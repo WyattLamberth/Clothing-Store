@@ -68,9 +68,31 @@ CREATE TRIGGER notify_new_sale_event
 AFTER INSERT ON sale_events
 FOR EACH ROW
 BEGIN
-    -- General notification for sale events, setting user_id as NULL
-    INSERT INTO notifications (user_id, message, notification_date, read_status)
-    VALUES (NULL, CONCAT('New sale event: ', NEW.event_name, ' starts on ', NEW.start_date), NOW(), FALSE);
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE customer_id INT;
+    
+    -- Declare a cursor to iterate over all customers
+    DECLARE customer_cursor CURSOR FOR 
+    SELECT user_id FROM users WHERE role_id = 1;  -- Assuming role_id = 1 is for customers
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    -- Open the cursor and iterate through all customers to insert a notification for each
+    OPEN customer_cursor;
+
+    read_loop: LOOP
+        FETCH customer_cursor INTO customer_id;
+        
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Insert a notification for each customer
+        INSERT INTO notifications (user_id, message, notification_date, read_status)
+        VALUES (customer_id, CONCAT('New sale event: ', NEW.event_name, ' starts on ', NEW.start_date), NOW(), FALSE);
+    END LOOP;
+
+    CLOSE customer_cursor;
 END$$
 
 
