@@ -102,7 +102,7 @@ const ShopPage = () => {
       <h1 className="text-2xl font-bold mb-6"></h1>
 
             {/* Sort Bar */}
-        <div className="flex items-center justify-end mb-4">
+        <div className="flex items-center justify-end">
           <label htmlFor="sort" className="font-medium mr-2">Sort by:</label>
           <select
             id="sort"
