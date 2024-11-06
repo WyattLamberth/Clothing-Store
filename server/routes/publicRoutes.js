@@ -183,5 +183,136 @@ router.get('/products/search/search', async (req, res) => {
   }
 });
 
+router.get('/categories/name/unique', async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT DISTINCT name FROM categories'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching:', error);
+    res.status(500).json({ message: 'An error occurred while fetching.' });
+  }
+});
+
+router.get('/categories/name/:name/products', async (req, res) => {
+  try {
+    const { name } = req.params;
+    const [rows] = await pool.execute(
+      `SELECT p.product_id, p.product_name, p.description, p.price, p.stock_quantity, 
+              p.size, p.color, p.brand, p.image_path 
+       FROM products p
+       JOIN categories c ON p.category_id = c.category_id
+       WHERE c.name  = ?`,
+      [name]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching:', error);
+    res.status(500).json({ message: 'An error occurred while fetching.' });
+  }
+});
+
+
+router.get('/filter/:name/:sex/:priceMin/:priceMax/products/LowtoHigh', async (req, res) => {
+  try {
+    const { sex, name, priceMin, priceMax } = req.params;
+    const sexArray = sex.split(',').map(s => s.trim());
+    const nameArray = name.split(',').map(n => n.trim()); // Corrected to use name
+
+    // Create a placeholders string for the IN clauses
+    const sexHolders = sexArray.map(() => '?').join(', ');
+    const nameHolders = nameArray.map(() => '?').join(', ');
+
+    // Build the query
+    const query = `
+      SELECT p.product_id, p.product_name, p.description, p.price, 
+             p.stock_quantity, p.size, p.color, p.brand, p.image_path 
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+      WHERE c.sex IN (${sexHolders}) 
+      AND c.name IN (${nameHolders}) 
+      AND p.price > ? 
+      AND p.price < ?
+      ORDER by p.price ASC
+    `;
+
+    // Execute the query with the appropriate parameters
+    const params = [...sexArray, ...nameArray, parseFloat(priceMin), parseFloat(priceMax)]; // Spread nameArray correctly
+    const [rows] = await pool.execute(query, params);
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching products by filter:', error);
+    res.status(500).json({ message: 'An error occurred while fetching products.' });
+  }
+});
+
+router.get('/filter/:name/:sex/:priceMin/:priceMax/products/HightoLow', async (req, res) => {
+  try {
+    const { sex, name, priceMin, priceMax } = req.params;
+    const sexArray = sex.split(',').map(s => s.trim());
+    const nameArray = name.split(',').map(n => n.trim()); // Corrected to use name
+
+    // Create a placeholders string for the IN clauses
+    const sexHolders = sexArray.map(() => '?').join(', ');
+    const nameHolders = nameArray.map(() => '?').join(', ');
+
+    // Build the query
+    const query = `
+      SELECT p.product_id, p.product_name, p.description, p.price, 
+             p.stock_quantity, p.size, p.color, p.brand, p.image_path 
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+      WHERE c.sex IN (${sexHolders}) 
+      AND c.name IN (${nameHolders}) 
+      AND p.price > ? 
+      AND p.price < ?
+      ORDER by p.price DESC
+    `;
+
+    // Execute the query with the appropriate parameters
+    const params = [...sexArray, ...nameArray, parseFloat(priceMin), parseFloat(priceMax)]; // Spread nameArray correctly
+    const [rows] = await pool.execute(query, params);
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching products by filter:', error);
+    res.status(500).json({ message: 'An error occurred while fetching products.' });
+  }
+});
+
+router.get('/filter/:name/:sex/:priceMin/:priceMax/products', async (req, res) => {
+  try {
+    const { sex, name, priceMin, priceMax } = req.params;
+    const sexArray = sex.split(',').map(s => s.trim());
+    const nameArray = name.split(',').map(n => n.trim()); // Corrected to use name
+
+    // Create a placeholders string for the IN clauses
+    const sexHolders = sexArray.map(() => '?').join(', ');
+    const nameHolders = nameArray.map(() => '?').join(', ');
+
+    // Build the query
+    const query = `
+      SELECT p.product_id, p.product_name, p.description, p.price, 
+             p.stock_quantity, p.size, p.color, p.brand, p.image_path 
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+      WHERE c.sex IN (${sexHolders}) 
+      AND c.name IN (${nameHolders}) 
+      AND p.price > ? 
+      AND p.price < ?
+    `;
+
+    // Execute the query with the appropriate parameters
+    const params = [...sexArray, ...nameArray, parseFloat(priceMin), parseFloat(priceMax)]; // Spread nameArray correctly
+    const [rows] = await pool.execute(query, params);
+
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching products by filter:', error);
+    res.status(500).json({ message: 'An error occurred while fetching products.' });
+  }
+});
 
 module.exports = router;
