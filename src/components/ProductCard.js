@@ -1,40 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import api from '../utils/api';
 
-const ProductCard = ({ product, onProductAdded }) => {
+const ProductCard = ({ product, onAddToCart, isInCart }) => {
   const price = !isNaN(product.price) ? parseFloat(product.price).toFixed(2) : 'N/A';
 
-  const addItemToCart = async () => {
-    // Update cart items in localStorage
-    const savedCart = localStorage.getItem('cart');
-    const cartItems = savedCart ? JSON.parse(savedCart) : [];
-    const existingItem = cartItems.find(item => item.product_id === product.product_id);
-
-    let updatedCart;
-    if (existingItem) {
-      updatedCart = cartItems.map(item =>
-        item.product_id === product.product_id ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      updatedCart = [...cartItems, { ...product, quantity: 1 }];
-    }
-
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
-
-    // Make API request to add item to cart in the database
-    try {
-      await api.post('/cart-items/add', {
-        product_id: product.product_id,
-        quantity: 1,
-      });
-      console.log('Item added to cart in database');
-      
-      // Trigger the overlay by calling the callback
-      onProductAdded(product);
-    } catch (error) {
-      console.error('Error adding item to cart:', error);
-    }
+  const handleAddToCart = (e) => {
+    e.preventDefault();
+    onAddToCart(product);
   };
 
   return (
@@ -53,15 +25,22 @@ const ProductCard = ({ product, onProductAdded }) => {
         )}
       </Link>
       <div className="p-4">
-        <Link to={`/product/${product.product_id}`} style={{ color: 'black' }} className="text-lg font-semibold hover:underline">
+        <Link 
+          to={`/product/${product.product_id}`} 
+          className="text-lg font-semibold hover:underline text-gray-900"
+        >
           {product.product_name}
         </Link>
         <p className="text-gray-600">${price}</p>
         <button
-          onClick={addItemToCart}
-          className="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          onClick={handleAddToCart}
+          className={`mt-2 w-full px-4 py-2 rounded transition-colors duration-200
+            ${isInCart 
+              ? 'bg-green-500 hover:bg-green-600' 
+              : 'bg-blue-500 hover:bg-blue-600'
+            } text-white`}
         >
-          Add to Cart
+          {isInCart ? 'Add More' : 'Add to Cart'}
         </button>
       </div>
     </div>
