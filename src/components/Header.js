@@ -146,7 +146,7 @@ const Header = () => {
                     </button>
 
                     {showNotifications && (
-                      <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50">
+                      <div className="absolute right-0 mt-2 w-64 max-h-96 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50 overflow-y-auto">
                         <h3 className="text-sm font-bold mb-2">Notifications</h3>
                         <ul>
                           {notifications.map((notif) => (
