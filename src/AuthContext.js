@@ -1,4 +1,3 @@
-// src/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import api from './utils/api';
 
@@ -10,21 +9,55 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [userId, setUserId] = useState(() => localStorage.getItem('userId') || '');
 
+  // Add the new mergeGuestCart helper function
+  const mergeGuestCart = async () => {
+    try {
+      const guestCart = JSON.parse(localStorage.getItem('cart') || '[]');
+
+      if (guestCart.length > 0) {
+        console.log('Merging guest cart:', guestCart);
+
+        try {
+          await api.post('/shopping_cart/create');
+        } catch (error) {
+          console.log('Cart already exists or creation failed:', error);
+        }
+
+        for (const item of guestCart) {
+          try {
+            await api.post('/cart-items/add', {
+              product_id: item.product_id,
+              quantity: item.quantity,
+            });
+          } catch (error) {
+            console.error('Error adding item to database cart:', error);
+          }
+        }
+
+        console.log('Guest cart merged successfully');
+      }
+    } catch (error) {
+      console.error('Error merging guest cart:', error);
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const response = await api.post('/login', { email, password });
       const data = response.data;
-      
-      // Store token, role, and userId in localStorage and state
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
       localStorage.setItem('userId', data.userId);
-      
+
       setToken(data.token);
       setRole(data.role);
       setUserId(data.userId);
       setIsAuthenticated(true);
-      
+
+      // Add cart merging after successful login
+      await mergeGuestCart();
+
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -46,7 +79,7 @@ export const AuthProvider = ({ children }) => {
           email: userData.email,
           phone_number: userData.phone_number,
           password: userData.password,
-          role_id: userData.role_id || 1,  // Default role_id for new users is customer
+          role_id: userData.role_id || 1,
           line_1: userData.line_1,
           line_2: userData.line_2 || null,
           city: userData.city,
@@ -56,7 +89,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        return true;
+        // Add automatic login and cart merging after successful registration
+        const loginSuccess = await login(userData.email, userData.password);
+        if (loginSuccess) {
+          return true;
+        }
       } else {
         const errorData = await response.json();
         console.error('Registration error:', errorData.message || 'Unknown error');
@@ -69,18 +106,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('userId');
-    
-    // Clear state
+
     setToken(null);
     setRole(null);
     setUserId(null);
     setIsAuthenticated(false);
-    
-    // Optional: Redirect to login page
+
     window.location.href = '/signin';
   };
 
@@ -96,7 +130,7 @@ export const AuthProvider = ({ children }) => {
         userId: localStorage.getItem('userId')
       }
     });
-  
+
     const storedToken = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
 
@@ -106,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       setRole(localStorage.getItem('role') || '');
       setUserId(storedUserId || '');
     }
-  
+
     console.log('Checking auth - after:', {
       isAuthenticated,
       role,
@@ -121,19 +155,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Check auth status when component mounts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      login, 
-      register, 
-      logout, 
-      role, 
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      login,
+      register,
+      logout,
+      role,
       token,
-      userId // Provide userId here
+      userId
     }}>
       {children}
     </AuthContext.Provider>
