@@ -12,28 +12,54 @@ export const AuthProvider = ({ children }) => {
   // Add the new mergeGuestCart helper function
   const mergeGuestCart = async () => {
     try {
+      // Get guest cart from localStorage
       const guestCart = JSON.parse(localStorage.getItem('cart') || '[]');
-
+      
       if (guestCart.length > 0) {
         console.log('Merging guest cart:', guestCart);
-
+  
+        // First get the existing cart from database
         try {
-          await api.post('/shopping_cart/create');
+          const existingCartResponse = await api.get('/shopping_cart');
+          const existingCart = existingCartResponse.data.cartItems || [];
+  
+          // Merge the carts
+          for (const guestItem of guestCart) {
+            const existingItem = existingCart.find(item => item.product_id === guestItem.product_id);
+            
+            if (existingItem) {
+              // If item exists, update quantity
+              await api.put('/cart-items/update', {
+                product_id: guestItem.product_id,
+                quantity: existingItem.quantity + guestItem.quantity
+              });
+            } else {
+              // If item is new, add it
+              await api.post('/cart-items/add', {
+                product_id: guestItem.product_id,
+                quantity: guestItem.quantity,
+              });
+            }
+          }
         } catch (error) {
-          console.log('Cart already exists or creation failed:', error);
-        }
-
-        for (const item of guestCart) {
-          try {
-            await api.post('/cart-items/add', {
-              product_id: item.product_id,
-              quantity: item.quantity,
-            });
-          } catch (error) {
-            console.error('Error adding item to database cart:', error);
+          if (error.response?.status === 404) {
+            // If no cart exists, create one and add all items
+            try {
+              await api.post('/shopping_cart/create');
+              for (const item of guestCart) {
+                await api.post('/cart-items/add', {
+                  product_id: item.product_id,
+                  quantity: item.quantity,
+                });
+              }
+            } catch (createError) {
+              console.error('Error creating cart:', createError);
+            }
           }
         }
-
+  
+        // Clear guest cart after successful merge
+        localStorage.setItem('cart', '[]');
         console.log('Guest cart merged successfully');
       }
     } catch (error) {
