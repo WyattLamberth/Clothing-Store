@@ -153,7 +153,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
                 </SidebarSection>
 
                 {/* Shop by Price Section */}
-                <SidebarSection title="By Price">
+                <SidebarSection title="Shop by Price">
                     <div className="px-4 space-y-2">
                         <label className="block text-sm font-medium">Min Price</label>
                         <input
