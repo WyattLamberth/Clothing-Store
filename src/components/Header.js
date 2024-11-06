@@ -54,6 +54,7 @@ const Header = () => {
     { name: 'Women', path: '/women' },
     { name: 'Kids', path: '/kids' }
   ];
+  
   const userRole = Number(role);
 
   return (
