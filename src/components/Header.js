@@ -49,11 +49,7 @@ const Header = () => {
     }
   };
 
-  const categories = [
-    { name: 'Men', path: '/men' },
-    { name: 'Women', path: '/women' },
-    { name: 'Kids', path: '/kids' }
-  ];
+  
   const userRole = Number(role);
 
   return (
@@ -62,20 +58,6 @@ const Header = () => {
         {/* Left Section - Logo and Categories */}
         <div className="flex items-center space-x-12">
           <Link to="/" className="text-2xl font-bold">StyleHub</Link>
-          <nav className="flex space-x-10">
-            {categories.map((category, index) => (
-              <NavLink
-                key={index}
-                to={category.path}
-                className={({ isActive }) => 
-                  `text-gray-700 hover:text-gray-900 font-medium ${isActive ? 'font-bold' : ''}`
-                }
-                aria-label={`Go to ${category.name} page`}
-              >
-                {category.name}
-              </NavLink>
-            ))}
-          </nav>
         </div>
 
         {/* Right Section - Links */}
