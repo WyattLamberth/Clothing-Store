@@ -12,8 +12,11 @@ const EditProductModal = ({ product, onClose, onSave }) => {
     size: '',
     color: '',
     brand: '',
-    category_id: ''
+    category_id: '',
+    image: null
   });
+
+  const [imagePreview, setImagePreview] = useState('');
 
   useEffect(() => {
     if (product) {
@@ -26,8 +29,10 @@ const EditProductModal = ({ product, onClose, onSave }) => {
         size: product.size || '',
         color: product.color || '',
         brand: product.brand || '',
-        category_id: product.category_id || ''
+        category_id: product.category_id || '',
+        image: null
       });
+      setImagePreview(product.image_path ? `/images/${product.image_path}` : '');
     }
   }, [product]);
 
@@ -39,10 +44,34 @@ const EditProductModal = ({ product, onClose, onSave }) => {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setFormData(prevState => ({
+      ...prevState,
+      image: file
+    }));
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    if (file) {
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await api.put(`/products/${product.product_id}`, formData);
+      const formDataToSend = new FormData();
+      Object.keys(formData).forEach(key => {
+        if (key === 'image' && formData.image) {
+          formDataToSend.append('image', formData.image);
+        } else {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+
+      const response = await api.put(`/products/${product.product_id}`, formDataToSend);
       onSave(response.data);
       onClose();
     } catch (error) {
@@ -175,6 +204,18 @@ const EditProductModal = ({ product, onClose, onSave }) => {
                 onChange={handleInputChange}
                 className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
                 required
+              />
+            </div>
+
+            {/* Image Preview */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Product Image</label>
+              {imagePreview && <img src={imagePreview} alt="Image Preview" className="mt-2 w-32 h-32 object-cover" />}
+              <input
+                type="file"
+                name="image"
+                onChange={handleFileChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
               />
             </div>
 
