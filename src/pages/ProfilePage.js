@@ -1,123 +1,121 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../AuthContext';
 import ProfileDashboard from '../components/ProfileDashboard';
+import PaymentManagement from '../components/PaymentManagement';
+import { Wallet, User, Receipt } from 'lucide-react';
+import api from '../utils/api';
 
 const ProfilePage = () => {
-  const initialProfileData = {
-    customerId: '12345',
-    firstName: 'John',
-    lastName: 'Doe',
-    username: 'johndoe',
-    email: 'john@example.com',
-    phoneNumber: '123-456-7890',
-    passwordHash: 'hashed_password', // Store securely and never display as plain text
-    role: 'customer',
-    dateJoined: '2024-01-15',
-    addressLine1: '123 Main St',
-    addressLine2: '',
-    city: 'Anytown',
-    state: 'CA',
-    zip: '12345',
-    wallet: 100.00,
-    paymentCards: [
-      {
-        id: 1,
-        cardNumber: '1234 5678 9012 3456',
-        cardCVV: '123',
-        cardExp: '12/25'
-      },
-      {
-        id: 2,
-        cardNumber: '9876 5432 1098 7654',
-        cardCVV: '456',
-        cardExp: '01/26'
-      }
-    ]
-  };
-
-  // get user id from local storage
-  // do api call to get user data
-  // something like this -> const profileData = await api.get('');
-
-  const [profileData, setProfileData] = useState(initialProfileData);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isAddressOpen, setIsAddressOpen] = useState(false);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [selectedCard, setSelectedCard] = useState(profileData.paymentCards[0] || {});
+  const { userId } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [updateMessage, setUpdateMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [userData, setUserData] = useState(null);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData({ ...profileData, [name]: value });
-  };
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'payment', label: 'Payment Methods', icon: Wallet },
+    { id: 'orders', label: 'Order History', icon: Receipt }
+  ];
 
-  const handleCardChange = (e) => {
-    const { name, value } = e.target;
-    setSelectedCard({ ...selectedCard, [name]: value });
-  };
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!userId) return;
+      
+      try {
+        setLoading(true);
+        const response = await api.get(`/users/${userId}`);
+        setUserData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError('Failed to load profile data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleSave = () => {
-    // Save profile data logic
-    console.log('Profile data saved:', profileData);
-    // Assuming you want to save changes to the selected card as well
-    const updatedCards = profileData.paymentCards.map(card =>
-      card.id === selectedCard.id ? selectedCard : card
+    fetchUserData();
+  }, [userId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
     );
-    setProfileData({ ...profileData, paymentCards: updatedCards });
-    setUpdateMessage('Your profile is being updated.');
-    setTimeout(() => setUpdateMessage(''), 3000); // Clear message after 3 seconds
-    setIsEditing(false); // Exit editing mode after saving
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'profile':
+        return <ProfileDashboard userData={userData} onUpdateMessage={setUpdateMessage} />;
+      case 'payment':
+        return <PaymentManagement />;
+      case 'orders':
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4">Order History</h2>
+            <p className="text-gray-500 text-center py-8">Order history will be implemented soon.</p>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold">My Profile</h1>
+          <h1 className="text-2xl font-bold">My Account</h1>
+          {updateMessage && (
+            <div className="mt-2 text-sm text-green-600">
+              {updateMessage}
+            </div>
+          )}
         </div>
       </header>
+
       <main className="container mx-auto px-4 py-8">
-        <ProfileDashboard />
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-gray-200">
+          <div className="flex space-x-8">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {renderTabContent()}
+        </div>
       </main>
     </div>
   );
 };
 
 export default ProfilePage;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,426 +1,600 @@
-import React, { useState } from 'react';
-import { Wallet, ShoppingCart, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, MapPin, ShoppingBag, CreditCard, Plus, X } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import api from '../utils/api';
 
 const ProfileDashboard = () => {
-  const [activeTab, setActiveTab] = useState("wallet");
-  const [showCardForm, setShowCardForm] = useState(false);
+  const { userId } = useAuth();
   const [showProfileEditForm, setShowProfileEditForm] = useState(false);
+  const [showAddressEditForm, setShowAddressEditForm] = useState(false);
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState('');
+  const [cards, setCards] = useState([]);
+  const [showCardForm, setShowCardForm] = useState(false);
   const [cardDetails, setCardDetails] = useState({
-    cardHolder: '',
-    cardNumber: '',
-    exp: '',
+    cardholder_name: '',
+    card_number: '',
+    expiration_date: '',
     cvv: '',
-    billingAddress: {
-      line1: '',
-      line2: '',
+    billing_address: {
+      line_1: '',
+      line_2: '',
       city: '',
       state: '',
       zip: '',
-    },
-  });
-
-  // Hardcoded mock user data
-  const [mockUserData, setMockUserData] = useState({
-    id: 4,
-    firstName: 'Jane',
-    lastName: 'Doe',
-    address: {
-      line1: '456 Elm St',
-      line2: '',
-      city: 'Somewhere',
-      state: 'NY',
-      zip: '67890',
-    },
-    email: 'jane.doe@example.com',
-    phone: '555-123-4567',
-  });
-
-  const sections = [
-    { id: "wallet", label: "My Wallet", icon: Wallet },
-    { id: "orders", label: "My Orders", icon: ShoppingCart },
-    { id: "personalInfo", label: "Personal Information", icon: User },
-  ];
-
-  const [cards, setCards] = useState([]);
-
-  const handleCardChange = (e) => {
-    const { name, value } = e.target;
-    if (name.includes('line')) {
-      const lineKey = name.split('.')[1];
-      setCardDetails((prev) => ({
-        ...prev,
-        billingAddress: { ...prev.billingAddress, [lineKey]: value },
-      }));
-    } else {
-      setCardDetails((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
     }
-  };
+  });
 
-  const handleCardSubmit = (e) => {
-    e.preventDefault();
-    const newCard = {
-      cardHolder: cardDetails.cardHolder,
-      cardNumber: cardDetails.cardNumber.slice(-4),
-      exp: cardDetails.exp,
-      billingAddress: cardDetails.billingAddress,
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(`/users/${userId}`);
+        setUserData(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setError('Failed to load user data');
+      } finally {
+        setLoading(false);
+      }
     };
-    setCards((prev) => [...prev, newCard]);
-    resetCardForm();
-  };
 
-  const resetCardForm = () => {
-    setCardDetails({
-      cardHolder: '',
-      cardNumber: '',
-      exp: '',
-      cvv: '',
-      billingAddress: {
-        line1: '',
-        line2: '',
-        city: '',
-        state: '',
-        zip: '',
-      },
-    });
-    setShowCardForm(false);
-  };
+    if (userId) {
+      fetchUserData();
+    }
+  }, [userId]);
 
-  const handleProfileChange = (e) => {
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const response = await api.get(`/payment/user/${userId}`);
+        setCards(response.data || []);
+      } catch (err) {
+        console.error('Error fetching payment methods:', err);
+      }
+    };
+
+    if (userId) {
+      fetchPaymentMethods();
+    }
+  }, [userId]);
+
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name.includes('line')) {
-      const lineKey = name.split('.')[1];
-      setMockUserData((prev) => ({
+    if (name.startsWith('address.')) {
+      const addressField = name.split('.')[1];
+      setUserData(prev => ({
         ...prev,
-        address: { ...prev.address, [lineKey]: value },
+        address: {
+          ...prev.address,
+          [addressField]: value
+        }
       }));
     } else {
-      setMockUserData((prev) => ({
+      setUserData(prev => ({
         ...prev,
-        [name]: value,
+        [name]: value
       }));
     }
   };
 
-  const handleProfileSubmit = (e) => {
-    e.preventDefault();
-    // Update the user data (this would typically involve an API call)
-    setShowProfileEditForm(false);
+  const handleCardInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('billing_address.')) {
+      const field = name.split('.')[1];
+      setCardDetails(prev => ({
+        ...prev,
+        billing_address: {
+          ...prev.billing_address,
+          [field]: value
+        }
+      }));
+    } else if (name === 'card_number') {
+      // Only allow numbers and limit to 16 digits
+      const numbersOnly = value.replace(/\D/g, '').slice(0, 16);
+      setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
+    } else if (name === 'expiration_date') {
+      // Format MM/YY
+      const numbersOnly = value.replace(/\D/g, '');
+      const formatted = numbersOnly.slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
+      setCardDetails(prev => ({ ...prev, [name]: formatted }));
+    } else if (name === 'cvv') {
+      // Only allow numbers and limit to 3 digits
+      const numbersOnly = value.replace(/\D/g, '').slice(0, 3);
+      setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
+    } else {
+      setCardDetails(prev => ({ ...prev, [name]: value }));
+    }
   };
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/users/${userId}`, {
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        phone_number: userData.phone_number,
+      });
+      setShowProfileEditForm(false);
+      setUpdateSuccess('Profile updated successfully');
+      setTimeout(() => setUpdateSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile');
+    }
+  };
+
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/users/${userId}`, {
+        address: userData.address
+      });
+      setShowAddressEditForm(false);
+      setUpdateSuccess('Address updated successfully');
+      setTimeout(() => setUpdateSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error updating address:', error);
+      setError('Failed to update address');
+    }
+  };
+
+  const handleAddCard = async (e) => {
+    e.preventDefault();
+    try {
+      // First create billing address
+      const addressResponse = await api.post('/address', cardDetails.billing_address);
+      const billing_address_id = addressResponse.data.address_id;
+
+      // Create payment method
+      await api.post('/payment', {
+        cardholder_name: cardDetails.cardholder_name,
+        card_number: cardDetails.card_number,
+        expiration_date: cardDetails.expiration_date,
+        cvv: cardDetails.cvv,
+        user_id: userId,
+        billing_address_id
+      });
+
+      // Refresh payment methods
+      const response = await api.get(`/payment/user/${userId}`);
+      setCards(response.data || []);
+      setShowCardForm(false);
+      setUpdateSuccess('Payment method added successfully');
+      setTimeout(() => setUpdateSuccess(''), 3000);
+
+      // Reset form
+      setCardDetails({
+        cardholder_name: '',
+        card_number: '',
+        expiration_date: '',
+        cvv: '',
+        billing_address: {
+          line_1: '',
+          line_2: '',
+          city: '',
+          state: '',
+          zip: '',
+        }
+      });
+    } catch (error) {
+      console.error('Error adding payment method:', error);
+      setError('Failed to add payment method');
+    }
+  };
+
+  const handleDeleteCard = async (cardId) => {
+    try {
+      await api.delete(`/payment/${cardId}`);
+      setCards(cards.filter(card => card.preferred_payment_id !== cardId));
+      setUpdateSuccess('Payment method deleted successfully');
+      setTimeout(() => setUpdateSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error deleting payment method:', error);
+      setError('Failed to delete payment method');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center p-4">{error}</div>;
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <div className="flex space-x-8">
-            {sections.map(({ id, label, icon: Icon }) => (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {updateSuccess && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-600 rounded">
+          {updateSuccess}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Left Column */}
+        <div>
+          {/* Personal Information Section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-2">
+                <User className="h-5 w-5 text-blue-500" />
+                <h2 className="text-xl font-semibold">Personal Information</h2>
+              </div>
               <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                onClick={() => setShowProfileEditForm(!showProfileEditForm)}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
               >
-                <Icon className="h-4 w-4" />
-                {label}
+                {showProfileEditForm ? "Cancel" : "Edit"}
               </button>
-            ))}
+            </div>
+
+            {showProfileEditForm ? (
+              <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      value={userData.first_name || ''}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={userData.last_name || ''}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={userData.email || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    name="phone_number"
+                    value={userData.phone_number || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                >
+                  Save Changes
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="font-medium">Name</span>
+                  <span>{userData.first_name} {userData.last_name}</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="font-medium">Email</span>
+                  <span>{userData.email}</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b">
+                  <span className="font-medium">Phone</span>
+                  <span>{userData.phone_number}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Address Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-5 w-5 text-blue-500" />
+                <h2 className="text-xl font-semibold">Address Information</h2>
+              </div>
+              <button
+                onClick={() => setShowAddressEditForm(!showAddressEditForm)}
+                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+              >
+                {showAddressEditForm ? "Cancel" : "Edit"}
+              </button>
+            </div>
+
+            {showAddressEditForm ? (
+              <form onSubmit={handleAddressSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
+                  <input
+                    type="text"
+                    name="address.line_1"
+                    value={userData.address?.line_1 || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
+                  <input
+                    type="text"
+                    name="address.line_2"
+                    value={userData.address?.line_2 || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      name="address.city"
+                      value={userData.address?.city || ''}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                    <input
+                      type="text"
+                      name="address.state"
+                      value={userData.address?.state || ''}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
+                  <input
+                    type="text"
+                    name="address.zip"
+                    value={userData.address?.zip || ''}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                >
+                  Save Address
+                </button>
+              </form>
+            ) : (
+              userData.address && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-medium">Street Address</span>
+                    <span>{userData.address.line_1}</span>
+                  </div>
+                  {userData.address.line_2 && (
+                    <div className="flex justify-between items-center pb-2 border-b">
+                      <span className="font-medium">Additional Address</span>
+                      <span>{userData.address.line_2}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-medium">City</span>
+                    <span>{userData.address.city}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-medium">State</span>
+                    <span>{userData.address.state}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="font-medium">ZIP Code</span>
+                    <span>{userData.address.zip}</span>
+                  </div>
+                </div>
+              )
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Tab Content */}
-      <div className="mt-6">
-        {activeTab === "wallet" && (
-          <div>
-            <h2 className="text-lg font-semibold">My Wallet</h2>
-            <button
-              onClick={() => setShowCardForm(!showCardForm)}
-              className="mt-4 bg-blue-500 text-white py-2 px-4 rounded shadow hover:bg-blue-600 transition"
-            >
-              {showCardForm ? "Cancel" : "Add New Card"}
-            </button>
+        {/* Right Column */}
+        <div>
+          {/* Payment Methods Section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center space-x-2">
+                <CreditCard className="h-5 w-5 text-blue-500" />
+                <h2 className="text-xl font-semibold">Payment Methods</h2>
+              </div>
+              <button
+                onClick={() => setShowCardForm(!showCardForm)}
+                className="flex items-center space-x-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Payment Method</span>
+              </button>
+            </div>
+
             {showCardForm && (
-              <form onSubmit={handleCardSubmit} className="mt-4 space-y-4">
-                <input
-                  type="text"
-                  name="cardHolder"
-                  placeholder="Card Holder Name"
-                  value={cardDetails.cardHolder}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="cardNumber"
-                  placeholder="Card Number"
-                  value={cardDetails.cardNumber}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="exp"
-                  placeholder="Expiration Date (MM/YY)"
-                  value={cardDetails.exp}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="cvv"
-                  placeholder="CVV"
-                  value={cardDetails.cvv}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <h3 className="text-md font-semibold">Billing Address</h3>
-                <input
-                  type="text"
-                  name="billingAddress.line1"
-                  placeholder="Address Line 1"
-                  value={cardDetails.billingAddress.line1}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="billingAddress.line2"
-                  placeholder="Address Line 2 (optional)"
-                  value={cardDetails.billingAddress.line2}
-                  onChange={handleCardChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="billingAddress.city"
-                  placeholder="City"
-                  value={cardDetails.billingAddress.city}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="billingAddress.state"
-                  placeholder="State"
-                  value={cardDetails.billingAddress.state}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="billingAddress.zip"
-                  placeholder="Zip Code"
-                  value={cardDetails.billingAddress.zip}
-                  onChange={handleCardChange}
-                  required
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <button type="submit" className="mt-4 bg-green-500 text-white py-2 px-4 rounded shadow hover:bg-green-600 transition">
-                  Submit
-                </button>
-              </form>
-            )}
-            <h3 className="mt-6 text-lg font-semibold">My Cards</h3>
-            {cards.length === 0 ? (
-              <p>No cards added yet.</p>
-            ) : (
-              <ul className="space-y-2">
-                {cards.map((card, index) => (
-                  <li key={index} className="border p-4 rounded shadow hover:shadow-lg transition">
-                    <p><strong>Card Number:</strong> XXXX XXXX XXXX {card.cardNumber}</p>
-                    <p><strong>Expiration Date:</strong> {card.exp}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-        {activeTab === "orders" && <div>Your order history goes here.</div>}
-        {activeTab === "personalInfo" && (
-          <div>
-            <h2 className="text-lg font-semibold">Personal Information</h2>
-            <button
-              onClick={() => setShowProfileEditForm(!showProfileEditForm)}
-              className="mt-4 bg-blue-500 text-white py-2 px-4 rounded shadow hover:bg-blue-600 transition"
-            >
-              {showProfileEditForm ? "Cancel" : "Edit Profile"}
-            </button>
-            {showProfileEditForm ? (
-              <form onSubmit={handleProfileSubmit} className="mt-4 space-y-4">
-                <div className="flex">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      name="firstName"
-                      placeholder="First Name"
-                      value={mockUserData.firstName}
-                      onChange={handleProfileChange}
-                      className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                      required
-                    />
-                  </div>
-                  <div className="flex-1 ml-2">
-                    <input
-                      type="text"
-                      name="lastName"
-                      placeholder="Last Name"
-                      value={mockUserData.lastName}
-                      onChange={handleProfileChange}
-                      className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                      required
-                    />
-                  </div>
+              <form onSubmit={handleAddCard} className="mb-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+                  <input
+                    type="text"
+                    name="cardholder_name"
+                    value={cardDetails.cardholder_name}
+                    onChange={handleCardInputChange}
+                    className="w-full p-2 border rounded"
+                    required
+                  />
                 </div>
-                <input
-                  type="text"
-                  name="email"
-                  placeholder="Email"
-                  value={mockUserData.email}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <input
-                  type="text"
-                  name="phone"
-                  placeholder="Phone Number"
-                  value={mockUserData.phone}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <h3 className="text-md font-semibold">Address</h3>
-                <input
-                  type="text"
-                  name="address.line1"
-                  placeholder="Address Line 1"
-                  value={mockUserData.address.line1}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <input
-                  type="text"
-                  name="address.line2"
-                  placeholder="Address Line 2 (optional)"
-                  value={mockUserData.address.line2}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                />
-                <input
-                  type="text"
-                  name="address.city"
-                  placeholder="City"
-                  value={mockUserData.address.city}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <input
-                  type="text"
-                  name="address.state"
-                  placeholder="State"
-                  value={mockUserData.address.state}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <input
-                  type="text"
-                  name="address.zip"
-                  placeholder="Zip Code"
-                  value={mockUserData.address.zip}
-                  onChange={handleProfileChange}
-                  className="border p-2 rounded w-full shadow hover:border-blue-300 transition"
-                  required
-                />
-                <button type="submit" className="mt-4 bg-green-500 text-white py-2 px-4 rounded shadow hover:bg-green-600 transition">
-                  Save
-                </button>
-              </form>
-            ) : (
-                <div className="mt-4 grid grid-cols-1 gap-4">
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p><strong>User ID:</strong> <span className="text-gray-500">{mockUserData.id}</span></p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+                    <input
+                      type="text"
+                      name="card_number"
+                      value={cardDetails.card_number}
+                      onChange={handleCardInputChange}
+                      placeholder="1234567890123456"
+                      className="w-full p-2 border rounded"
+                      required
+                    />
                   </div>
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p><strong>First Name:</strong> {mockUserData.firstName}</p>
-                  </div>
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p><strong>Last Name:</strong> {mockUserData.lastName}</p>
-                  </div>
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p><strong>Email:</strong> {mockUserData.email}</p>
-                  </div>
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p><strong>Phone Number:</strong> {mockUserData.phone}</p>
-                  </div>
-                  <div className="p-4 bg-white shadow-md rounded-lg">
-                    <p>
-                      <strong>Address:</strong> {`${mockUserData.address.line1}, ${mockUserData.address.line2 || ''} ${mockUserData.address.city}, ${mockUserData.address.state} ${mockUserData.address.zip}`}
-                    </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
+                      <input
+                        type="text"
+                        name="expiration_date"
+                        value={cardDetails.expiration_date}
+                        onChange={handleCardInputChange}
+                        placeholder="MM/YY"
+                        className="w-full p-2 border rounded"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                      <input
+                        type="text"
+                        name="cvv"
+                        value={cardDetails.cvv}
+                        onChange={handleCardInputChange}
+                        placeholder="123"
+                        className="w-full p-2 border rounded"
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
 
+                <div className="space-y-4 mt-4">
+                  <h3 className="font-medium">Billing Address</h3>
+                  <input
+                    type="text"
+                    name="billing_address.line_1"
+                    value={cardDetails.billing_address.line_1}
+                    onChange={handleCardInputChange}
+                    placeholder="Street Address"
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                  <input
+                    type="text"
+                    name="billing_address.line_2"
+                    value={cardDetails.billing_address.line_2}
+                    onChange={handleCardInputChange}
+                    placeholder="Apt, Suite, etc. (optional)"
+                    className="w-full p-2 border rounded"
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      name="billing_address.city"
+                      value={cardDetails.billing_address.city}
+                      onChange={handleCardInputChange}
+                      placeholder="City"
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                    <input
+                      type="text"
+                      name="billing_address.state"
+                      value={cardDetails.billing_address.state}
+                      onChange={handleCardInputChange}
+                      placeholder="State"
+                      className="w-full p-2 border rounded"
+                      required
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    name="billing_address.zip"
+                    value={cardDetails.billing_address.zip}
+                    onChange={handleCardInputChange}
+                    placeholder="ZIP Code"
+                    className="w-full p-2 border rounded"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                >
+                  Add Payment Method
+                </button>
+              </form>
             )}
+
+            {/* Display saved cards */}
+            <div className="space-y-4">
+              {cards.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No payment methods found</p>
+              ) : (
+                cards.map(card => (
+                  <div key={card.preferred_payment_id} className="flex justify-between items-center p-4 border rounded">
+                    <div>
+                      <div className="font-medium">{card.cardholder_name}</div>
+                      <div className="text-sm text-gray-500">
+                        •••• •••• •••• {card.card_number.slice(-4)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Expires: {card.expiration_date}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCard(card.preferred_payment_id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Orders Section */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center space-x-2 mb-6">
+              <ShoppingBag className="h-5 w-5 text-blue-500" />
+              <h2 className="text-xl font-semibold">Recent Orders</h2>
+            </div>
+            <div className="text-gray-500 text-center py-8">
+              No recent orders found
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default ProfileDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
