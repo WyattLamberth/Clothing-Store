@@ -11,12 +11,11 @@ router.use(express.urlencoded({extended:false}));
 // Set up storage engine with destination
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../images')); // Make sure this directory exists
+      cb(null, 'src/images'); // Ensure this directory exists
   },
   filename: (req, file, cb) => {
-    // Keep original filename but make it unique with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+      // Set the filename to be the original name
+      cb(null, file.originalname);
   }
 });
 
@@ -30,9 +29,10 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
-router.post('/products', async (req, res) => {
+router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
+
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     
@@ -50,6 +50,12 @@ router.post('/products', async (req, res) => {
       color,
       brand
     } = req.body;
+
+
+    let image_path = req.file ? req.file.path : '';
+    if (image_path.length !== 0){
+      image_path = path.basename(req.file.path)
+    }
 
     // Validate all required fields are present
     if (!product_name || !category_id || !description || !price || 
@@ -91,7 +97,8 @@ router.post('/products', async (req, res) => {
       parseInt(reorder_threshold),
       size,
       color,
-      brand
+      brand,
+      image_path
     ];
 
     // Log the values being passed to the query
@@ -100,8 +107,8 @@ router.post('/products', async (req, res) => {
     const query = `
       INSERT INTO products (
         product_name, category_id, description, price, 
-        stock_quantity, reorder_threshold, size, color, brand
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        stock_quantity, reorder_threshold, size, color, brand, image_path
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await connection.execute(query, values);
