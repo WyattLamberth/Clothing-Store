@@ -11,7 +11,8 @@ const AddProductForm = ({ onProductAdded }) => {
     size: '',
     color: '',
     brand: '',
-    category_id: ''
+    category_id: '',
+    image: null
   });
 
   const handleInputChange = (e) => {
@@ -19,6 +20,13 @@ const AddProductForm = ({ onProductAdded }) => {
     setFormData(prevState => ({
       ...prevState,
       [name]: value
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    setFormData(prevState => ({
+      ...prevState,
+      image: e.target.files[0] // Update with selected file
     }));
   };
 
@@ -47,16 +55,26 @@ const AddProductForm = ({ onProductAdded }) => {
         return;
       }
   
-      const response = await api.post('/products', {
-        product_name: formData.product_name,
-        category_id: parseInt(formData.category_id),
-        description: formData.description,
-        price: parseFloat(formData.price),
-        stock_quantity: parseInt(formData.stock_quantity),
-        reorder_threshold: parseInt(formData.reorder_threshold),
-        size: formData.size,
-        color: formData.color,
-        brand: formData.brand
+      // Create a FormData object and append all form data, including the image file
+      const data = new FormData();
+      data.append('product_name', formData.product_name);
+      data.append('category_id', parseInt(formData.category_id));
+      data.append('description', formData.description);
+      data.append('price', parseFloat(formData.price));
+      data.append('stock_quantity', parseInt(formData.stock_quantity));
+      data.append('reorder_threshold', parseInt(formData.reorder_threshold));
+      data.append('size', formData.size);
+      data.append('color', formData.color);
+      data.append('brand', formData.brand);
+
+      if (formData.image) {
+        data.append('image', formData.image); // Append the image file
+      }
+
+      const response = await api.post('/products', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data' // Set content type for file upload
+        }
       });
   
       if (response.data) {
@@ -71,9 +89,11 @@ const AddProductForm = ({ onProductAdded }) => {
           reorder_threshold: '',
           size: '',
           color: '',
-          brand: ''
+          brand: '',
+          image: null
         });
       }
+      
     } catch (error) {
       console.error('Error adding product:', error.response?.data || error);
       alert(error.response?.data?.error || 'Failed to add product');
@@ -199,6 +219,16 @@ const AddProductForm = ({ onProductAdded }) => {
           <option value="2">Women's Clothing</option>
           <option value="3">Kid's Clothing</option>
         </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Image: .JPG or .PNG</label>
+        <input
+          type="file"
+          name="image"
+          onChange={handleFileChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
+        />
       </div>
 
       <button
