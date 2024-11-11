@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import ProfileDashboard from '../components/ProfileDashboard';
-import PaymentManagement from '../components/PaymentManagement';
-import { Wallet, User, Receipt } from 'lucide-react';
+import { User } from 'lucide-react';
 import api from '../utils/api';
 
 const ProfilePage = () => {
@@ -13,10 +12,9 @@ const ProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [userData, setUserData] = useState(null);
 
+  // Only include the Profile tab
   const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'payment', label: 'Payment Methods', icon: Wallet },
-    { id: 'orders', label: 'Order History', icon: Receipt }
+    { id: 'profile', label: 'Profile', icon: User }
   ];
 
   useEffect(() => {
@@ -61,15 +59,6 @@ const ProfilePage = () => {
     switch (activeTab) {
       case 'profile':
         return <ProfileDashboard userData={userData} onUpdateMessage={setUpdateMessage} />;
-      case 'payment':
-        return <PaymentManagement />;
-      case 'orders':
-        return (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Order History</h2>
-            <p className="text-gray-500 text-center py-8">Order history will be implemented soon.</p>
-          </div>
-        );
       default:
         return null;
     }
