@@ -9,6 +9,8 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { userId } = useAuth();
 
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [deliveryInfo, setDeliveryInfo] = useState({
     firstName: '',
@@ -17,6 +19,50 @@ const Checkout = () => {
     phone: '',
     address: '',
   });
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await api.get(`/users/${userId}`);
+        const user = response.data;
+        if (user) {
+          setDeliveryInfo({
+            firstName: user.first_name,
+            lastName: user.last_name,
+            phone: user.phone_number,
+            line_1: user.address?.line_1 || '',
+            line_2: user.address?.line_2 || '',
+            city: user.address?.city || '',
+            state: user.address?.state || '',
+            zip: user.address?.zip || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, [userId]);
+
+  const handleEditAddress = () => setIsEditingAddress(true);
+
+  const handleSaveAddress = async () => {
+    try {
+      await api.put(`/address/${userId}`, {
+        line_1: deliveryInfo.line_1,
+        line_2: deliveryInfo.line_2,
+        city: deliveryInfo.city,
+        state: deliveryInfo.state,
+        zip: deliveryInfo.zip,
+      });
+      setIsEditingAddress(false);
+    } catch (error) {
+      console.error('Error updating address:', error);
+    }
+  };
+
+
+
   const [paymentInfo, setPaymentInfo] = useState({
     cardId: null,
     newCardDetails: {
@@ -58,7 +104,7 @@ const Checkout = () => {
   }, [userId]);
 
   const validateDeliveryInfo = () => {
-    const { firstName, lastName, email, phone, address } = deliveryInfo;
+    const { firstName, lastName, email, phone, line_1 } = deliveryInfo;
     const newErrors = {};
     if (!firstName) newErrors.firstName = "First name is required.";
     if (!lastName) newErrors.lastName = "Last name is required.";
@@ -68,10 +114,11 @@ const Checkout = () => {
       newErrors.email = "Email address is invalid.";
     }
     if (!phone) newErrors.phone = "Phone number is required.";
-    if (!address) newErrors.address = "Address is required.";
-    setErrors(prev => ({ ...prev, delivery: newErrors }));
+    if (!line_1) newErrors.address = "Address Line 1 is required.";
+    setErrors((prev) => ({ ...prev, delivery: newErrors }));
     return Object.keys(newErrors).length === 0;
   };
+  
 
   const handleDeliveryChange = (e) => {
     setDeliveryInfo({ ...deliveryInfo, [e.target.name]: e.target.value });
@@ -138,11 +185,16 @@ const Checkout = () => {
 
   const handleNextStep = () => {
     if (currentStep === 1) {
-      if (validateDeliveryInfo()) setCurrentStep(currentStep + 1);
+      // Check if delivery info has default values and skip validation if so
+      const isDefaultAddress = deliveryInfo.firstName && deliveryInfo.lastName && deliveryInfo.line_1;
+      if (isDefaultAddress || validateDeliveryInfo()) {
+        setCurrentStep(currentStep + 1);
+      }
     } else if (currentStep === 2) {
       setCurrentStep(currentStep + 1);
     }
   };
+  
 
   const handlePlaceOrder = () => {
     console.log('Order placed!', { deliveryInfo, paymentInfo, cartItems });
@@ -152,24 +204,89 @@ const Checkout = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+      
       {currentStep === 1 && (
         <div>
-          <h2 className="text-2xl font-bold">Delivery Information</h2>
-          <form className="space-y-4 mt-4">
-            <input type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
-            {errors.delivery.firstName && <span className="text-red-500">{errors.delivery.firstName}</span>}
-            <input type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
-            {errors.delivery.lastName && <span className="text-red-500">{errors.delivery.lastName}</span>}
-            <input type="email" name="email" placeholder="Email" value={deliveryInfo.email} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
-            {errors.delivery.email && <span className="text-red-500">{errors.delivery.email}</span>}
-            <input type="tel" name="phone" placeholder="Phone Number" value={deliveryInfo.phone} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
-            {errors.delivery.phone && <span className="text-red-500">{errors.delivery.phone}</span>}
-            <input type="text" name="address" placeholder="Address" value={deliveryInfo.address} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
-            {errors.delivery.address && <span className="text-red-500">{errors.delivery.address}</span>}
-            <button type="button" className="mt-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700" onClick={handleNextStep}>
-              Next: Payment Method
+          <h2 className="text-2xl font-bold mb-4">Delivery Information</h2>
+          <div className="flex items-center space-x-4 mb-4">
+            <button className="px-6 py-2 border border-gray-400 rounded flex items-center space-x-2">
+              <span role="img" aria-label="Truck">🚚</span>
+              <span>Ship</span>
             </button>
-          </form>
+          </div>
+
+          <div className="border border-gray-300 p-4 rounded-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Shipping Address</h3>
+              {!isEditingAddress ? (
+                <button
+                  onClick={handleEditAddress}
+                  className="text-blue-600 underline"
+                >
+                  Edit
+                </button>
+              ) : (
+                <button
+                  onClick={handleSaveAddress}
+                  className="text-green-600 underline"
+                >
+                  Save
+                </button>
+              )}
+            </div>
+
+            {!isEditingAddress ? (
+              <div className="text-gray-700">
+                <p>{deliveryInfo.firstName} {deliveryInfo.lastName}</p>
+                <p>{deliveryInfo.line_1}{deliveryInfo.line_2 && `, ${deliveryInfo.line_2}`}</p>
+                <p>{deliveryInfo.city}, {deliveryInfo.state} {deliveryInfo.zip}</p>
+                <p>{deliveryInfo.phone}</p>
+              </div>
+            ) : (
+              <form className="space-y-4">
+                <input
+                  type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="tel" name="phone" placeholder="Phone Number" value={deliveryInfo.phone}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="line_1" placeholder="Address Line 1" value={deliveryInfo.line_1}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="line_2" placeholder="Address Line 2" value={deliveryInfo.line_2}
+                  onChange={handleDeliveryChange} className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="city" placeholder="City" value={deliveryInfo.city}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="state" placeholder="State" value={deliveryInfo.state}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+                <input
+                  type="text" name="zip" placeholder="ZIP Code" value={deliveryInfo.zip}
+                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
+                />
+              </form>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="mt-6 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+            onClick={handleNextStep}
+          >
+            Next: Payment Method
+          </button>
         </div>
       )}
 
