@@ -13,6 +13,8 @@ const ProfileDashboard = () => {
   const [updateSuccess, setUpdateSuccess] = useState('');
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
+  const [isEditingCard, setIsEditingCard] = useState(false);
+  const [editCardId, setEditCardId] = useState(null);
   const [cardDetails, setCardDetails] = useState({
     cardholder_name: '',
     card_number: '',
@@ -73,17 +75,7 @@ const ProfileDashboard = () => {
           [addressField]: value
         }
       }));
-    } else {
-      setUserData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-
-  const handleCardInputChange = (e) => {
-    const { name, value } = e.target;
-    if (name.startsWith('billing_address.')) {
+    } else if (name.startsWith('billing_address.')) {
       const field = name.split('.')[1];
       setCardDetails(prev => ({
         ...prev,
@@ -93,20 +85,82 @@ const ProfileDashboard = () => {
         }
       }));
     } else if (name === 'card_number') {
-      // Only allow numbers and limit to 16 digits
       const numbersOnly = value.replace(/\D/g, '').slice(0, 16);
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
     } else if (name === 'expiration_date') {
-      // Format MM/YY
       const numbersOnly = value.replace(/\D/g, '');
       const formatted = numbersOnly.slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
       setCardDetails(prev => ({ ...prev, [name]: formatted }));
     } else if (name === 'cvv') {
-      // Only allow numbers and limit to 3 digits
       const numbersOnly = value.replace(/\D/g, '').slice(0, 3);
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
     } else {
-      setCardDetails(prev => ({ ...prev, [name]: value }));
+      setUserData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleEditCard = (card) => {
+    setCardDetails({
+      cardholder_name: card.cardholder_name,
+      card_number: card.card_number,
+      expiration_date: card.expiration_date,
+      cvv: '', 
+      billing_address: {
+        line_1: card.billing_address.line_1,
+        line_2: card.billing_address.line_2,
+        city: card.billing_address.city,
+        state: card.billing_address.state,
+        zip: card.billing_address.zip,
+      }
+    });
+    setEditCardId(card.preferred_payment_id);
+    setShowCardForm(true);
+    setIsEditingCard(true);
+  };
+
+  const handleAddOrUpdateCard = async (e) => {
+    e.preventDefault();
+    try {
+      if (isEditingCard) {
+        await api.put(`/payment/${editCardId}`, {
+          ...cardDetails,
+          user_id: userId
+        });
+        setUpdateSuccess('Payment method updated successfully');
+      } else {
+        const addressResponse = await api.post('/address', cardDetails.billing_address);
+        const billing_address_id = addressResponse.data.address_id;
+  
+        await api.post('/payment', {
+          ...cardDetails,
+          user_id: userId,
+          billing_address_id
+        });
+        setUpdateSuccess('Payment method added successfully');
+      }
+  
+      const response = await api.get(`/payment/user/${userId}`);
+      setCards(response.data || []);
+      setShowCardForm(false);
+      setIsEditingCard(false);
+      setEditCardId(null);
+  
+      setCardDetails({
+        cardholder_name: '',
+        card_number: '',
+        expiration_date: '',
+        cvv: '',
+        billing_address: {
+          line_1: '',
+          line_2: '',
+          city: '',
+          state: '',
+          zip: '',
+        }
+      });
+    } catch (error) {
+      console.error('Error adding or updating payment method:', error);
+      setError('Failed to add or update payment method');
     }
   };
 
@@ -140,50 +194,6 @@ const ProfileDashboard = () => {
     } catch (error) {
       console.error('Error updating address:', error);
       setError('Failed to update address');
-    }
-  };
-
-  const handleAddCard = async (e) => {
-    e.preventDefault();
-    try {
-      // First create billing address
-      const addressResponse = await api.post('/address', cardDetails.billing_address);
-      const billing_address_id = addressResponse.data.address_id;
-
-      // Create payment method
-      await api.post('/payment', {
-        cardholder_name: cardDetails.cardholder_name,
-        card_number: cardDetails.card_number,
-        expiration_date: cardDetails.expiration_date,
-        cvv: cardDetails.cvv,
-        user_id: userId,
-        billing_address_id
-      });
-
-      // Refresh payment methods
-      const response = await api.get(`/payment/user/${userId}`);
-      setCards(response.data || []);
-      setShowCardForm(false);
-      setUpdateSuccess('Payment method added successfully');
-      setTimeout(() => setUpdateSuccess(''), 3000);
-
-      // Reset form
-      setCardDetails({
-        cardholder_name: '',
-        card_number: '',
-        expiration_date: '',
-        cvv: '',
-        billing_address: {
-          line_1: '',
-          line_2: '',
-          city: '',
-          state: '',
-          zip: '',
-        }
-      });
-    } catch (error) {
-      console.error('Error adding payment method:', error);
-      setError('Failed to add payment method');
     }
   };
 
@@ -431,28 +441,44 @@ const ProfileDashboard = () => {
                 <h2 className="text-xl font-semibold">Payment Methods</h2>
               </div>
               <button
-                onClick={() => setShowCardForm(!showCardForm)}
+                onClick={() => {
+                  setShowCardForm(!showCardForm);
+                  setIsEditingCard(false);
+                  setEditCardId(null);
+                  setCardDetails({
+                    cardholder_name: '',
+                    card_number: '',
+                    expiration_date: '',
+                    cvv: '',
+                    billing_address: {
+                      line_1: '',
+                      line_2: '',
+                      city: '',
+                      state: '',
+                      zip: '',
+                    },
+                  });
+                }}
                 className="flex items-center space-x-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add Payment Method</span>
+                <span>{isEditingCard ? 'Cancel Edit' : 'Add Payment Method'}</span>
               </button>
             </div>
 
             {showCardForm && (
-              <form onSubmit={handleAddCard} className="mb-6 space-y-4">
+              <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
                   <input
                     type="text"
                     name="cardholder_name"
                     value={cardDetails.cardholder_name}
-                    onChange={handleCardInputChange}
+                    onChange={handleInputChange}
                     className="w-full p-2 border rounded"
                     required
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
@@ -460,7 +486,7 @@ const ProfileDashboard = () => {
                       type="text"
                       name="card_number"
                       value={cardDetails.card_number}
-                      onChange={handleCardInputChange}
+                      onChange={handleInputChange}
                       placeholder="1234567890123456"
                       className="w-full p-2 border rounded"
                       required
@@ -473,7 +499,7 @@ const ProfileDashboard = () => {
                         type="text"
                         name="expiration_date"
                         value={cardDetails.expiration_date}
-                        onChange={handleCardInputChange}
+                        onChange={handleInputChange}
                         placeholder="MM/YY"
                         className="w-full p-2 border rounded"
                         required
@@ -485,7 +511,7 @@ const ProfileDashboard = () => {
                         type="text"
                         name="cvv"
                         value={cardDetails.cvv}
-                        onChange={handleCardInputChange}
+                        onChange={handleInputChange}
                         placeholder="123"
                         className="w-full p-2 border rounded"
                         required
@@ -493,14 +519,13 @@ const ProfileDashboard = () => {
                     </div>
                   </div>
                 </div>
-
                 <div className="space-y-4 mt-4">
                   <h3 className="font-medium">Billing Address</h3>
                   <input
                     type="text"
                     name="billing_address.line_1"
                     value={cardDetails.billing_address.line_1}
-                    onChange={handleCardInputChange}
+                    onChange={handleInputChange}
                     placeholder="Street Address"
                     className="w-full p-2 border rounded"
                     required
@@ -509,7 +534,7 @@ const ProfileDashboard = () => {
                     type="text"
                     name="billing_address.line_2"
                     value={cardDetails.billing_address.line_2}
-                    onChange={handleCardInputChange}
+                    onChange={handleInputChange}
                     placeholder="Apt, Suite, etc. (optional)"
                     className="w-full p-2 border rounded"
                   />
@@ -518,7 +543,7 @@ const ProfileDashboard = () => {
                       type="text"
                       name="billing_address.city"
                       value={cardDetails.billing_address.city}
-                      onChange={handleCardInputChange}
+                      onChange={handleInputChange}
                       placeholder="City"
                       className="w-full p-2 border rounded"
                       required
@@ -527,7 +552,7 @@ const ProfileDashboard = () => {
                       type="text"
                       name="billing_address.state"
                       value={cardDetails.billing_address.state}
-                      onChange={handleCardInputChange}
+                      onChange={handleInputChange}
                       placeholder="State"
                       className="w-full p-2 border rounded"
                       required
@@ -537,48 +562,70 @@ const ProfileDashboard = () => {
                     type="text"
                     name="billing_address.zip"
                     value={cardDetails.billing_address.zip}
-                    onChange={handleCardInputChange}
+                    onChange={handleInputChange}
                     placeholder="ZIP Code"
                     className="w-full p-2 border rounded"
                     required
                   />
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                >
-                  Add Payment Method
-                </button>
+                <div className="flex justify-between">
+                  <button
+                    type="submit"
+                    className="py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                  >
+                    {isEditingCard ? 'Update Payment Method' : 'Add Payment Method'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCardForm(false);
+                      setIsEditingCard(false);
+                      setEditCardId(null);
+                    }}
+                    className="py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* Display saved cards */}
-            <div className="space-y-4">
-              {cards.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No payment methods found</p>
-              ) : (
-                cards.map(card => (
-                  <div key={card.preferred_payment_id} className="flex justify-between items-center p-4 border rounded">
-                    <div>
-                      <div className="font-medium">{card.cardholder_name}</div>
-                      <div className="text-sm text-gray-500">
-                        •••• •••• •••• {card.card_number.slice(-4)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Expires: {card.expiration_date}
+            {/* Display saved cards only if not editing or adding a card */}
+            {!showCardForm && (
+              <div className="space-y-4">
+                {cards.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">No payment methods found</p>
+                ) : (
+                  cards.map(card => (
+                    <div key={card.preferred_payment_id} className="flex justify-between items-center p-4 border rounded">
+                      <div>
+                        <div className="font-medium">{card.cardholder_name}</div>
+                        <div className="text-sm text-gray-500">
+                          •••• •••• •••• {card.card_number.slice(-4)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Expires: {card.expiration_date}
+                        </div>
+                      </div>     
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditCard(card)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCard(card.preferred_payment_id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteCard(card.preferred_payment_id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           {/* Orders Section */}
@@ -598,3 +645,5 @@ const ProfileDashboard = () => {
 };
 
 export default ProfileDashboard;
+
+
