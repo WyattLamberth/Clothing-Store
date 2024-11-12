@@ -8,72 +8,78 @@ const Checkout = () => {
   const cartItems = location.state?.cartItems || [];
   const navigate = useNavigate();
   const { userId } = useAuth();
-
-  const [isEditingAddress, setIsEditingAddress] = useState(false);
-
+  const [useDefaultAddress, setUseDefaultAddress] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [deliveryInfo, setDeliveryInfo] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
-    address: '',
+    line_1: '',
+    line_2: '',
+    city: '',
+    state: '',
+    zip: '',
   });
+
+  const [defaultAddress, setDefaultAddress] = useState({});
+
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         const userResponse = await api.get(`/users/${userId}`);
         const user = userResponse.data;
-        let address_id = user.address_id;
-  
-        // If address_id is missing, fetch it using the address API
-        if (!address_id && user.address) {
-          const addressResponse = await api.get(`/address/${user.address_id}`);
-          address_id = addressResponse.data.address_id;
-        }
-  
-        setDeliveryInfo({
+
+        const fetchedAddress = {
           firstName: user.first_name,
           lastName: user.last_name,
+          email: user.email,
           phone: user.phone_number,
-          address_id: address_id || '',
           line_1: user.address?.line_1 || '',
           line_2: user.address?.line_2 || '',
           city: user.address?.city || '',
           state: user.address?.state || '',
           zip: user.address?.zip || '',
-        });
+          address_id: user.address_id, // Ensure address_id is stored
+        };
+
+        setDefaultAddress(fetchedAddress);
+
+        // If "Use Default Address" is already checked, auto-fill delivery info
+        if (useDefaultAddress) {
+          setDeliveryInfo(fetchedAddress);
+        }
       } catch (error) {
         console.error('Error fetching user or address info:', error);
       }
     };
-  
+
     fetchUserInfo();
-  }, [userId]);
-  
-  
-  
+  }, [userId, useDefaultAddress]);
   
 
-  const handleEditAddress = () => setIsEditingAddress(true);
+  const handleCheckboxChange = async () => {
+    setUseDefaultAddress(!useDefaultAddress);
 
-  const handleSaveAddress = async () => {
-    try {
-      await api.put(`/address/${userId}`, {
-        line_1: deliveryInfo.line_1,
-        line_2: deliveryInfo.line_2,
-        city: deliveryInfo.city,
-        state: deliveryInfo.state,
-        zip: deliveryInfo.zip,
+    if (!useDefaultAddress && defaultAddress) {
+      // Auto-fill delivery info with default address if available
+      setDeliveryInfo(defaultAddress);
+    } else {
+      // Clear delivery info if unchecked
+      setDeliveryInfo({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        line_1: '',
+        line_2: '',
+        city: '',
+        state: '',
+        zip: '',
       });
-      setIsEditingAddress(false);
-    } catch (error) {
-      console.error('Error updating address:', error);
     }
   };
-
-
 
   const [paymentInfo, setPaymentInfo] = useState({
     cardId: null,
@@ -197,7 +203,6 @@ const Checkout = () => {
 
   const handleNextStep = () => {
     if (currentStep === 1) {
-      // Check if delivery info has default values and skip validation if so
       const isDefaultAddress = deliveryInfo.firstName && deliveryInfo.lastName && deliveryInfo.line_1;
       if (isDefaultAddress || validateDeliveryInfo()) {
         setCurrentStep(currentStep + 1);
@@ -209,21 +214,42 @@ const Checkout = () => {
   
 
   const handlePlaceOrder = async () => {
-    const orderData = {
-      user_id: userId,
-      shipping_address_id: deliveryInfo.address_id, // Check this value
-      order_status: 'Pending',
-      order_date: new Date().toISOString().slice(0, 10),
-      shipping_cost: 10.0,
-      payment_method: paymentInfo.cardId, // Check this value
-      total_amount: total,
-    };
-  
-    console.log('Order Data:', orderData); // Inspect the data being sent
-  
     try {
+      let shippingAddressId;
+  
+      if (useDefaultAddress && defaultAddress.address_id) {
+        // Use the default address ID if "Use Default Address" is checked
+        shippingAddressId = defaultAddress.address_id;
+      } else {
+        // If not using the default address, save the new address to the database first
+        const newAddress = {
+          line_1: deliveryInfo.line_1,
+          line_2: deliveryInfo.line_2,
+          city: deliveryInfo.city,
+          state: deliveryInfo.state,
+          zip: deliveryInfo.zip,
+        };
+  
+        const addressResponse = await api.post('/address', newAddress);
+        shippingAddressId = addressResponse.data.address_id;
+      }
+  
+      const orderData = {
+        user_id: userId,
+        shipping_address_id: shippingAddressId,
+        order_status: 'Pending',
+        order_date: new Date().toISOString().slice(0, 10),
+        shipping_cost: 10.0,
+        payment_method: paymentInfo.cardId,
+        total_amount: total,
+      };
+  
+      console.log('Order Data:', orderData); // Inspect the data being sent
+  
       const response = await api.post('/orders', orderData);
       console.log('Order placed successfully:', response.data);
+  
+      // Redirect user after successful order
       navigate('/profile');
     } catch (error) {
       console.error('Error placing order:', error);
@@ -232,116 +258,145 @@ const Checkout = () => {
   
   
   
+  
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Checkout</h1>
       
-      {currentStep === 1 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Delivery Information</h2>
-          <div className="flex items-center space-x-4 mb-4">
-            <button className="px-6 py-2 border border-gray-400 rounded flex items-center space-x-2">
-              <span role="img" aria-label="Truck">🚚</span>
-              <span>Ship</span>
-            </button>
-          </div>
+    {currentStep === 1 && (
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Delivery Information</h2>
 
-          <div className="border border-gray-300 p-4 rounded-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Shipping Address</h3>
-              {!isEditingAddress ? (
-                <button
-                  onClick={handleEditAddress}
-                  className="text-blue-600 underline"
-                >
-                  Edit
-                </button>
-              ) : (
-                <button
-                  onClick={handleSaveAddress}
-                  className="text-green-600 underline"
-                >
-                  Save
-                </button>
-              )}
-            </div>
-
-            {!isEditingAddress ? (
-              <div className="text-gray-700">
-                <p>{deliveryInfo.firstName} {deliveryInfo.lastName}</p>
-                <p>{deliveryInfo.line_1}{deliveryInfo.line_2 && `, ${deliveryInfo.line_2}`}</p>
-                <p>{deliveryInfo.city}, {deliveryInfo.state} {deliveryInfo.zip}</p>
-                <p>{deliveryInfo.phone}</p>
-              </div>
-            ) : (
-              <form className="space-y-4">
-                <input
-                  type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="tel" name="phone" placeholder="Phone Number" value={deliveryInfo.phone}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="line_1" placeholder="Address Line 1" value={deliveryInfo.line_1}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="line_2" placeholder="Address Line 2" value={deliveryInfo.line_2}
-                  onChange={handleDeliveryChange} className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="city" placeholder="City" value={deliveryInfo.city}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="state" placeholder="State" value={deliveryInfo.state}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-                <input
-                  type="text" name="zip" placeholder="ZIP Code" value={deliveryInfo.zip}
-                  onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full"
-                />
-              </form>
-            )}
-          </div>
-
-          <button
-            type="button"
-            className="mt-6 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-            onClick={handleNextStep}
-          >
-            Next: Payment Method
-          </button>
+        <div className="flex items-center space-x-4 mb-4">
+          <label>
+            <input
+              type="checkbox"
+              checked={useDefaultAddress}
+              onChange={handleCheckboxChange}
+            />{' '}
+            Use Default Address
+          </label>
         </div>
-      )}
 
-      {currentStep === 2 && (
-        <div>
-          <h2 className="text-2xl font-bold">Payment Method</h2>
-          <div className="space-y-4 mt-4">
-            {cards.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium mb-1">Select a saved card</label>
-                <select
-                  value={paymentInfo.cardId || ""} // Default to empty string if cardId is null or undefined
-                  onChange={(e) => setPaymentInfo({ ...paymentInfo, cardId: e.target.value })}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select a card</option>
-                  {cards.map((card) => (
-                    <option key={card.preferred_payment_id} value={card.preferred_payment_id}>
-                      {card.cardholder_name} •••• {card.card_number.slice(-4)} (Expires {card.expiration_date})
-                    </option>
-                  ))}
-                </select>
-              </div>
+        <div className="border border-gray-300 p-4 rounded-md">
+          <h3 className="text-lg font-semibold mb-4">Shipping Address</h3>
+
+          <form className="space-y-4">
+            <input
+              type="text"
+              name="firstName"
+              placeholder="First Name"
+              value={deliveryInfo.firstName}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Last Name"
+              value={deliveryInfo.lastName}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={deliveryInfo.email}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Phone Number"
+              value={deliveryInfo.phone}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="line_1"
+              placeholder="Address Line 1"
+              value={deliveryInfo.line_1}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="line_2"
+              placeholder="Address Line 2"
+              value={deliveryInfo.line_2}
+              onChange={handleDeliveryChange}
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="city"
+              placeholder="City"
+              value={deliveryInfo.city}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="state"
+              placeholder="State"
+              value={deliveryInfo.state}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+            <input
+              type="text"
+              name="zip"
+              placeholder="ZIP Code"
+              value={deliveryInfo.zip}
+              onChange={handleDeliveryChange}
+              required
+              className="border rounded px-4 py-2 w-full"
+            />
+          </form>
+        </div>
+
+        <button
+          type="button"
+          className="mt-6 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          onClick={handleNextStep}
+        >
+          Next: Payment Method
+        </button>
+      </div>
+    )}
+
+
+          {currentStep === 2 && (
+            <div>
+              <h2 className="text-2xl font-bold">Payment Method</h2>
+              <div className="space-y-4 mt-4">
+                {cards.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Select a saved card</label>
+                    <select
+                      value={paymentInfo.cardId || ""} // Default to empty string if cardId is null or undefined
+                      onChange={(e) => setPaymentInfo({ ...paymentInfo, cardId: e.target.value })}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="">Select a card</option>
+                      {cards.map((card) => (
+                        <option key={card.preferred_payment_id} value={card.preferred_payment_id}>
+                          {card.cardholder_name} •••• {card.card_number.slice(-4)} (Expires {card.expiration_date})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
             )}
 
             <button
