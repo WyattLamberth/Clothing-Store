@@ -167,12 +167,18 @@ const ProfileDashboard = () => {
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.put(`/users/${userId}`, {
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        phone_number: userData.phone_number,
-      });
+      // Ensure all fields are correctly set and handle potential undefined values
+      const payload = {
+        first_name: userData.first_name || null,
+        last_name: userData.last_name || null,
+        email: userData.email || null,
+        phone_number: userData.phone_number || null,
+      };
+  
+      // Send the update request
+      await api.put(`/users/${userId}`, payload);
+  
+      // Handle successful response
       setShowProfileEditForm(false);
       setUpdateSuccess('Profile updated successfully');
       setTimeout(() => setUpdateSuccess(''), 3000);
@@ -181,12 +187,19 @@ const ProfileDashboard = () => {
       setError('Failed to update profile');
     }
   };
+  
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
     try {
       await api.put(`/users/${userId}`, {
-        address: userData.address
+        address: {
+          line_1: userData.address?.line_1 || null,
+          line_2: userData.address?.line_2 || null,
+          city: userData.address?.city || null,
+          state: userData.address?.state || null,
+          zip: userData.address?.zip || null,
+        }
       });
       setShowAddressEditForm(false);
       setUpdateSuccess('Address updated successfully');

@@ -10,12 +10,22 @@ const ProfilePage = () => {
   const [error, setError] = useState(null);
   const [updateMessage, setUpdateMessage] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
-  const [userData, setUserData] = useState(null);
+  const [userData, setUserData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone_number: '',
+    address: {
+      line_1: '',
+      line_2: '',
+      city: '',
+      state: '',
+      zip: '',
+    }
+  });
 
   // Only include the Profile tab
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User }
-  ];
+  const tabs = [{ id: 'profile', label: 'Profile', icon: User }];
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -24,7 +34,16 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         const response = await api.get(`/users/${userId}`);
-        setUserData(response.data);
+        setUserData({
+          ...response.data,
+          address: {
+            line_1: response.data.address?.line_1 || '',
+            line_2: response.data.address?.line_2 || '',
+            city: response.data.address?.city || '',
+            state: response.data.address?.state || '',
+            zip: response.data.address?.zip || ''
+          }
+        });
         setError(null);
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -58,7 +77,7 @@ const ProfilePage = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
-        return <ProfileDashboard userData={userData} onUpdateMessage={setUpdateMessage} />;
+        return <ProfileDashboard userData={userData} onUpdateMessage={setUpdateMessage} userId={userId} />;
       default:
         return null;
     }
@@ -108,3 +127,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
