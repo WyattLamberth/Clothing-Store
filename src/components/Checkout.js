@@ -309,7 +309,6 @@ const Checkout = () => {
                     </option>
                   ))}
                 </select>
-
               </div>
             )}
 
@@ -327,6 +326,7 @@ const Checkout = () => {
                 <input type="text" name="card_number" placeholder="Card Number" value={paymentInfo.newCardDetails.card_number} onChange={handleNewCardInputChange} required className="border rounded px-4 py-2 w-full" />
                 <input type="text" name="expiration_date" placeholder="Expiration Date (MM/YY)" value={paymentInfo.newCardDetails.expiration_date} onChange={handleNewCardInputChange} required className="border rounded px-4 py-2 w-full" />
                 <input type="text" name="cvv" placeholder="CVV" value={paymentInfo.newCardDetails.cvv} onChange={handleNewCardInputChange} required className="border rounded px-4 py-2 w-full" />
+                <h2 className="text-xl font-bold">Billing Address</h2>
                 <input type="text" name="billing_address.line_1" placeholder="Street Address" value={paymentInfo.newCardDetails.billing_address.line_1} onChange={handleNewCardInputChange} required className="border rounded px-4 py-2 w-full" />
                 <input type="text" name="billing_address.line_2" placeholder="Apt, Suite, etc. (optional)" value={paymentInfo.newCardDetails.billing_address.line_2} onChange={handleNewCardInputChange} className="border rounded px-4 py-2 w-full" />
                 <input type="text" name="billing_address.city" placeholder="City" value={paymentInfo.newCardDetails.billing_address.city} onChange={handleNewCardInputChange} required className="border rounded px-4 py-2 w-full" />
@@ -342,16 +342,26 @@ const Checkout = () => {
               </form>
             )}
 
-            <button
-              type="button"
-              className="mt-4 w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-              onClick={handleNextStep}
-            >
-              Next: Order Review
-            </button>
+            <div className="flex justify-between mt-4">
+              <button
+                type="button"
+                className="w-full mr-2 bg-gray-400 text-white py-2 rounded hover:bg-gray-500"
+                onClick={() => setCurrentStep(1)} // Back to Delivery Information
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                onClick={handleNextStep}
+              >
+                Next: Order Review
+              </button>
+            </div>
           </div>
         </div>
       )}
+
 
       {currentStep === 3 && (
         <div>
