@@ -19,30 +19,42 @@ const Checkout = () => {
     phone: '',
     address: '',
   });
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await api.get(`/users/${userId}`);
-        const user = response.data;
-        if (user) {
-          setDeliveryInfo({
-            firstName: user.first_name,
-            lastName: user.last_name,
-            phone: user.phone_number,
-            line_1: user.address?.line_1 || '',
-            line_2: user.address?.line_2 || '',
-            city: user.address?.city || '',
-            state: user.address?.state || '',
-            zip: user.address?.zip || '',
-          });
+        const userResponse = await api.get(`/users/${userId}`);
+        const user = userResponse.data;
+        let address_id = user.address_id;
+  
+        // If address_id is missing, fetch it using the address API
+        if (!address_id && user.address) {
+          const addressResponse = await api.get(`/address/${user.address_id}`);
+          address_id = addressResponse.data.address_id;
         }
+  
+        setDeliveryInfo({
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone_number,
+          address_id: address_id || '',
+          line_1: user.address?.line_1 || '',
+          line_2: user.address?.line_2 || '',
+          city: user.address?.city || '',
+          state: user.address?.state || '',
+          zip: user.address?.zip || '',
+        });
       } catch (error) {
-        console.error('Error fetching user info:', error);
+        console.error('Error fetching user or address info:', error);
       }
     };
-
+  
     fetchUserInfo();
   }, [userId]);
+  
+  
+  
+  
 
   const handleEditAddress = () => setIsEditingAddress(true);
 
@@ -196,10 +208,30 @@ const Checkout = () => {
   };
   
 
-  const handlePlaceOrder = () => {
-    console.log('Order placed!', { deliveryInfo, paymentInfo, cartItems });
-    navigate('/profile');
+  const handlePlaceOrder = async () => {
+    const orderData = {
+      user_id: userId,
+      shipping_address_id: deliveryInfo.address_id, // Check this value
+      order_status: 'Pending',
+      order_date: new Date().toISOString().slice(0, 10),
+      shipping_cost: 10.0,
+      payment_method: paymentInfo.cardId, // Check this value
+      total_amount: total,
+    };
+  
+    console.log('Order Data:', orderData); // Inspect the data being sent
+  
+    try {
+      const response = await api.post('/orders', orderData);
+      console.log('Order placed successfully:', response.data);
+      navigate('/profile');
+    } catch (error) {
+      console.error('Error placing order:', error);
+    }
   };
+  
+  
+  
 
   return (
     <div className="container mx-auto px-4 py-8">
