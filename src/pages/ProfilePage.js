@@ -1,5 +1,6 @@
 import React from 'react';
 import ProfileDashboard from '../components/ProfileDashboard';
+import { useState } from 'react';
 
 const ProfilePage = () => {
   const initialProfileData = {

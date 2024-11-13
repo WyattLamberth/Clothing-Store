@@ -3,6 +3,8 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
+import { Bell } from 'lucide-react';
+
 
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
@@ -58,20 +60,6 @@ const Header = () => {
         {/* Left Section - Logo and Categories */}
         <div className="flex items-center space-x-12">
           <Link to="/" className="text-2xl font-bold">StyleHub</Link>
-          <nav className="flex space-x-10">
-            {categories.map((category, index) => (
-              <NavLink
-                key={index}
-                to={category.path}
-                className={({ isActive }) => 
-                  `text-gray-700 hover:text-gray-900 font-medium ${isActive ? 'font-bold' : ''}`
-                }
-                aria-label={`Go to ${category.name} page`}
-              >
-                {category.name}
-              </NavLink>
-            ))}
-          </nav>
         </div>
 
         {/* Right Section - Links */}

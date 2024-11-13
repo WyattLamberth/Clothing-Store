@@ -1,14 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import React, { useEffect, useState, useMemo } from 'react';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
 import SideBar from '../components/SideBar';
 import CartOverlay from '../components/CartOverlay';
 import { useAuth } from '../AuthContext';
-import SideBar from '../components/SideBar';
 
 const ShopPage = () => {
-  const [categoriesName, setCategoriesName] = useState([]);
   const [categoriesName, setCategoriesName] = useState([]);
   const [products, setProducts] = useState([]);
   const [showOverlay, setShowOverlay] = useState(false);
