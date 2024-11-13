@@ -33,6 +33,7 @@ router.use(authMiddleware.staffOnly);
 router.post('/products', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     
@@ -131,9 +132,12 @@ router.post('/products', async (req, res) => {
   }
 });
 
-router.delete('/products/:productId', async (req, res) => {
+
+router.put('/products/:productId', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    // Set current user for auditing, if required
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     
     // First check if the product exists
@@ -283,6 +287,8 @@ router.delete('/products/:productId', async (req, res) => {
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
 
+
+    // Destructure and sanitize incoming data
     const { 
       product_name, category_id, description, price, 
       stock_quantity, reorder_threshold, size, color, brand 
@@ -298,16 +304,49 @@ router.delete('/products/:productId', async (req, res) => {
 
     const [result] = await connection.execute(updateProductQuery, [
       product_name, category_id, description, price,
+
+    let image_path = req.file ? path.basename(req.file.path) : '';
+    let updateProductQuery;
+    let queryParams = [
+      product_name, category_id, description, price, 
       stock_quantity, reorder_threshold, size, color, brand,
       req.params.productId
-    ]);
+    ];
 
+    // Update query with conditional image update
+    if (image_path) {
+      updateProductQuery = `
+        UPDATE products 
+        SET product_name = ?, category_id = ?, description = ?, 
+            price = ?, stock_quantity = ?, reorder_threshold = ?, 
+            size = ?, color = ?, brand = ?, image_path = ?
+        WHERE product_id = ?
+      `;
+      queryParams.splice(-1, 0, image_path); // Insert image_path into query params
+    } else {
+      updateProductQuery = `
+        UPDATE products 
+        SET product_name = ?, category_id = ?, description = ?, 
+            price = ?, stock_quantity = ?, reorder_threshold = ?, 
+            size = ?, color = ?, brand = ?
+        WHERE product_id = ?
+      `;
+    }
+
+    // Execute the update query
+    const [result] = await connection.execute(updateProductQuery, queryParams);
+
+    // Commit if the update was successful
     await connection.commit();
-    if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
-    res.status(200).json({ message: 'Product deleted successfully' });
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({ message: 'Product updated successfully' });
   } catch (error) {
     await connection.rollback();
-    res.status(500).json({ error: 'Error deleting product' });
+    console.error('Error updating product:', error); // Log error for debugging
+    res.status(400).json({ error: 'Error updating product' });
   } finally {
     connection.release();
   }

@@ -70,6 +70,7 @@ router.put('/users/:userId', async (req, res) => {
       await connection.execute(
         'UPDATE address SET line_1 = ?, line_2 = ?, city = ?, state = ?, zip = ? WHERE address_id = (SELECT address_id FROM users WHERE user_id = ?)',
         [address.line_1, address.line_2, address.city, address.state, address.zip, req.params.userId]
+
       );
     }
 
@@ -298,6 +299,43 @@ router.get('/payment/user/:userId', async (req, res) => {
   } catch (error) {
     console.error('Error retrieving payment methods:', error);
     res.status(500).json({ error: 'Error retrieving payment methods' });
+      );
+    }
+
+    // Fetch updated user with address
+    const [users] = await connection.execute(`
+      SELECT u.*, 
+             a.line_1, a.line_2, a.city, a.state, a.zip
+      FROM users u
+      LEFT JOIN address a ON u.address_id = a.address_id
+      WHERE u.user_id = ?
+    `, [req.params.userId]);
+
+    await connection.commit();
+
+    if (userResult.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updatedUser = users[0];
+    const response = {
+      message: 'User updated successfully',
+      user: {
+        ...updatedUser,
+        address: updatedUser.address_id ? {
+          line_1: updatedUser.line_1,
+          line_2: updatedUser.line_2,
+          city: updatedUser.city,
+          state: updatedUser.state,
+          zip: updatedUser.zip
+        } : null
+      }
+    };
+
+    res.json(response);
+  } catch (error) {
+    await connection.rollback();
+    res.status(500).json({ message: 'Error updating user', error: error.message });
   } finally {
     connection.release();
   }
