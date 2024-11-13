@@ -259,7 +259,7 @@ router.delete('/users/:userId', async (req, res) => {
   } finally {
     connection.release();
   }
-});
+}); 
 
 // ADDRESS MANAGEMENT 
 
