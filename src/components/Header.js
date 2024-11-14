@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, Shield, Briefcase, Bell } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
+import { Bell } from 'lucide-react';
 
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
@@ -181,6 +182,19 @@ const Header = () => {
                 <span>Cart</span>
               </Link>
             </li>
+
+            {/* Profile Icon */}
+            {isAuthenticated && (
+              <li>
+                <Link 
+                  to="/profile" 
+                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  <span>Profile</span>
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
