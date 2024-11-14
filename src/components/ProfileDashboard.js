@@ -2,15 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { User, MapPin, ShoppingBag, CreditCard, Plus, X } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
+import { Link } from 'react-router-dom';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
+  const [activeTab, setActiveTab] = useState('Profile');
   const [showProfileEditForm, setShowProfileEditForm] = useState(false);
   const [showAddressEditForm, setShowAddressEditForm] = useState(false);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [expandedOrders, setExpandedOrders] = useState({});
+  const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
   const [isEditingCard, setIsEditingCard] = useState(false);
@@ -63,6 +68,46 @@ const ProfileDashboard = () => {
       fetchPaymentMethods();
     }
   }, [userId]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await api.get(`/users/${userId}/orders`);
+        console.log("Orders Data:", response.data); // Check if total_amount is present
+        setOrders(response.data || []);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      }
+    };
+  
+    if (userId) {
+      fetchOrders();
+    }
+  }, [userId]);
+  
+  const toggleOrderExpansion = async (orderId) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+
+    // Fetch order items if they haven't been loaded yet
+    if (!orderItems[orderId]) {
+      try {
+        const response = await api.get(`/order_items/${orderId}`);
+        setOrderItems((prev) => ({
+          ...prev,
+          [orderId]: response.data,
+        }));
+      } catch (error) {
+        console.error('Error fetching order items:', error);
+      }
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -241,10 +286,31 @@ const ProfileDashboard = () => {
           {updateSuccess}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <div>
+  
+      {/* Tab Navigation */}
+      <div className="flex justify-center mb-8 space-x-8">
+        <button
+          onClick={() => handleTabClick('Profile')}
+          className={`px-4 py-2 font-semibold ${activeTab === 'Profile' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => handleTabClick('Orders')}
+          className={`px-4 py-2 font-semibold ${activeTab === 'Orders' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+        >
+          Orders
+        </button>
+      </div>
+  
+      {loading ? (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : error ? (
+        <div className="text-red-500 text-center p-4">{error}</div>
+      ) : activeTab === 'Profile' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Personal Information Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -259,7 +325,7 @@ const ProfileDashboard = () => {
                 {showProfileEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-
+  
             {showProfileEditForm ? (
               <form onSubmit={handleProfileSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -332,7 +398,7 @@ const ProfileDashboard = () => {
               </div>
             )}
           </div>
-
+  
           {/* Address Section */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
@@ -347,7 +413,7 @@ const ProfileDashboard = () => {
                 {showAddressEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-
+  
             {showAddressEditForm ? (
               <form onSubmit={handleAddressSubmit} className="space-y-4">
                 <div>
@@ -442,10 +508,7 @@ const ProfileDashboard = () => {
               )
             )}
           </div>
-        </div>
-
-        {/* Right Column */}
-        <div>
+  
           {/* Payment Methods Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -478,7 +541,7 @@ const ProfileDashboard = () => {
                 <span>{isEditingCard ? 'Cancel Edit' : 'Add Payment Method'}</span>
               </button>
             </div>
-
+  
             {showCardForm && (
               <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-4">
                 <div>
@@ -602,7 +665,7 @@ const ProfileDashboard = () => {
                 </div>
               </form>
             )}
-
+  
             {/* Display saved cards only if not editing or adding a card */}
             {!showCardForm && (
               <div className="space-y-4">
@@ -619,7 +682,7 @@ const ProfileDashboard = () => {
                         <div className="text-sm text-gray-500">
                           Expires: {card.expiration_date}
                         </div>
-                      </div>     
+                      </div>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEditCard(card)}
@@ -640,22 +703,52 @@ const ProfileDashboard = () => {
               </div>
             )}
           </div>
-
-          {/* Orders Section */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <ShoppingBag className="h-5 w-5 text-blue-500" />
-              <h2 className="text-xl font-semibold">Recent Orders</h2>
-            </div>
-            <div className="text-gray-500 text-center py-8">
-              No recent orders found
-            </div>
-          </div>
         </div>
-      </div>
+      ) : (
+        <div className="orders-list grid grid-cols-1 gap-4">
+          {orders.length === 0 ? (
+            <p>No recent orders found</p>
+          ) : (
+            orders.map((order) => (
+              <div
+                key={order.order_id}
+                className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => toggleOrderExpansion(order.order_id)}
+              >
+                <div className="text-gray-700 font-semibold">
+                  Status: {order.order_status || 'Unknown'}
+                </div>
+                <div className="text-gray-500">
+                  Order Date: {new Date(order.order_date).toLocaleDateString()}
+                </div>
+                <div className="text-gray-900 font-bold mt-2">
+                  Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
+                </div>
+
+                {/* Expanded order items */}
+                {expandedOrders[order.order_id] && orderItems[order.order_id] && (
+                  <div className="order-items mt-4">
+                    {orderItems[order.order_id].map((item) => (
+                      <div key={item.order_item_id} className="flex justify-between p-2 border-b">
+                        <div className="flex items-center space-x-4">
+                          <img src={item.image_path} alt={item.product_name} className="w-16 h-16 object-cover rounded" />
+                          <span>{item.product_name}</span>
+                        </div>
+                        <span>Quantity: {item.quantity}</span>
+                        <span>Price: ${parseFloat(item.order_item_price).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 };
+  
 
 export default ProfileDashboard;
 
