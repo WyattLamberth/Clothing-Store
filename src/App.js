@@ -13,7 +13,7 @@ import SalesReports from './pages/SalesReports';
 import SystemMaintenance from './pages/SystemMaintenance';
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './AuthContext';
-import Checkout from './components/Checkout';
+import Checkout from './pages/Checkout';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
 import ProductPage from './pages/ProductPage';
