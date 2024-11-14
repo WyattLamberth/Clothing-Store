@@ -175,18 +175,8 @@ CREATE TABLE sale_events (
   event_name VARCHAR(100) NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
-  product_id INT,
-  category_id INT,
-  CHECK (end_date > start_date)
-);
-
--- Discounts table
-CREATE TABLE discounts (
-  discount_id INT AUTO_INCREMENT PRIMARY KEY,
-  discount_type VARCHAR(50) NOT NULL,
   discount_percentage DECIMAL(5,2) NOT NULL,
-  sale_event_id INT,
-  CHECK (discount_percentage BETWEEN 0 AND 50)
+  CHECK (end_date > start_date)
 );
 
 -- Permissions table
@@ -245,13 +235,6 @@ ADD CONSTRAINT fk_refund_return FOREIGN KEY (return_id) REFERENCES returns(retur
 
 ALTER TABLE activity_logs
 ADD CONSTRAINT fk_activity_log_user FOREIGN KEY (user_id) REFERENCES users(user_id);
-
-ALTER TABLE sale_events
-ADD CONSTRAINT fk_sale_event_product FOREIGN KEY (product_id) REFERENCES products(product_id),
-ADD CONSTRAINT fk_sale_event_category FOREIGN KEY (category_id) REFERENCES categories(category_id);
-
-ALTER TABLE discounts
-ADD CONSTRAINT fk_discount_sale_event FOREIGN KEY (sale_event_id) REFERENCES sale_events(sale_event_id);
 
 ALTER TABLE notifications
 ADD CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(user_id);
@@ -710,3 +693,14 @@ CALL PopulateSalesAndDiscounts(
     CURRENT_DATE,  -- Start from today
     DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY)  -- Plan sales for next 30 days
 );
+
+-- Quick verification
+SELECT 'Users' as table_name, COUNT(*) as record_count FROM users
+UNION ALL
+SELECT 'Products', COUNT(*) FROM products
+UNION ALL
+SELECT 'Categories', COUNT(*) FROM categories
+UNION ALL
+SELECT 'Orders', COUNT(*) FROM orders
+UNION ALL
+SELECT 'Sale Events', COUNT(*) FROM sale_events;
