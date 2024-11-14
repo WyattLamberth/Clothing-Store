@@ -191,7 +191,7 @@ const Checkout = () => {
           unit_price: item.price,
           total_item_price: item.price * item.quantity,
         };
-        await api.post('/order-items', orderItemData); // Add an API route if not available
+        await api.post('/order_items', orderItemData); // Add an API route if not available
       }));
   
       // 3. Delete cart items for the user
