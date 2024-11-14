@@ -152,25 +152,15 @@ router.put('/products/:productId', upload.single('image'), async (req, res) => {
       req.params.productId
     ];
 
-    // Update query with conditional image update
-    if (image_path) {
-      updateProductQuery = `
-        UPDATE products 
-        SET product_name = ?, category_id = ?, description = ?, 
-            price = ?, stock_quantity = ?, reorder_threshold = ?, 
-            size = ?, color = ?, brand = ?, image_path = ?
-        WHERE product_id = ?
-      `;
-      queryParams.splice(-1, 0, image_path); // Insert image_path into query params
-    } else {
-      updateProductQuery = `
-        UPDATE products 
-        SET product_name = ?, category_id = ?, description = ?, 
-            price = ?, stock_quantity = ?, reorder_threshold = ?, 
-            size = ?, color = ?, brand = ?
-        WHERE product_id = ?
-      `;
-    }
+    // Update query with image update
+    updateProductQuery = `
+      UPDATE products 
+      SET product_name = ?, category_id = ?, description = ?, 
+          price = ?, stock_quantity = ?, reorder_threshold = ?, 
+          size = ?, color = ?, brand = ?, image_path = ?
+      WHERE product_id = ?
+    `;
+    queryParams.splice(-1, 0, image_path); // Insert image_path into query params
 
     // Execute the update query
     const [result] = await connection.execute(updateProductQuery, queryParams);
