@@ -22,6 +22,10 @@ const InventoryReport = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // Add these state declarations at the beginning of the component, after the existing useState declarations
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [filterLowStock, setFilterLowStock] = useState(false);
+    const [sortBy, setSortBy] = useState('stock_quantity');
 
     useEffect(() => {
         fetchInventoryData();
@@ -156,6 +160,56 @@ const InventoryReport = () => {
                             </h3>
                         </div>
                         <RefreshCcw className="h-8 w-8 text-red-500" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter Controls */}
+            <div className="bg-white p-6 rounded-lg shadow mb-6">
+                <div className="flex flex-wrap gap-4 items-center">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Category Filter
+                        </label>
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        >
+                            <option value="all">All Categories</option>
+                            {data.categoryTotals.map((category) => (
+                                <option key={category.category_name} value={category.category_name}>
+                                    {category.category_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Sort By
+                        </label>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                        >
+                            <option value="stock_quantity">Stock Quantity</option>
+                            <option value="price">Price</option>
+                            <option value="reorder_threshold">Reorder Threshold</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center">
+                        <label className="flex items-center">
+                            <input
+                                type="checkbox"
+                                checked={filterLowStock}
+                                onChange={(e) => setFilterLowStock(e.target.checked)}
+                                className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">Show Only Low Stock Items</span>
+                        </label>
                     </div>
                 </div>
             </div>
