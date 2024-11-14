@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
+import { FaCreditCard, FaShippingFast, FaMapMarkerAlt, FaShoppingCart } from 'react-icons/fa';
 
 const Checkout = () => {
   const location = useLocation();
@@ -158,7 +159,6 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     try {
-      // 1. Insert the new order
       const shippingAddressId = useDefaultAddress && defaultAddress.address_id
         ? defaultAddress.address_id
         : (await api.post('/address', {
@@ -182,7 +182,6 @@ const Checkout = () => {
       const orderResponse = await api.post('/orders', orderData);
       const orderId = orderResponse.data.order_id;
   
-      // 2. Insert each cart item as an order item
       await Promise.all(cartItems.map(async (item) => {
         const orderItemData = {
           order_id: orderId,
@@ -191,15 +190,13 @@ const Checkout = () => {
           unit_price: item.price,
           total_item_price: item.price * item.quantity,
         };
-        await api.post('/order_items', orderItemData); // Add an API route if not available
+        await api.post('/order_items', orderItemData);
       }));
   
-      // 3. Delete cart items for the user
       await Promise.all(cartItems.map(async (item) => {
         await api.delete('/cart-items', { data: { product_id: item.product_id } });
       }));
   
-      // 4. Redirect user to their profile page or order confirmation page
       navigate('/profile');
     } catch (error) {
       console.error('Error placing order:', error);
@@ -208,9 +205,13 @@ const Checkout = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
-      <section>
-        <h2 className="text-2xl font-bold mb-4">Delivery Information</h2>
+      <h1 className="text-3xl font-bold mb-6 text-center">Checkout</h1>
+
+      {/* Delivery Information Section */}
+      <section className="mt-8 p-6 bg-white shadow rounded-lg">
+        <h2 className="text-2xl font-bold mb-4 flex items-center">
+          <FaMapMarkerAlt className="mr-2 text-blue-600" /> Delivery Information
+        </h2>
         <label>
           <input type="checkbox" checked={useDefaultAddress} onChange={handleCheckboxChange} />
           {' '}Use Default Address
@@ -228,8 +229,11 @@ const Checkout = () => {
         </form>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-2xl font-bold">Payment Method</h2>
+      {/* Payment Method Section */}
+      <section className="mt-8 p-6 bg-white shadow rounded-lg">
+        <h2 className="text-2xl font-bold mb-4 flex items-center">
+          <FaCreditCard className="mr-2 text-blue-600" /> Payment Method
+        </h2>
         <div className="space-y-4 mt-4">
           {cards ? (
             cards.length > 0 ? (
@@ -250,7 +254,9 @@ const Checkout = () => {
           ) : (
             <p>No saved payment methods.</p>
           )}
-          <button onClick={() => setShowCardForm(!showCardForm)}>{showCardForm ? 'Cancel' : 'Add New Payment Method'}</button>
+          <button onClick={() => setShowCardForm(!showCardForm)} className="text-blue-600 hover:text-blue-800 transition">
+            {showCardForm ? 'Cancel' : 'Add New Payment Method'}
+          </button>
           {showCardForm && (
             <form onSubmit={handleAddNewCard} className="space-y-4 mt-4">
               <input type="text" name="cardholder_name" placeholder="Cardholder Name" value={paymentInfo.newCardDetails.cardholder_name} onChange={(e) => setPaymentInfo({ ...paymentInfo, newCardDetails: { ...paymentInfo.newCardDetails, cardholder_name: e.target.value }})} required className="border rounded px-4 py-2 w-full" />
@@ -266,19 +272,40 @@ const Checkout = () => {
               <input type="text" name="city" placeholder="City" value={paymentInfo.newCardDetails.billing_address.city} onChange={(e) => setPaymentInfo(prev => ({ ...prev, newCardDetails: { ...prev.newCardDetails, billing_address: { ...prev.newCardDetails.billing_address, city: e.target.value }}}))} required className="border rounded px-4 py-2 w-full" />
               <input type="text" name="state" placeholder="State" value={paymentInfo.newCardDetails.billing_address.state} onChange={(e) => setPaymentInfo(prev => ({ ...prev, newCardDetails: { ...prev.newCardDetails, billing_address: { ...prev.newCardDetails.billing_address, state: e.target.value }}}))} required className="border rounded px-4 py-2 w-full" />
               <input type="text" name="zip" placeholder="ZIP Code" value={paymentInfo.newCardDetails.billing_address.zip} onChange={(e) => setPaymentInfo(prev => ({ ...prev, newCardDetails: { ...prev.newCardDetails, billing_address: { ...prev.newCardDetails.billing_address, zip: e.target.value }}}))} required className="border rounded px-4 py-2 w-full" />
-              <button type="submit" className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">Add Payment Method</button>
+              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors">Add Payment Method</button>
             </form>
           )}
         </div>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-2xl font-bold">Order Summary</h2>
+      {/* Order Summary Section */}
+      <section className="mt-8 p-6 bg-white shadow rounded-lg">
+        <h2 className="text-2xl font-bold mb-4 flex items-center">
+          <FaShippingFast className="mr-2 text-blue-600" /> Order Summary
+        </h2>
         <ul>
           {cartItems.map((item) => (
-            <li key={item.product_id} className="flex justify-between py-2">
-              <span>{item.product_name} x {item.quantity}</span>
-              <span>${(item.price * item.quantity).toFixed(2)}</span>
+            <li key={item.product_id} className="flex justify-between py-4 items-center border-b">
+              <div className="flex items-center">
+                <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 flex-shrink-0">
+                  {item.image_path ? (
+                    <img
+                      src={require(`../images/${item.image_path}`)}
+                      alt={item.product_name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <FaShoppingCart className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">{item.product_name}</h3>
+                  <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                </div>
+              </div>
+              <span className="text-lg font-medium">${(item.price * item.quantity).toFixed(2)}</span>
             </li>
           ))}
         </ul>
@@ -288,7 +315,9 @@ const Checkout = () => {
         <p className="text-xl font-bold">Total: ${total.toFixed(2)}</p>
       </section>
 
-      <button onClick={handlePlaceOrder} className="w-full bg-green-600 text-white py-2 rounded mt-4">Place Order</button>
+      <button onClick={handlePlaceOrder} className="w-full bg-blue-600 text-white py-2 rounded mt-4 hover:bg-blue-700 transition-colors">
+        Place Order
+      </button>
     </div>
   );
 };
