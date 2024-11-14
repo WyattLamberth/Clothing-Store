@@ -263,7 +263,7 @@ router.get('/users/:userId/orders',
   });
 
 // Create a return request
-router.post('/returns', async (req, res) => {
+router.post('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -335,7 +335,7 @@ router.post('/returns', async (req, res) => {
 });
 
 // Get all returns for logged-in user
-router.get('/returns', async (req, res) => {
+router.get('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const [returns] = await connection.execute(`
@@ -372,7 +372,7 @@ router.get('/returns', async (req, res) => {
 });
 
 // Get specific return details
-router.get('/returns/:returnId', async (req, res) => {
+router.get('/customer/returns/:returnId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     // Get return details with items and refund info
@@ -461,6 +461,7 @@ router.get('/eligible-orders', async (req, res) => {
     connection.release();
   }
 });
+
 
 
 router.post('/payment', async (req, res) => {
