@@ -14,6 +14,8 @@ const ProfileDashboard = () => {
   const [error, setError] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState('');
   const [orders, setOrders] = useState([]);
+  const [expandedOrders, setExpandedOrders] = useState({});
+  const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
   const [isEditingCard, setIsEditingCard] = useState(false);
@@ -83,11 +85,25 @@ const ProfileDashboard = () => {
     }
   }, [userId]);
   
-  
-  
-  
-  
-  
+  const toggleOrderExpansion = async (orderId) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+
+    // Fetch order items if they haven't been loaded yet
+    if (!orderItems[orderId]) {
+      try {
+        const response = await api.get(`/order_items/${orderId}`);
+        setOrderItems((prev) => ({
+          ...prev,
+          [orderId]: response.data,
+        }));
+      } catch (error) {
+        console.error('Error fetching order items:', error);
+      }
+    }
+  };
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -693,26 +709,41 @@ const ProfileDashboard = () => {
           {orders.length === 0 ? (
             <p>No recent orders found</p>
           ) : (
-            orders.map((order, index) => (
-              <Link to={`/order/${order.id}`} key={order.id || index}>
-                <div className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-                  <div className="text-gray-700 font-semibold">Status: {order.order_status || 'Unknown'}</div>
-                  <div className="text-gray-500">Order Date: {new Date(order.order_date).toLocaleDateString()}</div>
-                  <div className="text-gray-900 font-bold mt-2">
-                    Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
-                  </div>
+            orders.map((order) => (
+              <div
+                key={order.order_id}
+                className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => toggleOrderExpansion(order.order_id)}
+              >
+                <div className="text-gray-700 font-semibold">
+                  Status: {order.order_status || 'Unknown'}
                 </div>
-              </Link>
+                <div className="text-gray-500">
+                  Order Date: {new Date(order.order_date).toLocaleDateString()}
+                </div>
+                <div className="text-gray-900 font-bold mt-2">
+                  Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
+                </div>
+
+                {/* Expanded order items */}
+                {expandedOrders[order.order_id] && orderItems[order.order_id] && (
+                  <div className="order-items mt-4">
+                    {orderItems[order.order_id].map((item) => (
+                      <div key={item.order_item_id} className="flex justify-between p-2 border-b">
+                        <div className="flex items-center space-x-4">
+                          <img src={item.image_path} alt={item.product_name} className="w-16 h-16 object-cover rounded" />
+                          <span>{item.product_name}</span>
+                        </div>
+                        <span>Quantity: {item.quantity}</span>
+                        <span>Price: ${parseFloat(item.order_item_price).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))
           )}
         </div>
-
-
-
-
-
-
-
       )}
     </div>
   );
