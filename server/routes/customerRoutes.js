@@ -1204,55 +1204,6 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
   }
 });
 
-// Get all discounts API
-router.get('/all_discounts', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    // Query to get all discounts
-    const discountsQuery = `
-      SELECT *
-      FROM discounts`;
-
-    const [discountsResult] = await connection.execute(discountsQuery);
-
-    if (discountsResult.length === 0) { // if there are no discounts found
-      return res.status(404).json({ message: 'No discounts found.' });
-    }
-
-    res.status(201).json(discountsResult);
-  } catch (error) {
-    console.error('Error retrieving discounts:', error);
-    res.status(400).json({ error: 'Error retrieving discounts' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
-
-// Get Discount by discount_id API
-router.get('/discount/:discount_id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { discount_id } = req.params; // request parameters
-
-    const discountsQuery = `
-      SELECT *
-      FROM discounts
-      WHERE discount_id = ?
-    `;
-
-    const [discountsResult] = await connection.execute(discountsQuery, [discount_id]); // execute query with parameter
-
-    if (discountsResult.length === 0) { // if no discount found
-      return res.status(404).json({ message: 'No discount found for this ID.' });
-    }
-    res.status(201).json(discountsResult);
-  } catch (error) {
-    console.error('Error retrieving discount:', error);
-    res.status(400).json({ error: 'Error retrieving discount' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
 
 
 
