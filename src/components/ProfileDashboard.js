@@ -256,10 +256,10 @@ const ProfileDashboard = () => {
           Profile
         </button>
         <button
-          onClick={() => handleTabClick('Return&Orders')}
-          className={`px-4 py-2 font-semibold ${activeTab === 'Return&Orders' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+          onClick={() => handleTabClick('Orders')}
+          className={`px-4 py-2 font-semibold ${activeTab === 'Orders' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
         >
-          Return&Orders
+          Orders
         </button>
       </div>
   
