@@ -52,48 +52,157 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-// Update user and address
 router.put('/users/:userId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    const { first_name, last_name, email, phone_number, role_id, address } = req.body;
+    const userId = req.params.userId;
 
-    // Update user information
-    const [userResult] = await connection.execute(
-      'UPDATE users SET first_name = ?, last_name = ?, email = ?, phone_number = ?, role_id = ? WHERE user_id = ?',
-      [first_name, last_name, email, phone_number, role_id, req.params.userId]
+    // Destructure only the fields that are being updated
+    const {
+      first_name,
+      last_name,
+      email,
+      phone_number,
+      address
+    } = req.body;
+
+    // Log the received data for debugging
+    console.log('Request body:', req.body);
+
+    // First check if user exists
+    const [existingUser] = await connection.execute(
+      'SELECT user_id, address_id FROM users WHERE user_id = ?',
+      [userId]
     );
 
-    // Update address if provided
-    if (address) {
-      await connection.execute(
-        'UPDATE address SET line_1 = ?, line_2 = ?, city = ?, state = ?, zip = ? WHERE address_id = (SELECT address_id FROM users WHERE user_id = ?)',
-        [address.line_1, address.line_2, address.city, address.state, address.zip, req.params.userId]
+    if (!existingUser.length) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-      );
+    // Build update query dynamically only for provided fields
+    const updateFields = [];
+    const updateValues = [];
+
+    if (first_name !== undefined) {
+      updateFields.push('first_name = ?');
+      updateValues.push(first_name);
+    }
+    if (last_name !== undefined) {
+      updateFields.push('last_name = ?');
+      updateValues.push(last_name);
+    }
+    if (email !== undefined) {
+      updateFields.push('email = ?');
+      updateValues.push(email);
+    }
+    if (phone_number !== undefined) {
+      updateFields.push('phone_number = ?');
+      updateValues.push(phone_number);
+    }
+
+    // Only proceed with update if there are fields to update
+    if (updateFields.length > 0) {
+      // Add userId to values array
+      updateValues.push(userId);
+
+      const updateQuery = `
+        UPDATE users 
+        SET ${updateFields.join(', ')} 
+        WHERE user_id = ?
+      `;
+      
+      console.log('Update Query:', updateQuery);
+      console.log('Update Values:', updateValues);
+
+      await connection.execute(updateQuery, updateValues);
+    }
+
+    // Handle address update if provided
+    if (address) {
+      const userAddressId = existingUser[0].address_id;
+      
+      if (userAddressId) {
+        // Update existing address
+        const addressUpdateFields = [];
+        const addressUpdateValues = [];
+
+        if (address.line_1 !== undefined) {
+          addressUpdateFields.push('line_1 = ?');
+          addressUpdateValues.push(address.line_1);
+        }
+        if (address.line_2 !== undefined) {
+          addressUpdateFields.push('line_2 = ?');
+          addressUpdateValues.push(address.line_2);
+        }
+        if (address.city !== undefined) {
+          addressUpdateFields.push('city = ?');
+          addressUpdateValues.push(address.city);
+        }
+        if (address.state !== undefined) {
+          addressUpdateFields.push('state = ?');
+          addressUpdateValues.push(address.state);
+        }
+        if (address.zip !== undefined) {
+          addressUpdateFields.push('zip = ?');
+          addressUpdateValues.push(address.zip);
+        }
+
+        if (addressUpdateFields.length > 0) {
+          // Add address_id to values array
+          addressUpdateValues.push(userAddressId);
+
+          const addressUpdateQuery = `
+            UPDATE address 
+            SET ${addressUpdateFields.join(', ')} 
+            WHERE address_id = ?
+          `;
+
+          await connection.execute(addressUpdateQuery, addressUpdateValues);
+        }
+      } else if (address.line_1 && address.city && address.state && address.zip) {
+        // Only create new address if all required fields are provided
+        const [addressResult] = await connection.execute(
+          'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)',
+          [
+            address.line_1,
+            address.line_2 || null,
+            address.city,
+            address.state,
+            address.zip
+          ]
+        );
+        
+        await connection.execute(
+          'UPDATE users SET address_id = ? WHERE user_id = ?',
+          [addressResult.insertId, userId]
+        );
+      }
     }
 
     // Fetch updated user with address
-    const [users] = await connection.execute(`
+    const [updatedUsers] = await connection.execute(`
       SELECT u.*, 
              a.line_1, a.line_2, a.city, a.state, a.zip
       FROM users u
       LEFT JOIN address a ON u.address_id = a.address_id
       WHERE u.user_id = ?
-    `, [req.params.userId]);
+    `, [userId]);
 
     await connection.commit();
 
-    if (userResult.affectedRows === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const updatedUser = users[0];
+    const updatedUser = updatedUsers[0];
     const response = {
       message: 'User updated successfully',
       user: {
-        ...updatedUser,
+        user_id: updatedUser.user_id,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        phone_number: updatedUser.phone_number,
+        role_id: updatedUser.role_id,
+        date_joined: updatedUser.date_joined,
         address: updatedUser.address_id ? {
           line_1: updatedUser.line_1,
           line_2: updatedUser.line_2,
@@ -107,33 +216,15 @@ router.put('/users/:userId', async (req, res) => {
     res.json(response);
   } catch (error) {
     await connection.rollback();
-    res.status(500).json({ message: 'Error updating user', error: error.message });
+    console.error('Error updating user:', error);
+    res.status(500).json({ 
+      message: 'Error updating user', 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
   } finally {
     connection.release();
   }
 });
-
-// User Profile Update
-router.put('/users/:userId',
-  authMiddleware.checkSelfOrHigher,
-  async (req, res) => {
-    try {
-      const { first_name, last_name, username, email, phone_number } = req.body;
-      const [result] = await pool.execute(
-        'UPDATE users SET first_name = ?, last_name = ?, username = ?, email = ?, phone_number = ? WHERE user_id = ?',
-        [first_name, last_name, username, email, phone_number, req.params.userId]
-      );
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      res.status(200).json({ message: 'User profile updated successfully' });
-    } catch (error) {
-      res.status(500).json({ message: 'Error updating user profile', error: error.message });
-    }
-  });
-
 
 // Order Management
 router.post('/orders',
