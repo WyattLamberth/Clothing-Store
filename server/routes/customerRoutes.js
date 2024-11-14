@@ -1204,6 +1204,31 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
   }
 });
 
+router.get('/active_discounts', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Query to get all active discounts
+    const discountsQuery = `
+      SELECT d.*, s.event_name, s.start_date, s.end_date, s.product_id, s.category_id
+      FROM discounts d
+      JOIN sale_events s ON d.sale_event_id = s.sale_event_id
+      WHERE CURDATE() BETWEEN s.start_date AND s.end_date
+    `;
+
+    const [discountsResult] = await connection.execute(discountsQuery);
+
+    if (discountsResult.length === 0) {
+      return res.status(404).json({ message: 'No active discounts found.' });
+    }
+
+    res.status(200).json(discountsResult);
+  } catch (error) {
+    console.error('Error retrieving discounts:', error);
+    res.status(500).json({ error: 'Error retrieving discounts' });
+  } finally {
+    connection.release();
+  }
+});
 
 
 
