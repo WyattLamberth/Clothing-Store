@@ -2,7 +2,7 @@ USE onlinestore;
 
 DELIMITER $$
 
--- ACTIVITY LOG TO MONITOR EMPLOYEES ACTIONS
+-- ACTIVITY LOG TRIGGERS TO MONITOR EMPLOYEES ACTIONS
 
 -- Trigger for INSERT action on products table
 CREATE TRIGGER log_user_action_insert_product
@@ -108,25 +108,3 @@ BEGIN
     SET stock_quantity = GREATEST(0, stock_quantity - NEW.quantity)
     WHERE product_id = NEW.product_id;
 END$$
-
--- CART ITEMS DELETE TRIGGER
--- Delete cart items via user_id when new order is created.
-CREATE TRIGGER after_order_created
-AFTER INSERT ON orders
-FOR EACH ROW
-BEGIN
-  DECLARE cartID INT;
-  
-  -- Retrieve the cart ID associated with the order user_id
-  SELECT cart_id INTO cartID
-  FROM shopping_cart
-  WHERE user_id = NEW.user_id;
-
-  -- Delete items from cart_items by the cart_id
-  IF cartID IS NOT NULL THEN
-    DELETE FROM cart_items
-    WHERE cart_id = cartID;
-  END IF;
-END $$
-
-DELIMITER ;

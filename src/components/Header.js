@@ -5,7 +5,6 @@ import { useAuth } from '../AuthContext';
 import api from '../utils/api';
 import { Bell } from 'lucide-react';
 
-
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
   const navigate = useNavigate();
