@@ -460,10 +460,6 @@ router.put('/staff/returns/:returnId', async (req, res) => {
   }
 });
 
-module.exports = router;
-
-module.exports = router;
-
 // Inventory Management (Permission: 2003)
 router.post('/products/:productId/restock', async (req, res) => {
   const connection = await pool.getConnection();

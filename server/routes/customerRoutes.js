@@ -334,35 +334,73 @@ router.post('/customer/returns', async (req, res) => {
   }
 });
 
-// Get all returns for logged-in user
+// Get all returns for the logged-in user
 router.get('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
+  const userId = req.user.user_id;
+
   try {
-    const [returns] = await connection.execute(`
-      SELECT r.*, 
-             o.order_date, o.total_amount as order_total,
-             JSON_ARRAYAGG(
-               JSON_OBJECT(
-                 'product_id', ri.product_id,
-                 'quantity', ri.quantity,
-                 'product_name', p.product_name,
-                 'price', p.price
-               )
-             ) as return_items,
-             COALESCE(ref.refund_amount, 0) as refund_amount,
-             ref.refund_status
-      FROM returns r
-      JOIN orders o ON r.order_id = o.order_id
-      LEFT JOIN return_items ri ON r.return_id = ri.return_id
-      LEFT JOIN products p ON ri.product_id = p.product_id
-      LEFT JOIN refunds ref ON r.return_id = ref.return_id
-      WHERE r.user_id = ?
-      GROUP BY r.return_id
-      ORDER BY r.return_date DESC`,
-      [req.user.user_id]
+    // Check if there are any returns for this user
+    const [returns] = await connection.execute(
+      'SELECT r.return_id, r.return_date, r.status, r.order_id, ' +
+      'o.order_date, o.total_amount as order_total, ' +
+      'COALESCE(ref.refund_amount, 0) as refund_amount, ref.refund_status ' +
+      'FROM returns r ' +
+      'JOIN orders o ON r.order_id = o.order_id ' +
+      'LEFT JOIN refunds ref ON r.return_id = ref.return_id ' +
+      'WHERE r.user_id = ? ' +
+      'ORDER BY r.return_date DESC',
+      [userId]
     );
 
-    res.json(returns);
+    if (returns.length === 0) {
+      // If no returns exist, respond with a 404 status
+      return res.status(404).json({ message: 'No returns found for this user.' });
+    }
+
+    // Collect all return IDs for fetching associated return items
+    const returnIds = returns.map((returnRecord) => returnRecord.return_id);
+
+    // Fetch return items associated with each return_id
+    const [returnItems] = await connection.execute(
+      'SELECT ri.return_id, ri.product_id, ri.quantity, ' +
+      'p.product_name, p.price, p.image_path ' +
+      'FROM return_items ri ' +
+      'JOIN products p ON ri.product_id = p.product_id ' +
+      'WHERE ri.return_id IN (?)',
+      [returnIds]
+    );
+
+    // Organize return items by return_id
+    const returnItemsByReturnId = returnItems.reduce((acc, item) => {
+      if (!acc[item.return_id]) {
+        acc[item.return_id] = [];
+      }
+      acc[item.return_id].push({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        product_name: item.product_name,
+        price: item.price,
+        image_path: item.image_path,
+      });
+      return acc;
+    }, {});
+
+    // Attach return items to their corresponding return
+    const detailedReturns = returns.map((returnRecord) => ({
+      return_id: returnRecord.return_id,
+      return_date: returnRecord.return_date,
+      status: returnRecord.status,
+      order_id: returnRecord.order_id,
+      order_date: returnRecord.order_date,
+      order_total: returnRecord.order_total,
+      refund_amount: returnRecord.refund_amount,
+      refund_status: returnRecord.refund_status,
+      return_items: returnItemsByReturnId[returnRecord.return_id] || [],
+    }));
+
+    // Respond with the structured returns data
+    res.status(200).json(detailedReturns);
   } catch (error) {
     console.error('Error fetching returns:', error);
     res.status(500).json({ error: 'Failed to fetch returns' });
@@ -370,6 +408,7 @@ router.get('/customer/returns', async (req, res) => {
     connection.release();
   }
 });
+
 
 // Get specific return details
 router.get('/customer/returns/:returnId', async (req, res) => {
