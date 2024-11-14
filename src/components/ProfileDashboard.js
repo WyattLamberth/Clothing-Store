@@ -5,6 +5,7 @@ import api from '../utils/api';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
+  const [activeTab, setActiveTab] = useState('Profile');
   const [showProfileEditForm, setShowProfileEditForm] = useState(false);
   const [showAddressEditForm, setShowAddressEditForm] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -63,6 +64,10 @@ const ProfileDashboard = () => {
       fetchPaymentMethods();
     }
   }, [userId]);
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -241,10 +246,31 @@ const ProfileDashboard = () => {
           {updateSuccess}
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <div>
+  
+      {/* Tab Navigation */}
+      <div className="flex justify-center mb-8 space-x-8">
+        <button
+          onClick={() => handleTabClick('Profile')}
+          className={`px-4 py-2 font-semibold ${activeTab === 'Profile' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => handleTabClick('Return&Orders')}
+          className={`px-4 py-2 font-semibold ${activeTab === 'Return&Orders' ? 'border-b-2 border-blue-500 text-blue-500' : 'text-gray-500'}`}
+        >
+          Return&Orders
+        </button>
+      </div>
+  
+      {loading ? (
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      ) : error ? (
+        <div className="text-red-500 text-center p-4">{error}</div>
+      ) : activeTab === 'Profile' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Personal Information Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -259,7 +285,7 @@ const ProfileDashboard = () => {
                 {showProfileEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-
+  
             {showProfileEditForm ? (
               <form onSubmit={handleProfileSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -332,7 +358,7 @@ const ProfileDashboard = () => {
               </div>
             )}
           </div>
-
+  
           {/* Address Section */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
@@ -347,7 +373,7 @@ const ProfileDashboard = () => {
                 {showAddressEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-
+  
             {showAddressEditForm ? (
               <form onSubmit={handleAddressSubmit} className="space-y-4">
                 <div>
@@ -442,10 +468,7 @@ const ProfileDashboard = () => {
               )
             )}
           </div>
-        </div>
-
-        {/* Right Column */}
-        <div>
+  
           {/* Payment Methods Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -478,7 +501,7 @@ const ProfileDashboard = () => {
                 <span>{isEditingCard ? 'Cancel Edit' : 'Add Payment Method'}</span>
               </button>
             </div>
-
+  
             {showCardForm && (
               <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-4">
                 <div>
@@ -602,7 +625,7 @@ const ProfileDashboard = () => {
                 </div>
               </form>
             )}
-
+  
             {/* Display saved cards only if not editing or adding a card */}
             {!showCardForm && (
               <div className="space-y-4">
@@ -619,7 +642,7 @@ const ProfileDashboard = () => {
                         <div className="text-sm text-gray-500">
                           Expires: {card.expiration_date}
                         </div>
-                      </div>     
+                      </div>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEditCard(card)}
@@ -640,22 +663,22 @@ const ProfileDashboard = () => {
               </div>
             )}
           </div>
-
-          {/* Orders Section */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <ShoppingBag className="h-5 w-5 text-blue-500" />
-              <h2 className="text-xl font-semibold">Recent Orders</h2>
-            </div>
-            <div className="text-gray-500 text-center py-8">
-              No recent orders found
-            </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center space-x-2 mb-6">
+            <ShoppingBag className="h-5 w-5 text-blue-500" />
+            <h2 className="text-xl font-semibold">Recent Orders</h2>
+          </div>
+          <div className="text-gray-500 text-center py-8">
+            No recent orders found
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
+  
 
 export default ProfileDashboard;
 
