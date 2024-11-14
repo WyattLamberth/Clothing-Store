@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
 import NotificationBar from '../components/NotificationBar';
 import SearchBar from '../components/SearchBar';
-import backgroundImage from '../images/shoe.gif';
+import backgroundImage from '../images/pic1.jpg';
 import TrendingSection from '../components/TrendingSection';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
