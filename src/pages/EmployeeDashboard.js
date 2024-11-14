@@ -7,6 +7,7 @@ import ReturnsManagement from '../components/ReturnsManagement';
 
 const EmployeeDashboard = () => {
   const [activeTab, setActiveTab] = useState("inventory");
+  
   const sections = [
     { id: "inventory", label: "Inventory", icon: Package2 },
     { id: "orders", label: "Orders", icon: ShoppingCart },
