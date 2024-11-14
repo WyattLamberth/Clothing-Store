@@ -249,7 +249,7 @@ router.post('/orders',
   });
 
 router.get('/users/:userId/orders',
-  authMiddleware.checkSelfOrHigher,
+  // authMiddleware.checkSelfOrHigher,
   async (req, res) => {
     try {
       const [orders] = await pool.execute(

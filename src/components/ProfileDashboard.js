@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, MapPin, ShoppingBag, CreditCard, Plus, X } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
+import { Link } from 'react-router-dom';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
@@ -12,6 +13,7 @@ const ProfileDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState('');
+  const [orders, setOrders] = useState([]);
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
   const [isEditingCard, setIsEditingCard] = useState(false);
@@ -64,6 +66,28 @@ const ProfileDashboard = () => {
       fetchPaymentMethods();
     }
   }, [userId]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await api.get(`/users/${userId}/orders`);
+        console.log("Orders Data:", response.data); // Check if total_amount is present
+        setOrders(response.data || []);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+      }
+    };
+  
+    if (userId) {
+      fetchOrders();
+    }
+  }, [userId]);
+  
+  
+  
+  
+  
+  
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -665,15 +689,30 @@ const ProfileDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <ShoppingBag className="h-5 w-5 text-blue-500" />
-            <h2 className="text-xl font-semibold">Recent Orders</h2>
-          </div>
-          <div className="text-gray-500 text-center py-8">
-            No recent orders found
-          </div>
+        <div className="orders-list grid grid-cols-1 gap-4">
+          {orders.length === 0 ? (
+            <p>No recent orders found</p>
+          ) : (
+            orders.map((order, index) => (
+              <Link to={`/order/${order.id}`} key={order.id || index}>
+                <div className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                  <div className="text-gray-700 font-semibold">Status: {order.order_status || 'Unknown'}</div>
+                  <div className="text-gray-500">Order Date: {new Date(order.order_date).toLocaleDateString()}</div>
+                  <div className="text-gray-900 font-bold mt-2">
+                    Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
+                  </div>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
+
+
+
+
+
+
+
       )}
     </div>
   );
