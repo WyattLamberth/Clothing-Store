@@ -1365,10 +1365,6 @@ router.put('/cart-items/update', authMiddleware.customerOnly, async (req, res) =
   }
 });
 
-
-
-
-
 // NOTIFICATION MANAGEMENT
 
 // Fetch only unread notifications for the logged-in user
