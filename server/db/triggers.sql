@@ -127,3 +127,4 @@ BEGIN
     SET stock_quantity = GREATEST(0, stock_quantity - NEW.quantity)
     WHERE product_id = NEW.product_id;
 END$$
+DELIMITER ;
