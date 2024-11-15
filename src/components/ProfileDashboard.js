@@ -79,28 +79,35 @@ const ProfileDashboard = () => {
         console.error('Error fetching orders:', err);
       }
     };
-  
+
     if (userId) {
       fetchOrders();
     }
   }, [userId]);
-  
+
   const toggleOrderExpansion = async (orderId) => {
     setExpandedOrders((prev) => ({
       ...prev,
       [orderId]: !prev[orderId],
     }));
-
-    // Fetch order items if they haven't been loaded yet
-    if (!orderItems[orderId]) {
+  
+    if (!orderItems[orderId] && !expandedOrders[orderId]) {
       try {
         const response = await api.get(`/order_items/${orderId}`);
+        console.log('API Response:', response); // Check full response
+        console.log('Response data:', response.data); // Check data specifically
+        
+        const items = Array.isArray(response.data) ? response.data : [];
         setOrderItems((prev) => ({
           ...prev,
-          [orderId]: response.data,
+          [orderId]: items,
         }));
       } catch (error) {
-        console.error('Error fetching order items:', error);
+        console.error('Error fetching order items:', error.response || error);
+        setOrderItems((prev) => ({
+          ...prev,
+          [orderId]: [],
+        }));
       }
     }
   };
@@ -149,7 +156,7 @@ const ProfileDashboard = () => {
       cardholder_name: card.cardholder_name,
       card_number: card.card_number,
       expiration_date: card.expiration_date,
-      cvv: '', 
+      cvv: '',
       billing_address: {
         line_1: card.billing_address.line_1,
         line_2: card.billing_address.line_2,
@@ -175,7 +182,7 @@ const ProfileDashboard = () => {
       } else {
         const addressResponse = await api.post('/address', cardDetails.billing_address);
         const billing_address_id = addressResponse.data.address_id;
-  
+
         await api.post('/payment', {
           ...cardDetails,
           user_id: userId,
@@ -183,13 +190,13 @@ const ProfileDashboard = () => {
         });
         setUpdateSuccess('Payment method added successfully');
       }
-  
+
       const response = await api.get(`/payment/user/${userId}`);
       setCards(response.data || []);
       setShowCardForm(false);
       setIsEditingCard(false);
       setEditCardId(null);
-  
+
       setCardDetails({
         cardholder_name: '',
         card_number: '',
@@ -219,10 +226,10 @@ const ProfileDashboard = () => {
         email: userData.email || null,
         phone_number: userData.phone_number || null,
       };
-  
+
       // Send the update request
       await api.put(`/users/${userId}`, payload);
-  
+
       // Handle successful response
       setShowProfileEditForm(false);
       setUpdateSuccess('Profile updated successfully');
@@ -232,7 +239,7 @@ const ProfileDashboard = () => {
       setError('Failed to update profile');
     }
   };
-  
+
 
   const handleAddressSubmit = async (e) => {
     e.preventDefault();
@@ -286,7 +293,7 @@ const ProfileDashboard = () => {
           {updateSuccess}
         </div>
       )}
-  
+
       {/* Tab Navigation */}
       <div className="flex justify-center mb-8 space-x-8">
         <button
@@ -302,7 +309,7 @@ const ProfileDashboard = () => {
           Orders
         </button>
       </div>
-  
+
       {loading ? (
         <div className="flex justify-center items-center min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -325,7 +332,7 @@ const ProfileDashboard = () => {
                 {showProfileEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-  
+
             {showProfileEditForm ? (
               <form onSubmit={handleProfileSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -398,7 +405,7 @@ const ProfileDashboard = () => {
               </div>
             )}
           </div>
-  
+
           {/* Address Section */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
@@ -413,7 +420,7 @@ const ProfileDashboard = () => {
                 {showAddressEditForm ? "Cancel" : "Edit"}
               </button>
             </div>
-  
+
             {showAddressEditForm ? (
               <form onSubmit={handleAddressSubmit} className="space-y-4">
                 <div>
@@ -508,7 +515,7 @@ const ProfileDashboard = () => {
               )
             )}
           </div>
-  
+
           {/* Payment Methods Section */}
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex justify-between items-center mb-6">
@@ -541,7 +548,7 @@ const ProfileDashboard = () => {
                 <span>{isEditingCard ? 'Cancel Edit' : 'Add Payment Method'}</span>
               </button>
             </div>
-  
+
             {showCardForm && (
               <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-4">
                 <div>
@@ -665,7 +672,7 @@ const ProfileDashboard = () => {
                 </div>
               </form>
             )}
-  
+
             {/* Display saved cards only if not editing or adding a card */}
             {!showCardForm && (
               <div className="space-y-4">
@@ -726,7 +733,7 @@ const ProfileDashboard = () => {
                 </div>
 
                 {/* Expanded order items */}
-                {expandedOrders[order.order_id] && orderItems[order.order_id] && (
+                {expandedOrders[order.order_id] && orderItems[order.order_id] && Array.isArray(orderItems[order.order_id]) && (
                   <div className="order-items mt-4">
                     {orderItems[order.order_id].map((item) => (
                       <div key={item.order_item_id} className="flex justify-between p-2 border-b">
@@ -748,7 +755,7 @@ const ProfileDashboard = () => {
     </div>
   );
 };
-  
+
 
 export default ProfileDashboard;
 

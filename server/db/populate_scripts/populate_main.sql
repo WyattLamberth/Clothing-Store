@@ -385,6 +385,8 @@ BEGIN
     ('Cargo Shorts', 32, 'Durable cargo shorts', 44.99, 80, 10, '34', 'Khaki', 'OutdoorPro');
 END //
 
+-- EVERYTHING BEYOND THIS REQUIRES USERS
+
 -- Create a procedure to populate orders and related tables
 
 CREATE PROCEDURE PopulateOrders(

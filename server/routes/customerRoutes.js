@@ -270,6 +270,46 @@ router.post('/order_items', async (req, res) => {
   }
 });
 
+// Get all order items
+router.get('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItems] = await connection.execute(`
+      SELECT oi.*, p.category_id
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+    `);
+    res.status(200).json(orderItems);
+  } catch (error) {
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ error: 'Failed to fetch order items' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get order items by order ID
+router.get('/order_items/:order_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItems] = await connection.execute(
+      'SELECT oi.*, p.product_name, p.price, p.image_path FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = ?',
+      [req.params.order_id]
+    );
+    
+    if (orderItems.length === 0) {
+      return res.status(404).json({ error: 'No items found for this order' });
+    }
+    
+    res.status(200).json(orderItems);
+  } catch (error) {
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ error: 'Failed to fetch order items' });
+  } finally {
+    connection.release();
+  }
+});
+
 // Get all returns for the logged-in user
 router.get('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
