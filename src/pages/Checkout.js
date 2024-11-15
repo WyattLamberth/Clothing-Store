@@ -99,6 +99,20 @@ const Checkout = () => {
 
   const handleDeliveryChange = (e) => setDeliveryInfo({ ...deliveryInfo, [e.target.name]: e.target.value });
 
+  const validateDeliveryInfo = () => {
+    const newErrors = {};
+    const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'line_1', 'city', 'state', 'zip'];
+
+    requiredFields.forEach((field) => {
+      if (!deliveryInfo[field]) {
+        newErrors[field] = 'This field is required';
+      }
+    });
+
+    setErrors((prevErrors) => ({ ...prevErrors, delivery: newErrors }));
+    return Object.keys(newErrors).length === 0;
+  };
+
   const validatePaymentInfo = () => {
     const { card_number, expiration_date, cvv } = paymentInfo.newCardDetails;
     const errors = {};
@@ -158,12 +172,17 @@ const Checkout = () => {
   };
 
   const handlePlaceOrder = async () => {
+        // Validate delivery information before proceeding
+        if (!validateDeliveryInfo()) {
+          return;
+        }
+    
     try {
       const shippingAddressId = useDefaultAddress && defaultAddress.address_id
         ? defaultAddress.address_id
         : (await api.post('/address', {
             line_1: deliveryInfo.line_1,
-            line_2: deliveryInfo.line_2,
+            line_2: deliveryInfo.line_2 || 'N/A',
             city: deliveryInfo.city,
             state: deliveryInfo.state,
             zip: deliveryInfo.zip,
@@ -206,7 +225,6 @@ const Checkout = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6 text-center">Checkout</h1>
-
       {/* Delivery Information Section */}
       <section className="mt-8 p-6 bg-white shadow rounded-lg">
         <h2 className="text-2xl font-bold mb-4 flex items-center">
@@ -218,14 +236,22 @@ const Checkout = () => {
         </label>
         <form className="space-y-4 mt-4">
           <input type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.firstName && <p className="text-red-500">{errors.delivery.firstName}</p>}
           <input type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.lastName && <p className="text-red-500">{errors.delivery.lastName}</p>}
           <input type="email" name="email" placeholder="Email" value={deliveryInfo.email} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.email && <p className="text-red-500">{errors.delivery.email}</p>}
           <input type="tel" name="phone" placeholder="Phone" value={deliveryInfo.phone} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.phone && <p className="text-red-500">{errors.delivery.phone}</p>}
           <input type="text" name="line_1" placeholder="Address Line 1" value={deliveryInfo.line_1} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.line_1 && <p className="text-red-500">{errors.delivery.line_1}</p>}
           <input type="text" name="line_2" placeholder="Address Line 2 (Optional)" value={deliveryInfo.line_2} onChange={handleDeliveryChange} className="border rounded px-4 py-2 w-full" />
           <input type="text" name="city" placeholder="City" value={deliveryInfo.city} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.city && <p className="text-red-500">{errors.delivery.city}</p>}
           <input type="text" name="state" placeholder="State" value={deliveryInfo.state} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.state && <p className="text-red-500">{errors.delivery.state}</p>}
           <input type="text" name="zip" placeholder="ZIP Code" value={deliveryInfo.zip} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 w-full" />
+          {errors.delivery.zip && <p className="text-red-500">{errors.delivery.zip}</p>}
         </form>
       </section>
 
