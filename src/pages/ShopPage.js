@@ -149,7 +149,7 @@ const ShopPage = () => {
             id="sort"
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1"
+            className="border border-gray-300 rounded px-3 py-1 mb-2"
           >
             <option value="default">Default</option>
             <option value="lowToHigh">Price: Low to High</option>
