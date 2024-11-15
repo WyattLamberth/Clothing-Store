@@ -547,61 +547,57 @@ router.get('/activity-logs/user/:userId', async (req, res) => {
 
 // REPORTS
 
-// In adminRoutes.js
+// In adminRoutes.js, update the inventory report route
 router.get('/reports/inventory', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    // Get stock levels and value
+    // Get product inventory status
     const [stockLevels] = await connection.execute(`
-          SELECT p.product_id, p.product_name, p.stock_quantity, p.price,
-                 p.reorder_threshold, c.name as category_name,
-                 (p.stock_quantity * p.price) as stock_value
-          FROM products p
-          JOIN categories c ON p.category_id = c.category_id
-      `);
+      SELECT p.product_id, p.product_name, p.stock_quantity, p.price,
+             p.reorder_threshold, c.name as category_name,
+             (p.stock_quantity * p.price) as stock_value
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+    `);
 
-    // Get return rates
-    const [returnRates] = await connection.execute(`
-          SELECT p.product_id, p.product_name, 
-                 COUNT(ri.return_item_id) as return_count,
-                 COUNT(oi.order_item_id) as order_count,
-                 (COUNT(ri.return_item_id) * 100.0 / NULLIF(COUNT(oi.order_item_id), 0)) as return_rate
-          FROM products p
-          LEFT JOIN order_items oi ON p.product_id = oi.product_id
-          LEFT JOIN returns r ON oi.order_id = r.order_id
-          LEFT JOIN return_items ri ON r.return_id = ri.return_id
-          GROUP BY p.product_id
-      `);
+    // Get category totals with proper decimal handling
+    const [categoryTotals] = await connection.execute(`
+      SELECT c.name as category_name,
+             COUNT(p.product_id) as product_count,
+             SUM(p.stock_quantity) as total_items,
+             CAST(SUM(p.stock_quantity * p.price) AS DECIMAL(10,2)) as total_value
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+      GROUP BY c.category_id
+    `);
+
+    // Calculate total inventory value with proper decimal handling
+    const totalValue = stockLevels.reduce((sum, item) => {
+      const itemValue = parseFloat(item.stock_value) || 0;
+      return sum + itemValue;
+    }, 0);
 
     // Get low stock items
     const [lowStock] = await connection.execute(`
-          SELECT p.*, c.name as category_name
-          FROM products p
-          JOIN categories c ON p.category_id = c.category_id
-          WHERE p.stock_quantity <= p.reorder_threshold
-      `);
+      SELECT p.*, c.name as category_name
+      FROM products p
+      JOIN categories c ON p.category_id = c.category_id
+      WHERE p.stock_quantity <= p.reorder_threshold
+    `);
 
-    // Get category totals
-    const [categoryTotals] = await connection.execute(`
-          SELECT c.name as category_name,
-                 SUM(p.stock_quantity) as total_items,
-                 SUM(p.stock_quantity * p.price) as total_value
-          FROM products p
-          JOIN categories c ON p.category_id = c.category_id
-          GROUP BY c.category_id
-      `);
+    // Format the summary data
+    const summary = {
+      totalProducts: stockLevels.length,
+      totalValue: parseFloat(totalValue.toFixed(2)), // Ensure proper decimal handling
+      lowStockCount: lowStock.length,
+      averageReturnRate: 0 // Set default value if not calculating returns
+    };
 
     res.json({
       stockLevels,
-      returnRates,
       lowStock,
       categoryTotals,
-      summary: {
-        totalProducts: stockLevels.length,
-        totalValue: stockLevels.reduce((sum, item) => sum + item.stock_value, 0),
-        lowStockCount: lowStock.length,
-        averageReturnRate: returnRates.reduce((sum, item) => sum + (item.return_rate || 0), 0) / returnRates.length
-      }
+      summary
     });
   } catch (error) {
     console.error('Error generating inventory report:', error);

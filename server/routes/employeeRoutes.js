@@ -280,6 +280,185 @@ router.delete('/orders/:orderId', async (req, res) => {
   }
 });
 
+// Get all returns (with filters)
+router.get('/staff/returns', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const { status, startDate, endDate } = req.query;
+    
+    let query = `
+      SELECT r.*,
+             o.order_date, o.total_amount as order_total,
+             u.first_name, u.last_name, u.email,
+             JSON_ARRAYAGG(
+               JSON_OBJECT(
+                 'product_id', ri.product_id,
+                 'quantity', ri.quantity,
+                 'product_name', p.product_name,
+                 'price', p.price,
+                 'image_path', p.image_path
+               )
+             ) as return_items,
+             COALESCE(ref.refund_amount, 0) as refund_amount,
+             ref.refund_status
+      FROM returns r
+      JOIN orders o ON r.order_id = o.order_id
+      JOIN users u ON r.user_id = u.user_id
+      LEFT JOIN return_items ri ON r.return_id = ri.return_id
+      LEFT JOIN products p ON ri.product_id = p.product_id
+      LEFT JOIN refunds ref ON r.return_id = ref.return_id
+    `;
+
+    const whereConditions = [];
+    const params = [];
+
+    if (status) {
+      whereConditions.push('r.return_status = ?');
+      params.push(status);
+    }
+    if (startDate) {
+      whereConditions.push('r.return_date >= ?');
+      params.push(startDate);
+    }
+    if (endDate) {
+      whereConditions.push('r.return_date <= ?');
+      params.push(endDate);
+    }
+
+    if (whereConditions.length > 0) {
+      query += ' WHERE ' + whereConditions.join(' AND ');
+    }
+
+    query += ' GROUP BY r.return_id ORDER BY r.return_date DESC';
+
+    const [returns] = await connection.execute(query, params);
+    res.json(returns);
+  } catch (error) {
+    console.error('Error fetching returns:', error);
+    res.status(500).json({ error: 'Failed to fetch returns' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get specific return details
+router.get('/staff/returns/:returnId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [returns] = await connection.execute(`
+      SELECT r.*,
+             o.order_date, o.total_amount as order_total,
+             u.first_name, u.last_name, u.email,
+             JSON_ARRAYAGG(
+               JSON_OBJECT(
+                 'product_id', ri.product_id,
+                 'quantity', ri.quantity,
+                 'product_name', p.product_name,
+                 'price', p.price,
+                 'image_path', p.image_path
+               )
+             ) as return_items,
+             COALESCE(ref.refund_amount, 0) as refund_amount,
+             ref.refund_status,
+             ref.refund_date
+      FROM returns r
+      JOIN orders o ON r.order_id = o.order_id
+      JOIN users u ON r.user_id = u.user_id
+      LEFT JOIN return_items ri ON r.return_id = ri.return_id
+      LEFT JOIN products p ON ri.product_id = p.product_id
+      LEFT JOIN refunds ref ON r.return_id = ref.return_id
+      WHERE r.return_id = ?
+      GROUP BY r.return_id`,
+      [req.params.returnId]
+    );
+
+    if (returns.length === 0) {
+      return res.status(404).json({ message: 'Return not found' });
+    }
+
+    res.json(returns[0]);
+  } catch (error) {
+    console.error('Error fetching return details:', error);
+    res.status(500).json({ error: 'Failed to fetch return details' });
+  } finally {
+    connection.release();
+  }
+});
+
+router.put('/staff/returns/:returnId', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const { return_status, approval, notes } = req.body;
+    const { returnId } = req.params;
+
+    // Update return status
+    await connection.execute(
+      'UPDATE returns SET return_status = ?, approval = ?, notes = ? WHERE return_id = ?',
+      [return_status, approval, notes || null, returnId]
+    );
+
+    // If approved, create refund record
+    if (approval && return_status === 'Approved') {
+      // Calculate refund amount based on returned items
+      const [returnItems] = await connection.execute(`
+        SELECT ri.quantity, oi.unit_price
+        FROM return_items ri
+        JOIN returns r ON ri.return_id = r.return_id
+        JOIN orders o ON r.order_id = o.order_id
+        JOIN order_items oi ON o.order_id = oi.order_id AND ri.product_id = oi.product_id
+        WHERE r.return_id = ?`,
+        [returnId]
+      );
+
+      const refundAmount = returnItems.reduce((total, item) => 
+        total + (item.quantity * item.unit_price), 0);
+
+      // Create refund record
+      await connection.execute(
+        'INSERT INTO refunds (return_id, refund_amount, refund_date, refund_status) VALUES (?, ?, CURRENT_DATE, ?)',
+        [returnId, -Math.abs(refundAmount), 'Pending']  // Ensure negative amount per schema check
+      );
+
+      // Update stock quantities
+      const [items] = await connection.execute(
+        'SELECT product_id, quantity FROM return_items WHERE return_id = ?',
+        [returnId]
+      );
+
+      for (const item of items) {
+        await connection.execute(
+          'UPDATE products SET stock_quantity = stock_quantity + ? WHERE product_id = ?',
+          [item.quantity, item.product_id]
+        );
+      }
+
+      // Create notification for customer
+      const [returnInfo] = await connection.execute(
+        'SELECT user_id FROM returns WHERE return_id = ?',
+        [returnId]
+      );
+
+      if (returnInfo.length > 0) {
+        await connection.execute(
+          'INSERT INTO notifications (user_id, message, notification_date, read_status) VALUES (?, ?, CURRENT_DATE, FALSE)',
+          [returnInfo[0].user_id, `Your return #${returnId} has been approved and a refund will be processed.`]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ message: 'Return status updated successfully' });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating return status:', error);
+    res.status(500).json({ message: 'Error updating return status', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
 
 // Inventory Management (Permission: 2003)
 router.post('/products/:productId/restock', async (req, res) => {
