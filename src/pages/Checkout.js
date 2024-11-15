@@ -9,7 +9,9 @@ const Checkout = () => {
   const cartItems = location.state?.cartItems || [];
   const navigate = useNavigate();
   const { userId } = useAuth();
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false); 
   const [useDefaultAddress, setUseDefaultAddress] = useState(false);
+  const [orderData, setOrderData] = useState(null);
   const [deliveryInfo, setDeliveryInfo] = useState({
     firstName: '',
     lastName: '',
@@ -248,16 +250,24 @@ const Checkout = () => {
         total_item_price: item.price * item.quantity,
       };
       await api.post('/order_items', orderItemData);
+      return orderItemData;  
     }));
 
     await Promise.all(cartItems.map(async (item) => {
       await api.delete('/cart-items', { data: { product_id: item.product_id } });
     }));
 
-    navigate('/profile');
+    setOrderData({ ...orderData, items: cartItems, order_id: orderId });
+    setShowConfirmationModal(true); 
+
   } catch (error) {
     console.error('Error placing order:', error);
   }
+};
+
+const closeModal = () => {
+  setShowConfirmationModal(false);
+  navigate('/shop'); 
 };
 
   
@@ -402,9 +412,29 @@ return (
     <button onClick={handlePlaceOrder} className="w-full bg-blue-600 text-white py-2 rounded mt-4 hover:bg-blue-700 transition-colors">
       Place Order
     </button>
-  </div>
-);
+     {/* Order Confirmation Modal */}
+     {showConfirmationModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-2xl font-bold mb-4 text-center">Order Confirmation</h2>
+            <p className="text-center mb-4">Thank you for your purchase! Here are your order details:</p>
 
+            <div className="border rounded p-4 mb-4">
+              <p><strong>Order Date:</strong> {orderData?.order_date}</p>
+              <p><strong>Total Amount:</strong> ${orderData?.total_amount.toFixed(2)}</p>
+              <p><strong>Status:</strong> {orderData?.order_status}</p>
+            </div>
+
+           
+
+            <button onClick={closeModal} className="mt-6 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
+              Continue Shopping
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Checkout;
