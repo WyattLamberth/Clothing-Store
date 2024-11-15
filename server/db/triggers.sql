@@ -2,8 +2,27 @@ USE onlinestore;
 
 DELIMITER $$
 
--- ACTIVITY LOG TRIGGERS TO MONITOR EMPLOYEES ACTIONS
+-- LOG TRIGGER FOR NEW USERS
+-- Trigger when new users create
+CREATE TRIGGER after_create_user
+AFTER INSERT ON users
+FOR EACH ROW
+BEGIN
+    INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+    VALUES ('INSERT', NOW(), 'users', NEW.user_id);
+END$$
 
+-- LOG TRIGGER FOR NEW ORDERS
+-- Trigger when new order create
+CREATE TRIGGER after_create_order
+AFTER INSERT ON orders
+FOR EACH ROW
+BEGIN
+    INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+    VALUES ('INSERT', NOW(), 'orders', NEW.user_id);
+END$$
+
+-- ACTIVITY LOG TRIGGERS TO MONITOR EMPLOYEES ACTIONS
 -- Trigger for INSERT action on products table
 CREATE TRIGGER log_user_action_insert_product
 AFTER INSERT ON products
