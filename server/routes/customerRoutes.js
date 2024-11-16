@@ -1616,31 +1616,23 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
   }
 });
 
-router.get('/active_discounts', async (req, res) => {
-  const connection = await pool.getConnection();
+// API route to get active sale events
+router.get('/sale-events/active', async (req, res) => {
   try {
-    // Query to get all active discounts
-    const discountsQuery = `
-      SELECT d.*, s.event_name, s.start_date, s.end_date, s.product_id, s.category_id
-      FROM discounts d
-      JOIN sale_events s ON d.sale_event_id = s.sale_event_id
-      WHERE CURDATE() BETWEEN s.start_date AND s.end_date
-    `;
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); // Ensure format matches DB
+    const activeEvents = await pool.query(
+      'SELECT * FROM sale_events WHERE start_date <= ? AND end_date >= ?',
+      [now, now]
+    );
 
-    const [discountsResult] = await connection.execute(discountsQuery);
-
-    if (discountsResult.length === 0) {
-      return res.status(404).json({ message: 'No active discounts found.' });
-    }
-
-    res.status(200).json(discountsResult);
+    console.log('Active Sale Events:', activeEvents); // Debugging log
+    res.json(activeEvents[0]); // Send the correct rows object (if MySQL)
   } catch (error) {
-    console.error('Error retrieving discounts:', error);
-    res.status(500).json({ error: 'Error retrieving discounts' });
-  } finally {
-    connection.release();
+    console.error('Error fetching active sale events:', error.message); // Improved error log
+    res.status(500).json({ error: 'Failed to fetch active sale events' });
   }
 });
+
 
 
 
