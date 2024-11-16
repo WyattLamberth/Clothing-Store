@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Users, TrendingUp, CircleDollarSign, ShoppingCart } from 'lucide-react';
 import api from '../utils/api';
+import DataTable from './DataTable';
 
 const CustomerAnalytics = () => {
     const [timeRange, setTimeRange] = useState('30d');
@@ -280,6 +281,97 @@ const CustomerAnalytics = () => {
                     </div>
                 </div>
             )}
+            <div className="space-y-6">
+                {/* Customer Segments Table */}
+                <DataTable
+                    title="Customer Segments Data"
+                    data={data.customerSegments.map(segment => ({
+                        segment: segment.segment,
+                        customer_count: segment.customer_count,
+                        avg_spend: formatCurrency(segment.avg_spend),
+                        avg_orders: Number(segment.avg_orders).toFixed(2),
+                        avg_returns: Number(segment.avg_returns).toFixed(2),
+                        active_customers: segment.active_last_90_days,
+                        activity_rate: `${((segment.active_last_90_days / segment.customer_count) * 100).toFixed(1)}%`
+                    }))}
+                    columns={[
+                        { header: 'Segment', accessorKey: 'segment' },
+                        { header: 'Customer Count', accessorKey: 'customer_count' },
+                        { header: 'Average Spend', accessorKey: 'avg_spend' },
+                        { header: 'Average Orders', accessorKey: 'avg_orders' },
+                        { header: 'Average Returns', accessorKey: 'avg_returns' },
+                        { header: 'Active in Last 90 Days', accessorKey: 'active_customers' },
+                        { header: 'Activity Rate', accessorKey: 'activity_rate' }
+                    ]}
+                    exportFileName="customer_segments_data.csv"
+                />
+
+                {/* Category Preferences Table */}
+                <DataTable
+                    title="Category Preferences by Segment"
+                    data={data.categoryPreferences.map(pref => ({
+                        segment: pref.segment,
+                        category: pref.category,
+                        order_count: pref.order_count,
+                        revenue: formatCurrency(pref.revenue),
+                        customer_count: pref.customer_count,
+                        avg_spend: formatCurrency(pref.revenue / pref.customer_count)
+                    }))}
+                    columns={[
+                        { header: 'Segment', accessorKey: 'segment' },
+                        { header: 'Category', accessorKey: 'category' },
+                        { header: 'Total Orders', accessorKey: 'order_count' },
+                        { header: 'Total Revenue', accessorKey: 'revenue' },
+                        { header: 'Unique Customers', accessorKey: 'customer_count' },
+                        { header: 'Average Spend per Customer', accessorKey: 'avg_spend' }
+                    ]}
+                    exportFileName="category_preferences_by_segment.csv"
+                />
+
+                {/* Retention Trends Table */}
+                <DataTable
+                    title="Customer Retention Trends"
+                    data={data.retentionTrends.map(trend => ({
+                        month: trend.month,
+                        new_customers: trend.new_customers,
+                        returning_customers: trend.returning_customers,
+                        total_customers: trend.new_customers + trend.returning_customers,
+                        retention_rate: `${Number(trend.retention_rate).toFixed(1)}%`
+                    }))}
+                    columns={[
+                        { header: 'Month', accessorKey: 'month' },
+                        { header: 'New Customers', accessorKey: 'new_customers' },
+                        { header: 'Returning Customers', accessorKey: 'returning_customers' },
+                        { header: 'Total Customers', accessorKey: 'total_customers' },
+                        { header: 'Retention Rate', accessorKey: 'retention_rate' }
+                    ]}
+                    exportFileName="customer_retention_trends.csv"
+                />
+
+                {/* Top Customers Table */}
+                <DataTable
+                    title="Top Customers Data"
+                    data={data.topCustomers.map(customer => ({
+                        customer_name: `${customer.first_name} ${customer.last_name}`,
+                        total_orders: customer.total_orders,
+                        total_spent: formatCurrency(customer.total_spent),
+                        avg_order_value: formatCurrency(customer.avg_order_value),
+                        returns: customer.returns,
+                        return_rate: `${((customer.returns / customer.total_orders) * 100).toFixed(1)}%`,
+                        last_order: new Date(customer.last_order_date).toLocaleDateString()
+                    }))}
+                    columns={[
+                        { header: 'Customer Name', accessorKey: 'customer_name' },
+                        { header: 'Total Orders', accessorKey: 'total_orders' },
+                        { header: 'Total Spent', accessorKey: 'total_spent' },
+                        { header: 'Average Order Value', accessorKey: 'avg_order_value' },
+                        { header: 'Returns', accessorKey: 'returns' },
+                        { header: 'Return Rate', accessorKey: 'return_rate' },
+                        { header: 'Last Order Date', accessorKey: 'last_order' }
+                    ]}
+                    exportFileName="top_customers_data.csv"
+                />
+            </div>
         </div>
     );
 };
