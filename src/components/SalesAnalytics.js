@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Calendar, TrendingUp, DollarSign, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react';
 import api from '../utils/api';
+import DataTable from './DataTable';
 
 const SalesAnalytics = () => {
     const [timeRange, setTimeRange] = useState('30d');
@@ -415,6 +416,63 @@ const SalesAnalytics = () => {
                         <p>{new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
                     </div>
                 </div>
+            </div>
+            <div className="space-y-6">
+                {/* Revenue by Period Table */}
+                <DataTable
+                    title="Revenue by Period Data"
+                    data={data.monthlyRevenue.map(month => ({
+                        period: month.month,
+                        revenue: formatCurrency(month.revenue),
+                        order_count: month.order_count,
+                        average_order_value: formatCurrency(month.revenue / month.order_count)
+                    }))}
+                    columns={[
+                        { header: 'Period', accessorKey: 'period' },
+                        { header: 'Revenue', accessorKey: 'revenue' },
+                        { header: 'Order Count', accessorKey: 'order_count' },
+                        { header: 'Average Order Value', accessorKey: 'average_order_value' }
+                    ]}
+                    exportFileName="sales_by_period.csv"
+                />
+
+                {/* Category Performance Table */}
+                <DataTable
+                    title="Category Performance Data"
+                    data={data.categoryStats.map(cat => ({
+                        category: cat.category_name,
+                        revenue: formatCurrency(cat.revenue),
+                        order_count: cat.order_count,
+                        average_order_value: formatCurrency(cat.revenue / cat.order_count)
+                    }))}
+                    columns={[
+                        { header: 'Category', accessorKey: 'category' },
+                        { header: 'Revenue', accessorKey: 'revenue' },
+                        { header: 'Order Count', accessorKey: 'order_count' },
+                        { header: 'Average Order Value', accessorKey: 'average_order_value' }
+                    ]}
+                    exportFileName="sales_by_category.csv"
+                />
+
+                {/* Top Products Table */}
+                <DataTable
+                    title="Product Performance Data"
+                    data={data.topProducts.map(prod => ({
+                        product: prod.product_name,
+                        revenue: formatCurrency(prod.total_revenue),
+                        quantity_sold: prod.total_quantity,
+                        times_ordered: prod.times_ordered,
+                        average_order_value: formatCurrency(prod.total_revenue / prod.times_ordered)
+                    }))}
+                    columns={[
+                        { header: 'Product', accessorKey: 'product' },
+                        { header: 'Total Revenue', accessorKey: 'revenue' },
+                        { header: 'Quantity Sold', accessorKey: 'quantity_sold' },
+                        { header: 'Times Ordered', accessorKey: 'times_ordered' },
+                        { header: 'Average Order Value', accessorKey: 'average_order_value' }
+                    ]}
+                    exportFileName="product_performance.csv"
+                />
             </div>
         </div>
     );

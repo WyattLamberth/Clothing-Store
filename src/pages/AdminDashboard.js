@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
-import { Package2, ShoppingCart, Tag, BarChart, Users, ActivitySquare, Settings } from 'lucide-react';
+import { Package2, ShoppingCart, Tag, BarChart, Users, Shield, ActivitySquare, Settings, RotateCcw } from 'lucide-react';
 import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryReport from '../components/InventoryReport';
+import ReturnsManagement from '../components/ReturnsManagement';
 import UserManagement from '../components/UserManagement';
-import ActivityLogs from '../components/ActivityLogs'; // Import ActivityLogs component
+import CustomerAnalytics from '../components/CustomerAnalytics';
+import ActivityLogs from '../components/ActivityLogs';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
-  const [activeReport, setActiveReport] = useState("sales");
+  const [activeReport, setActiveReport] = useState("sales"); // Track active report
+
 
   const sections = [
     { id: "users", label: "Users & Access", icon: Users },
     { id: "inventory", label: "Inventory", icon: Package2 },
     { id: "orders", label: "Orders", icon: ShoppingCart },
+    { id: "returns", label: "Returns", icon: RotateCcw },
     { id: "discounts", label: "Discounts", icon: Tag },
     { id: "reports", label: "Reports", icon: BarChart },
     { id: "activity", label: "Activity Logs", icon: ActivitySquare },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   const reports = [
     { id: "sales-analytics", label: "Sales Analytics" },
     { id: "inventory", label: "Inventory Health" },
+    { id: "customer-analytics", label: "Customer Analytics" },
   ];
 
   return (
@@ -88,11 +92,13 @@ const AdminDashboard = () => {
         {activeTab === "users" && <UserManagement />}
         {activeTab === "inventory" && <InventoryManagement />}
         {activeTab === "orders" && <OrdersManagement />}
+        {activeTab === "returns" && <ReturnsManagement />}
         {activeTab === "discounts" && <DiscountsManagement />}
         {activeTab === "reports" && (
           <>
             {activeReport === "sales-analytics" && <SalesAnalytics />}
             {activeReport === "inventory" && <InventoryReport />}
+            {activeReport === "customer-analytics" && <CustomerAnalytics />}
           </>
         )}
         {activeTab === "activity" && <ActivityLogs />}

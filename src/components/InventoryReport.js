@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Package2, AlertTriangle, BarChart3, RefreshCcw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import api from '../utils/api';
+import DataTable from './DataTable';
 
 const InventoryReport = () => {
     const [data, setData] = useState({
@@ -291,6 +292,75 @@ const InventoryReport = () => {
                         </div>
                     )}
                 </div>
+            </div>
+            <div className="space-y-6">
+                {/* Product Stock Levels Table */}
+                <DataTable
+                    title="Product Stock Levels Data"
+                    data={data.stockLevels.map(item => ({
+                        product_id: item.product_id,
+                        product_name: item.product_name,
+                        category: item.category_name,
+                        stock_quantity: item.stock_quantity,
+                        price: formatCurrency(item.price),
+                        reorder_threshold: item.reorder_threshold,
+                        stock_value: formatCurrency(item.stock_value)
+                    }))}
+                    columns={[
+                        { header: 'Product ID', accessorKey: 'product_id' },
+                        { header: 'Product Name', accessorKey: 'product_name' },
+                        { header: 'Category', accessorKey: 'category' },
+                        { header: 'Current Stock', accessorKey: 'stock_quantity' },
+                        { header: 'Price', accessorKey: 'price' },
+                        { header: 'Reorder Threshold', accessorKey: 'reorder_threshold' },
+                        { header: 'Stock Value', accessorKey: 'stock_value' }
+                    ]}
+                    exportFileName="inventory_stock_levels.csv"
+                />
+
+                {/* Category Totals Table */}
+                <DataTable
+                    title="Category Inventory Summary"
+                    data={data.categoryTotals.map(cat => ({
+                        category: cat.category_name,
+                        product_count: cat.product_count,
+                        total_items: cat.total_items,
+                        total_value: formatCurrency(cat.total_value),
+                        average_value: formatCurrency(cat.total_value / cat.product_count)
+                    }))}
+                    columns={[
+                        { header: 'Category', accessorKey: 'category' },
+                        { header: 'Number of Products', accessorKey: 'product_count' },
+                        { header: 'Total Items', accessorKey: 'total_items' },
+                        { header: 'Total Value', accessorKey: 'total_value' },
+                        { header: 'Average Value per Product', accessorKey: 'average_value' }
+                    ]}
+                    exportFileName="inventory_category_summary.csv"
+                />
+
+                {/* Low Stock Items Table */}
+                <DataTable
+                    title="Low Stock Alert Items"
+                    data={data.lowStock.map(item => ({
+                        product_id: item.product_id,
+                        product_name: item.product_name,
+                        category: item.category_name,
+                        current_stock: item.stock_quantity,
+                        reorder_threshold: item.reorder_threshold,
+                        price: formatCurrency(item.price),
+                        needed_stock: item.reorder_threshold - item.stock_quantity
+                    }))}
+                    columns={[
+                        { header: 'Product ID', accessorKey: 'product_id' },
+                        { header: 'Product Name', accessorKey: 'product_name' },
+                        { header: 'Category', accessorKey: 'category' },
+                        { header: 'Current Stock', accessorKey: 'current_stock' },
+                        { header: 'Reorder Threshold', accessorKey: 'reorder_threshold' },
+                        { header: 'Price', accessorKey: 'price' },
+                        { header: 'Units Needed', accessorKey: 'needed_stock' }
+                    ]}
+                    exportFileName="low_stock_items.csv"
+                />
             </div>
         </div>
     );

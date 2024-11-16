@@ -1016,9 +1016,21 @@ router.post('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    
-    const user_id = req.user.user_id; // Get user_id from authenticated user
+    // Get user_id from authenticated user
+    const user_id = req.user.user_id;
     const { order_id, items } = req.body;
+
+    // Debug logging
+    console.log('Return request received:', {
+      user_id,
+      order_id,
+      items
+    });
+
+    // Validate inputs
+    if (!order_id || !items || !Array.isArray(items) || items.length === 0) {
+      throw new Error('Invalid request data');
+    }
 
     // Validate that the order exists and belongs to the user
     const [orderCheck] = await connection.execute(
@@ -1030,54 +1042,60 @@ router.post('/customer/returns', async (req, res) => {
       throw new Error('Order not found or unauthorized');
     }
 
-    // Validate the order is within return window (e.g., 30 days)
-    const orderDate = new Date(orderCheck[0].order_date);
-    const daysSinceOrder = (new Date() - orderDate) / (1000 * 60 * 60 * 24);
-    if (daysSinceOrder > 30) {
-      throw new Error('Order is outside the 30-day return window');
-    }
-
     // Create the return record
     const [returnResult] = await connection.execute(
       'INSERT INTO returns (order_id, user_id, return_date, return_status, approval) VALUES (?, ?, CURRENT_DATE, ?, FALSE)',
       [order_id, user_id, 'Pending']
     );
-
     const return_id = returnResult.insertId;
 
     // Add return items
     for (const item of items) {
+      // Validate item data
+      if (!item.order_item_id || !item.quantity) {
+        throw new Error('Invalid item data');
+      }
+
       // Verify item was part of the original order
       const [orderItemCheck] = await connection.execute(
-        'SELECT * FROM order_items WHERE order_id = ? AND product_id = ?',
-        [order_id, item.product_id]
+        'SELECT * FROM order_items WHERE order_id = ? AND order_item_id = ?',
+        [order_id, item.order_item_id]
       );
 
       if (orderItemCheck.length === 0) {
-        throw new Error(`Product ${item.product_id} was not part of the original order`);
+        throw new Error(`Order item ${item.order_item_id} was not part of the original order`);
       }
 
       // Verify return quantity doesn't exceed original order quantity
       if (item.quantity > orderItemCheck[0].quantity) {
-        throw new Error(`Return quantity exceeds ordered quantity for product ${item.product_id}`);
+        throw new Error(`Return quantity exceeds ordered quantity for item ${item.order_item_id}`);
       }
 
+      // Insert return item
       await connection.execute(
         'INSERT INTO return_items (return_id, product_id, quantity) VALUES (?, ?, ?)',
-        [return_id, item.product_id, item.quantity]
+        [return_id, orderItemCheck[0].product_id, item.quantity]
       );
     }
 
+    // Update order status to RETURNED
+    await connection.execute(
+      'UPDATE orders SET order_status = ? WHERE order_id = ?',
+      ['RETURNED', order_id]
+    );
+
     await connection.commit();
-    res.status(201).json({ 
-      message: 'Return request created successfully',
+    res.status(201).json({
+      message: 'Return request created successfully and order status updated to RETURNED',
       return_id: return_id
     });
-
   } catch (error) {
     await connection.rollback();
     console.error('Error creating return:', error);
-    res.status(400).json({ error: error.message || 'Failed to create return request' });
+    res.status(400).json({
+      error: error.message || 'Failed to create return request',
+      details: error.stack
+    });
   } finally {
     connection.release();
   }
