@@ -146,7 +146,10 @@ const ProfileDashboard = () => {
     } else if (name === 'cvv') {
       const numbersOnly = value.replace(/\D/g, '').slice(0, 3);
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
-    } else {
+    } else if (['cardholder_name'].includes(name)) { // Ensure cardholder_name is handled
+      setCardDetails((prev) => ({ ...prev, [name]: value }));
+    } 
+    else {
       setUserData(prev => ({ ...prev, [name]: value }));
     }
   };
@@ -285,6 +288,17 @@ const ProfileDashboard = () => {
   if (error) {
     return <div className="text-red-500 text-center p-4">{error}</div>;
   }
+
+  const handleReturnRequest = async (orderId) => {
+    try {
+      const response = await api.post(`/returns`, { order_id: orderId });
+      alert('Return request submitted successfully.');
+      // Optionally refresh orders or return requests after submission
+    } catch (error) {
+      console.error('Error submitting return request:', error);
+      alert('Failed to submit return request.');
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -742,10 +756,22 @@ const ProfileDashboard = () => {
                           <span>{item.product_name}</span>
                         </div>
                         <span>Quantity: {item.quantity}</span>
-                        <span>Price: ${parseFloat(item.order_item_price).toFixed(2)}</span>
+                        <span>Price: ${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
+                )}
+                {/* Return Button */}
+                {order.order_status === 'Delivered' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent expanding the order items
+                      handleReturnRequest(order.order_id);
+                    }}
+                    className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
+                  >
+                    Request Return
+                  </button>
                 )}
               </div>
             ))
