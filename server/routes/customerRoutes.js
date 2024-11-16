@@ -1499,24 +1499,20 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
 });
 
 // API route to get active sale events
-router.get('/active-sale-events', async (req, res) => {
+router.get('/sale-events/active', async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // Format date as YYYY-MM-DD
-
-    const query = `
-      SELECT sale_event_id, event_name, discount_percent, start_date, end_date
-      FROM sale_events
-      WHERE start_date <= ? AND end_date >= ?;
-    `;
-
-    const [results] = await pool.execute(query, [today, today]);
-
-    res.json(results);
+    const now = new Date();
+    const activeEvents = await pool.query(
+      'SELECT * FROM sale_events WHERE start_date <= ? AND end_date >= ?',
+      [now, now]
+    );
+    res.json(activeEvents);
   } catch (error) {
     console.error('Error fetching active sale events:', error);
     res.status(500).json({ error: 'Failed to fetch active sale events' });
   }
 });
+
 
 
 
