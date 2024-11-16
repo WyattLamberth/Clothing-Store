@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Package2, ShoppingCart, Tag, BarChart, Users, Shield, ActivitySquare, Settings } from 'lucide-react';
+import { Package2, ShoppingCart, Tag, BarChart, Users, Shield, ActivitySquare, Settings, RotateCcw } from 'lucide-react';
 import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryReport from '../components/InventoryReport';
+import ReturnsManagement from '../components/ReturnsManagement';
 import UserManagement from '../components/UserManagement';
 import CustomerAnalytics from '../components/CustomerAnalytics';
 
@@ -16,10 +17,10 @@ const AdminDashboard = () => {
     { id: "users", label: "Users & Access", icon: Users },
     { id: "inventory", label: "Inventory", icon: Package2 },
     { id: "orders", label: "Orders", icon: ShoppingCart },
+    { id: "returns", label: "Returns", icon: RotateCcw },
     { id: "discounts", label: "Discounts", icon: Tag },
     { id: "reports", label: "Reports", icon: BarChart },
     { id: "activity", label: "Activity Logs", icon: ActivitySquare },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   const reports = [
@@ -89,6 +90,7 @@ const AdminDashboard = () => {
         {activeTab === "users" && <UserManagement />}
         {activeTab === "inventory" && <InventoryManagement />}
         {activeTab === "orders" && <OrdersManagement />}
+        {activeTab === "returns" && <ReturnsManagement />}
         {activeTab === "discounts" && <DiscountsManagement />}
         {activeTab === "reports" && (
           <>
