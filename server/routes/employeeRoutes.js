@@ -30,6 +30,7 @@ router.use(authMiddleware.staffOnly);
 // =============================================
 
 // Product Management (Permission: 2001)
+
 router.post('/products', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -131,7 +132,6 @@ router.post('/products', upload.single('image'), async (req, res) => {
     connection.release();
   }
 });
-
 
 router.put('/products/:productId', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
@@ -280,8 +280,6 @@ router.delete('/orders/:orderId', async (req, res) => {
   }
 });
 
-
-// Get all returns (with filters)
 router.get('/staff/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -291,15 +289,18 @@ router.get('/staff/returns', async (req, res) => {
       SELECT r.*,
              o.order_date, o.total_amount as order_total,
              u.first_name, u.last_name, u.email,
-             JSON_ARRAYAGG(
-               JSON_OBJECT(
-                 'product_id', ri.product_id,
-                 'quantity', ri.quantity,
-                 'product_name', p.product_name,
-                 'price', p.price,
-                 'image_path', p.image_path
+             COALESCE(JSON_ARRAYAGG(
+               IF(ri.return_item_id IS NOT NULL,
+                  JSON_OBJECT(
+                    'product_id', ri.product_id,
+                    'quantity', ri.quantity,
+                    'product_name', p.product_name,
+                    'price', p.price,
+                    'image_path', p.image_path
+                  ),
+                  NULL
                )
-             ) as return_items,
+             ), JSON_ARRAY()) as return_items,
              COALESCE(ref.refund_amount, 0) as refund_amount,
              ref.refund_status
       FROM returns r
@@ -330,19 +331,36 @@ router.get('/staff/returns', async (req, res) => {
       query += ' WHERE ' + whereConditions.join(' AND ');
     }
 
-    query += ' GROUP BY r.return_id ORDER BY r.return_date DESC';
+    query += ' GROUP BY r.return_id, o.order_date, o.total_amount, u.first_name, u.last_name, u.email, ref.refund_amount, ref.refund_status';
+    query += ' ORDER BY r.return_date DESC';
+
+    console.log('Executing query:', query); // Debug log
+    console.log('With params:', params); // Debug log
 
     const [returns] = await connection.execute(query, params);
-    res.json(returns);
+    
+    // Process the returns to ensure valid JSON arrays
+    const processedReturns = returns.map(ret => ({
+      ...ret,
+      return_items: Array.isArray(ret.return_items) ? ret.return_items.filter(Boolean) : [],
+      refund_amount: Number(ret.refund_amount) || 0
+    }));
+
+    console.log('Processed returns:', processedReturns); // Debug log
+    res.json(processedReturns);
+
   } catch (error) {
     console.error('Error fetching returns:', error);
-    res.status(500).json({ error: 'Failed to fetch returns' });
+    res.status(500).json({ 
+      error: 'Failed to fetch returns',
+      details: error.message,
+      stack: error.stack
+    });
   } finally {
     connection.release();
   }
 });
 
-// Get specific return details
 router.get('/staff/returns/:returnId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -350,15 +368,18 @@ router.get('/staff/returns/:returnId', async (req, res) => {
       SELECT r.*,
              o.order_date, o.total_amount as order_total,
              u.first_name, u.last_name, u.email,
-             JSON_ARRAYAGG(
-               JSON_OBJECT(
-                 'product_id', ri.product_id,
-                 'quantity', ri.quantity,
-                 'product_name', p.product_name,
-                 'price', p.price,
-                 'image_path', p.image_path
+             COALESCE(JSON_ARRAYAGG(
+               IF(ri.return_item_id IS NOT NULL,
+                  JSON_OBJECT(
+                    'product_id', ri.product_id,
+                    'quantity', ri.quantity,
+                    'product_name', p.product_name,
+                    'price', p.price,
+                    'image_path', p.image_path
+                  ),
+                  NULL
                )
-             ) as return_items,
+             ), JSON_ARRAY()) as return_items,
              COALESCE(ref.refund_amount, 0) as refund_amount,
              ref.refund_status,
              ref.refund_date
@@ -369,7 +390,7 @@ router.get('/staff/returns/:returnId', async (req, res) => {
       LEFT JOIN products p ON ri.product_id = p.product_id
       LEFT JOIN refunds ref ON r.return_id = ref.return_id
       WHERE r.return_id = ?
-      GROUP BY r.return_id`,
+      GROUP BY r.return_id, o.order_date, o.total_amount, u.first_name, u.last_name, u.email, ref.refund_amount, ref.refund_status, ref.refund_date`,
       [req.params.returnId]
     );
 
@@ -377,10 +398,21 @@ router.get('/staff/returns/:returnId', async (req, res) => {
       return res.status(404).json({ message: 'Return not found' });
     }
 
-    res.json(returns[0]);
+    // Process the return to ensure valid JSON array
+    const processedReturn = {
+      ...returns[0],
+      return_items: Array.isArray(returns[0].return_items) ? 
+        returns[0].return_items.filter(Boolean) : [],
+      refund_amount: Number(returns[0].refund_amount) || 0
+    };
+
+    res.json(processedReturn);
   } catch (error) {
     console.error('Error fetching return details:', error);
-    res.status(500).json({ error: 'Failed to fetch return details' });
+    res.status(500).json({ 
+      error: 'Failed to fetch return details',
+      details: error.message 
+    });
   } finally {
     connection.release();
   }
@@ -396,8 +428,8 @@ router.put('/staff/returns/:returnId', async (req, res) => {
 
     // Update return status
     await connection.execute(
-      'UPDATE returns SET return_status = ?, approval = ?, notes = ? WHERE return_id = ?',
-      [return_status, approval, notes || null, returnId]
+      'UPDATE returns SET return_status = ?, approval = ? WHERE return_id = ?',
+      [return_status, approval, returnId]
     );
 
     // If approved, create refund record
@@ -441,12 +473,6 @@ router.put('/staff/returns/:returnId', async (req, res) => {
         [returnId]
       );
 
-      if (returnInfo.length > 0) {
-        await connection.execute(
-          'INSERT INTO notifications (user_id, message, notification_date, read_status) VALUES (?, ?, CURRENT_DATE, FALSE)',
-          [returnInfo[0].user_id, `Your return #${returnId} has been approved and a refund will be processed.`]
-        );
-      }
     }
 
     await connection.commit();
@@ -456,6 +482,133 @@ router.put('/staff/returns/:returnId', async (req, res) => {
     await connection.rollback();
     console.error('Error updating return status:', error);
     res.status(500).json({ message: 'Error updating return status', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// Add these routes to employeeRoutes.js
+
+// Get all refunds
+router.get('/refunds', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const query = 'SELECT * FROM refunds';
+    const [refunds] = await connection.execute(query);
+    res.json(refunds);
+  } catch (error) {
+    console.error('Error fetching refunds:', error);
+    res.status(500).json({ error: 'Failed to fetch refunds' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get refund by ID
+router.get('/refunds/:refund_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { refund_id } = req.params;
+  try {
+    const query = 'SELECT * FROM refunds WHERE refund_id = ?';
+    const [refund] = await connection.execute(query, [refund_id]);
+    
+    if (refund.length === 0) {
+      return res.status(404).json({ message: 'Refund not found' });
+    }
+    
+    res.json(refund[0]);
+  } catch (error) {
+    console.error('Error fetching refund:', error);
+    res.status(500).json({ error: 'Failed to fetch refund' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Create new refund
+router.post('/refunds', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const { return_id, refund_amount, refund_date, refund_status } = req.body;
+    
+    // Validate refund status
+    if (!['Pending', 'Completed'].includes(refund_status)) {
+      return res.status(400).json({ 
+        error: 'Invalid refund status. Must be either Pending or Completed' 
+      });
+    }
+    
+    // Validate refund amount is negative (as per table constraint)
+    if (refund_amount >= 0) {
+      return res.status(400).json({
+        error: 'Refund amount must be negative'
+      });
+    }
+
+    // Verify the return exists and is approved
+    const [returnCheck] = await connection.execute(
+      'SELECT approval FROM returns WHERE return_id = ?',
+      [return_id]
+    );
+
+    if (returnCheck.length === 0) {
+      return res.status(404).json({ error: 'Return not found' });
+    }
+
+    if (!returnCheck[0].approval) {
+      return res.status(400).json({ error: 'Cannot create refund for unapproved return' });
+    }
+
+    // Check if refund already exists for this return
+    const [existingRefund] = await connection.execute(
+      'SELECT refund_id FROM refunds WHERE return_id = ?',
+      [return_id]
+    );
+
+    if (existingRefund.length > 0) {
+      return res.status(400).json({ error: 'Refund already exists for this return' });
+    }
+
+    const query = `
+      INSERT INTO refunds 
+      (return_id, refund_amount, refund_date, refund_status) 
+      VALUES (?, ?, ?, ?)
+    `;
+    
+    const [result] = await connection.execute(query, [
+      return_id,
+      refund_amount,
+      refund_date,
+      refund_status
+    ]);
+
+    await connection.commit();
+    res.status(201).json({ 
+      message: 'Refund created successfully',
+      refund_id: result.insertId 
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating refund:', error);
+    res.status(500).json({ error: 'Failed to create refund' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get refunds by return ID
+router.get('/refunds/return/:return_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  const { return_id } = req.params;
+  try {
+    const query = 'SELECT * FROM refunds WHERE return_id = ?';
+    const [refunds] = await connection.execute(query, [return_id]);
+    res.json(refunds);
+  } catch (error) {
+    console.error('Error fetching refunds for return:', error);
+    res.status(500).json({ error: 'Failed to fetch refunds for return' });
   } finally {
     connection.release();
   }
@@ -666,7 +819,6 @@ router.delete('/transactions/:transaction_id', async (req, res) => {
   }
 });
 
-
 // Get transactions by order ID
 router.get('/transactions/order/:orderId', async (req, res) => {
   const connection = await pool.getConnection();
@@ -862,7 +1014,6 @@ router.post('/sale-event', async (req, res) => {
   }
 });
 
-
 // Get Sale Event by eventID API
 router.get('/sale-event/:event_id', async (req, res) => {
   const connection = await pool.getConnection();
@@ -970,7 +1121,5 @@ router.delete('/sale-event/:sale_event_id', async (req, res) => {
     connection.release(); // release the connection back to the pool
   }
 });
-
-
 
 module.exports = router;
