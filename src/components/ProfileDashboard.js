@@ -18,6 +18,7 @@ const ProfileDashboard = () => {
   const [expandedOrders, setExpandedOrders] = useState({});
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState('All'); // State for order status filter
   const [returnConfirmation, setReturnConfirmation] = useState(null); 
   const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
@@ -120,6 +121,15 @@ const ProfileDashboard = () => {
   const handleTabClick = (tab) => {
     setActiveTab(tab);
   };
+
+  const handleStatusFilterChange = (e) => {
+    setOrderStatusFilter(e.target.value);
+  };
+
+  const filteredOrders =
+  orderStatusFilter === 'All'
+    ? orders
+    : orders.filter((order) => order.order_status === orderStatusFilter);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -742,10 +752,24 @@ const ProfileDashboard = () => {
         </div>
       ) : (
         <div className="orders-list grid grid-cols-1 gap-4">
-          {orders.length === 0 ? (
-            <p>No recent orders found</p>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Your Orders</h2>
+            <select
+              value={orderStatusFilter}
+              onChange={handleStatusFilterChange}
+              className="p-2 border rounded"
+            >
+              <option value="All">All</option>
+              <option value="Pending">Pending</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="RETURNED">RETURNED</option>
+            </select>
+          </div>
+          {filteredOrders.length === 0 ? (
+            <p>No orders found for the selected status.</p>
           ) : (
-            orders.map((order) => (
+            filteredOrders.map((order) => (
               <div
                 key={order.order_id}
                 className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
@@ -784,7 +808,7 @@ const ProfileDashboard = () => {
                     </svg>
                   </div>
                 </div>
-            
+
                 {/* Expanded order items */}
                 {expandedOrders[order.order_id] && orderItems[order.order_id] && Array.isArray(orderItems[order.order_id]) && (
                   <div className="order-items mt-4">
