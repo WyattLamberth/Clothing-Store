@@ -3,6 +3,7 @@ import { User, MapPin, ShoppingBag, CreditCard, Plus, X } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
 import { Link } from 'react-router-dom';
+import ReturnRequestForm from './ReturnRequestForm';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
@@ -15,6 +16,8 @@ const ProfileDashboard = () => {
   const [updateSuccess, setUpdateSuccess] = useState('');
   const [orders, setOrders] = useState([]);
   const [expandedOrders, setExpandedOrders] = useState({});
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
@@ -33,6 +36,17 @@ const ProfileDashboard = () => {
       zip: '',
     }
   });
+
+  // Add this function with your other fetch functions
+  const fetchOrders = async () => {
+    try {
+      const response = await api.get(`/users/${userId}/orders`);
+      console.log("Orders Data:", response.data);
+      setOrders(response.data || []);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -70,16 +84,6 @@ const ProfileDashboard = () => {
   }, [userId]);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await api.get(`/users/${userId}/orders`);
-        console.log("Orders Data:", response.data); // Check if total_amount is present
-        setOrders(response.data || []);
-      } catch (err) {
-        console.error('Error fetching orders:', err);
-      }
-    };
-
     if (userId) {
       fetchOrders();
     }
@@ -90,13 +94,13 @@ const ProfileDashboard = () => {
       ...prev,
       [orderId]: !prev[orderId],
     }));
-  
+
     if (!orderItems[orderId] && !expandedOrders[orderId]) {
       try {
         const response = await api.get(`/order_items/${orderId}`);
         console.log('API Response:', response); // Check full response
         console.log('Response data:', response.data); // Check data specifically
-        
+
         const items = Array.isArray(response.data) ? response.data : [];
         setOrderItems((prev) => ({
           ...prev,
@@ -148,7 +152,7 @@ const ProfileDashboard = () => {
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
     } else if (['cardholder_name'].includes(name)) { // Ensure cardholder_name is handled
       setCardDetails((prev) => ({ ...prev, [name]: value }));
-    } 
+    }
     else {
       setUserData(prev => ({ ...prev, [name]: value }));
     }
@@ -217,6 +221,16 @@ const ProfileDashboard = () => {
       console.error('Error adding or updating payment method:', error);
       setError('Failed to add or update payment method');
     }
+  };
+
+  // Removed duplicate handleReturnRequest function
+
+  // Add this handler for successful returns
+  const handleReturnSuccess = () => {
+    // Refresh orders or show success message
+    setShowReturnForm(false);
+    setSelectedOrder(null);
+    fetchOrders(); // Re-fetch orders to update the list
   };
 
   const handleProfileSubmit = async (e) => {
@@ -289,15 +303,10 @@ const ProfileDashboard = () => {
     return <div className="text-red-500 text-center p-4">{error}</div>;
   }
 
-  const handleReturnRequest = async (orderId) => {
-    try {
-      const response = await api.post(`/returns`, { order_id: orderId });
-      alert('Return request submitted successfully.');
-      // Optionally refresh orders or return requests after submission
-    } catch (error) {
-      console.error('Error submitting return request:', error);
-      alert('Failed to submit return request.');
-    }
+  const handleReturnRequest = (order) => {
+    console.log("Requesting return for order:", order);
+    setSelectedOrder(order);
+    setShowReturnForm(true);
   };
 
   return (
@@ -766,7 +775,7 @@ const ProfileDashboard = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent expanding the order items
-                      handleReturnRequest(order.order_id);
+                      handleReturnRequest(order); // Pass the entire order object instead of just the ID
                     }}
                     className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
                   >
@@ -777,6 +786,17 @@ const ProfileDashboard = () => {
             ))
           )}
         </div>
+      )}
+      {showReturnForm && selectedOrder && (
+        <ReturnRequestForm
+          order={selectedOrder}
+          orderItems={orderItems[selectedOrder.order_id] || []}
+          onClose={() => {
+            setShowReturnForm(false);
+            setSelectedOrder(null);
+          }}
+          onSuccess={handleReturnSuccess}
+        />
       )}
     </div>
   );
