@@ -92,16 +92,6 @@ CREATE TABLE order_items (
   CHECK (quantity > 0)
 );
 
--- Transactions table
-CREATE TABLE transactions (
-  transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT,
-  transaction_date DATE NOT NULL,
-  total_amount DECIMAL(10,2) NOT NULL,
-  payment_status VARCHAR(20) NOT NULL,
-  CHECK (total_amount >= 0)
-);
-
 -- Shopping Cart table
 CREATE TABLE shopping_cart (
   cart_id INT AUTO_INCREMENT PRIMARY KEY,
