@@ -6,11 +6,12 @@ import DiscountsManagement from '../components/DiscountsManagement';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryReport from '../components/InventoryReport';
 import UserManagement from '../components/UserManagement';
+import CustomerAnalytics from '../components/CustomerAnalytics';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [activeReport, setActiveReport] = useState("sales"); // Track active report
-  
+
   const sections = [
     { id: "users", label: "Users & Access", icon: Users },
     { id: "inventory", label: "Inventory", icon: Package2 },
@@ -24,9 +25,9 @@ const AdminDashboard = () => {
   const reports = [
     { id: "sales-analytics", label: "Sales Analytics" },
     { id: "inventory", label: "Inventory Health" },
-    // We'll add more reports here later
+    { id: "customer-analytics", label: "Customer Analytics" },
   ];
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header with User Info */}
@@ -93,6 +94,7 @@ const AdminDashboard = () => {
           <>
             {activeReport === "sales-analytics" && <SalesAnalytics />}
             {activeReport === "inventory" && <InventoryReport />}
+            {activeReport === "customer-analytics" && <CustomerAnalytics />}
           </>
         )}
         {activeTab === "activity" && (
