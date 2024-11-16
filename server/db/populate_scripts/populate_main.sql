@@ -169,18 +169,6 @@ CREATE TABLE sale_events (
   CHECK (end_date > start_date)
 );
 
--- Permissions table
-CREATE TABLE permissions (
-  permission_id INT AUTO_INCREMENT PRIMARY KEY,
-  permission_name VARCHAR(50) NOT NULL
-);
-
--- Role Permissions table
-CREATE TABLE role_permissions (
-  role_id INT,
-  permission_id INT,
-  PRIMARY KEY (role_id, permission_id)
-);
 
 -- Add Foreign Key Constraints
 ALTER TABLE users
@@ -225,10 +213,6 @@ ADD CONSTRAINT fk_activity_log_user FOREIGN KEY (user_id) REFERENCES users(user_
 
 ALTER TABLE notifications
 ADD CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(user_id);
-
-ALTER TABLE role_permissions
-ADD CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(role_id),
-ADD CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
 
 -- Create indexes for better performance
 CREATE INDEX idx_user_role ON users(role_id);
