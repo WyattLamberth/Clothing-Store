@@ -1016,9 +1016,8 @@ router.post('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    
     // Get user_id from authenticated user
-    const user_id = req.user.user_id; 
+    const user_id = req.user.user_id;
     const { order_id, items } = req.body;
 
     // Debug logging
@@ -1048,7 +1047,6 @@ router.post('/customer/returns', async (req, res) => {
       'INSERT INTO returns (order_id, user_id, return_date, return_status, approval) VALUES (?, ?, CURRENT_DATE, ?, FALSE)',
       [order_id, user_id, 'Pending']
     );
-
     const return_id = returnResult.insertId;
 
     // Add return items
@@ -1080,16 +1078,21 @@ router.post('/customer/returns', async (req, res) => {
       );
     }
 
+    // Update order status to RETURNED
+    await connection.execute(
+      'UPDATE orders SET order_status = ? WHERE order_id = ?',
+      ['RETURNED', order_id]
+    );
+
     await connection.commit();
     res.status(201).json({
-      message: 'Return request created successfully',
+      message: 'Return request created successfully and order status updated to RETURNED',
       return_id: return_id
     });
-
   } catch (error) {
     await connection.rollback();
     console.error('Error creating return:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       error: error.message || 'Failed to create return request',
       details: error.stack
     });

@@ -745,42 +745,68 @@ const ProfileDashboard = () => {
                 className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => toggleOrderExpansion(order.order_id)}
               >
-                <div className="text-gray-700 font-semibold">
-                  Status: {order.order_status || 'Unknown'}
+                <div className="flex justify-between items-center">
+                  <div className="flex-grow">
+                    <div className="text-gray-700 font-semibold">
+                      Status: {order.order_status || 'Unknown'}
+                    </div>
+                    <div className="text-gray-500">
+                      Order Date: {new Date(order.order_date).toLocaleDateString()}
+                    </div>
+                    <div className="text-gray-900 font-bold mt-2">
+                      Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
+                    </div>
+                  </div>
+                  {/* Add chevron indicator that rotates when expanded */}
+                  <div className="flex items-center text-gray-500">
+                    <div className="mr-2">View Details</div>
+                    <svg
+                      className={`w-6 h-6 transform transition-transform ${
+                        expandedOrders[order.order_id] ? 'rotate-180' : ''
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
                 </div>
-                <div className="text-gray-500">
-                  Order Date: {new Date(order.order_date).toLocaleDateString()}
-                </div>
-                <div className="text-gray-900 font-bold mt-2">
-                  Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
-                </div>
-
+            
                 {/* Expanded order items */}
                 {expandedOrders[order.order_id] && orderItems[order.order_id] && Array.isArray(orderItems[order.order_id]) && (
                   <div className="order-items mt-4">
-                    {orderItems[order.order_id].map((item) => (
-                      <div key={item.order_item_id} className="flex justify-between p-2 border-b">
-                        <div className="flex items-center space-x-4">
-                          <img src={item.image_path} alt={item.product_name} className="w-16 h-16 object-cover rounded" />
-                          <span>{item.product_name}</span>
+                    <div className="border-t pt-4 mt-4">
+                      <h3 className="font-semibold mb-3">Order Items</h3>
+                      {orderItems[order.order_id].map((item) => (
+                        <div key={item.order_item_id} className="flex justify-between p-2 border-b">
+                          <div className="flex items-center space-x-4">
+                            <img src={item.image_path} alt={item.product_name} className="w-16 h-16 object-cover rounded" />
+                            <span>{item.product_name}</span>
+                          </div>
+                          <span>Quantity: {item.quantity}</span>
+                          <span>Price: ${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
                         </div>
-                        <span>Quantity: {item.quantity}</span>
-                        <span>Price: ${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
+                      ))}
+                      {order.order_status === 'Delivered' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReturnRequest(order);
+                          }}
+                          className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
+                        >
+                          Request Return
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-                {/* Return Button */}
-                {order.order_status === 'Delivered' && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent expanding the order items
-                      handleReturnRequest(order); // Pass the entire order object instead of just the ID
-                    }}
-                    className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
-                  >
-                    Request Return
-                  </button>
                 )}
               </div>
             ))
