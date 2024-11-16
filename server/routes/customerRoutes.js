@@ -1501,14 +1501,16 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
 // API route to get active sale events
 router.get('/sale-events/active', async (req, res) => {
   try {
-    const now = new Date();
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' '); // Ensure format matches DB
     const activeEvents = await pool.query(
       'SELECT * FROM sale_events WHERE start_date <= ? AND end_date >= ?',
       [now, now]
     );
-    res.json(activeEvents);
+
+    console.log('Active Sale Events:', activeEvents); // Debugging log
+    res.json(activeEvents[0]); // Send the correct rows object (if MySQL)
   } catch (error) {
-    console.error('Error fetching active sale events:', error);
+    console.error('Error fetching active sale events:', error.message); // Improved error log
     res.status(500).json({ error: 'Failed to fetch active sale events' });
   }
 });

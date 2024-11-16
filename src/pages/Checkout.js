@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../utils/api';
-import { FaCreditCard, FaShippingFast, FaMapMarkerAlt, FaShoppingCart } from 'react-icons/fa';
+import { FaCreditCard, FaShippingFast, FaMapMarkerAlt, FaShoppingCart, FaTag } from 'react-icons/fa';
 
 const Checkout = () => {
   const location = useLocation();
   const cartItems = location.state?.cartItems || [];
   const navigate = useNavigate();
   const { userId } = useAuth();
-  const [showConfirmationModal, setShowConfirmationModal] = useState(false); 
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [useDefaultAddress, setUseDefaultAddress] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [isSaleActive, setIsSaleActive] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+
   const [deliveryInfo, setDeliveryInfo] = useState({
     firstName: '',
     lastName: '',
@@ -49,10 +52,38 @@ const Checkout = () => {
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
 
+  // Calculate total with discount
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const tax = subtotal * 0.08; // Assuming an 8% tax rate
+  const discountAmount = isSaleActive && discountPercentage
+  ? (subtotal * discountPercentage) / 100
+  : 0;  const tax = (subtotal - discountAmount) * 0.08; // Assuming 8% tax
   const shippingCost = 10.0;
-  const total = subtotal + tax + shippingCost;
+  const total = subtotal - discountAmount + tax + shippingCost;
+
+  // Fetch active sale events
+  const [saleEventName, setSaleEventName] = useState('');
+
+  const fetchSaleEvents = async () => {
+    try {
+      const response = await api.get('/sale-events/active');
+      if (response.data.length > 0) {
+        const event = response.data[0];
+        setIsSaleActive(true);
+        setDiscountPercentage(event.discount_percentage);
+        setSaleEventName(event.event_name);
+      } else {
+        setIsSaleActive(false);
+        setDiscountPercentage(0);
+        setSaleEventName('');
+      }
+    } catch (error) {
+      console.error('Error fetching sale events:', error);
+      setIsSaleActive(false);
+      setDiscountPercentage(0);
+      setSaleEventName('');
+    }
+  };
+  
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -90,6 +121,7 @@ const Checkout = () => {
 
     fetchUserInfo();
     fetchPaymentMethods();
+    fetchSaleEvents(); // Fetch sale events in the same useEffect
   }, [userId, useDefaultAddress]);
 
   const handleCheckboxChange = () => {
@@ -372,46 +404,60 @@ return (
       </section>
     </div>
 
-    {/* Order Summary Section */}
-    <section className="mt-8 p-6 bg-white shadow rounded-lg">
-      <h2 className="text-2xl font-bold mb-4 flex items-center">
-        <FaShippingFast className="mr-2 text-blue-600" /> Order Summary
-      </h2>
-      <ul>
-        {cartItems.map((item) => (
-          <li key={item.product_id} className="flex justify-between py-4 items-center border-b">
-            <div className="flex items-center">
-              <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 flex-shrink-0">
-                {item.image_path ? (
-                  <img
-                    src={require(`../images/${item.image_path}`)}
-                    alt={item.product_name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center">
-                    <FaShoppingCart className="h-8 w-8 text-gray-400" />
-                  </div>
-                )}
+{/* Order Summary Section */}
+<section className="mt-8 p-6 bg-white shadow rounded-lg">
+  <h2 className="text-2xl font-bold mb-4 flex items-center">
+    <FaShippingFast className="mr-2 text-blue-600" /> Order Summary
+  </h2>
+  <ul>
+    {cartItems.map((item) => (
+      <li key={item.product_id} className="flex justify-between py-4 items-center border-b">
+        <div className="flex items-center">
+          <div className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100 flex-shrink-0">
+            {item.image_path ? (
+              <img
+                src={require(`../images/${item.image_path}`)}
+                alt={item.product_name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <FaShoppingCart className="h-8 w-8 text-gray-400" />
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">{item.product_name}</h3>
-                <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-              </div>
-            </div>
-            <span className="text-lg font-medium">${(item.price * item.quantity).toFixed(2)}</span>
-          </li>
-        ))}
-      </ul>
-      <p>Subtotal: ${subtotal.toFixed(2)}</p>
-      <p>Tax: ${tax.toFixed(2)}</p>
-      <p>Shipping: ${shippingCost.toFixed(2)}</p>
-      <p className="text-xl font-bold">Total: ${total.toFixed(2)}</p>
-    </section>
+            )}
+          </div>
+          <div className="ml-4">
+            <h3 className="text-lg font-medium text-gray-900">{item.product_name}</h3>
+            <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+          </div>
+        </div>
+        <span className="text-lg font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+      </li>
+    ))}
+  </ul>
+  <p className="mt-4">Subtotal: ${subtotal.toFixed(2)}</p>
+  {isSaleActive && (
+    <div className="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+      <p className="text-red-600 font-bold flex items-center">
+        <FaTag className="mr-2 text-yellow-500" />
+        Savings: -${discountAmount.toFixed(2)} ({discountPercentage}% - {saleEventName})
+      </p>
+    </div>
+  )}
+  <p className="mt-2">Tax: ${tax.toFixed(2)}</p>
+  <p className="mt-2">Shipping: ${shippingCost.toFixed(2)}</p>
+  <p className="text-xl font-bold mt-4">Total: ${total.toFixed(2)}</p>
+</section>
 
-    <button onClick={handlePlaceOrder} className="w-full bg-blue-600 text-white py-2 rounded mt-4 hover:bg-blue-700 transition-colors">
-      Place Order
-    </button>
+
+
+      <button
+        onClick={handlePlaceOrder}
+        className="w-full bg-blue-600 text-white py-2 rounded mt-4 hover:bg-blue-700 transition-colors"
+      >
+        Place Order
+      </button>
+
      {/* Order Confirmation Modal */}
      {showConfirmationModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
