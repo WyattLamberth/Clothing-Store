@@ -202,9 +202,6 @@ ALTER TABLE order_items
 ADD CONSTRAINT fk_order_item_order FOREIGN KEY (order_id) REFERENCES orders(order_id),
 ADD CONSTRAINT fk_order_item_product FOREIGN KEY (product_id) REFERENCES products(product_id);
 
-ALTER TABLE transactions
-ADD CONSTRAINT fk_transaction_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
-
 ALTER TABLE shopping_cart
 ADD CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(user_id);
 
