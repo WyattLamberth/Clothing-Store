@@ -184,6 +184,7 @@ router.put('/products/:productId', upload.single('image'), async (req, res) => {
 router.delete('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
   try {
+    await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
     
     // First check if the product exists
