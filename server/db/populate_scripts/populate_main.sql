@@ -118,7 +118,7 @@ CREATE TABLE returns (
   user_id INT,
   return_date DATE NOT NULL,
   return_status VARCHAR(20) NOT NULL,
-  CHECK (return_status IN ('Pending', 'Approved', 'Completed', 'Rejected'))
+  CHECK (return_status IN ('Pending', 'Approved', 'Rejected'))
 );
 
 -- Return Items table
