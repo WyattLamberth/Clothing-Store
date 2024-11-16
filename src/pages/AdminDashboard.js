@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Package2, ShoppingCart, Tag, BarChart, Users, Shield, ActivitySquare, Settings } from 'lucide-react';
+import { Package2, ShoppingCart, Tag, BarChart, Users, ActivitySquare, Settings } from 'lucide-react';
 import InventoryManagement from '../components/InventoryManagement';
 import OrdersManagement from '../components/OrdersManagement';
 import DiscountsManagement from '../components/DiscountsManagement';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryReport from '../components/InventoryReport';
 import UserManagement from '../components/UserManagement';
+import ActivityLogs from '../components/ActivityLogs'; // Import ActivityLogs component
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
-  const [activeReport, setActiveReport] = useState("sales"); // Track active report
-  
+  const [activeReport, setActiveReport] = useState("sales");
+
   const sections = [
     { id: "users", label: "Users & Access", icon: Users },
     { id: "inventory", label: "Inventory", icon: Package2 },
@@ -24,12 +25,11 @@ const AdminDashboard = () => {
   const reports = [
     { id: "sales-analytics", label: "Sales Analytics" },
     { id: "inventory", label: "Inventory Health" },
-    // We'll add more reports here later
   ];
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header with User Info */}
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-gray-600">Manage your store, users, and system settings</p>
@@ -45,7 +45,7 @@ const AdminDashboard = () => {
                 onClick={() => {
                   setActiveTab(id);
                   if (id === "reports") {
-                    setActiveReport("sales"); // Default to sales report when clicking Reports tab
+                    setActiveReport("sales");
                   }
                 }}
                 className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm transition-colors
@@ -62,7 +62,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Reports Sub-Navigation (only show when reports tab is active) */}
+      {/* Reports Sub-Navigation */}
       {activeTab === "reports" && (
         <div className="mb-6">
           <div className="bg-gray-100 rounded-lg p-2 flex gap-2">
@@ -95,12 +95,7 @@ const AdminDashboard = () => {
             {activeReport === "inventory" && <InventoryReport />}
           </>
         )}
-        {activeTab === "activity" && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Activity Logs</h2>
-            <p className="text-gray-600">System activity logs will be displayed here</p>
-          </div>
-        )}
+        {activeTab === "activity" && <ActivityLogs />}
         {activeTab === "settings" && (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">System Settings</h2>
