@@ -310,6 +310,125 @@ router.get('/order_items/:order_id', async (req, res) => {
   }
 });
 
+router.post('/returns', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    
+    const user_id = req.user.user_id;
+    const { order_id, items } = req.body;
+
+    console.log('Received request:', { user_id, order_id, items });
+
+    // Input validation
+    if (!order_id || !items || !Array.isArray(items) || items.length === 0) {
+      console.log('Failed initial validation:', { order_id, items });
+      throw new Error('Invalid request data. Please provide order_id and items array.');
+    }
+
+    // Validate that the order exists and belongs to the user
+    const [orderCheck] = await connection.execute(
+      `SELECT o.* 
+       FROM orders o 
+       WHERE o.order_id = ? AND o.user_id = ?`,
+      [order_id, user_id]
+    );
+
+    console.log('Order check result:', orderCheck);
+
+    if (orderCheck.length === 0) {
+      throw new Error('Order not found or unauthorized');
+    }
+
+    // Validate order is in a returnable state
+    if (orderCheck[0].order_status !== 'Delivered') {
+      throw new Error('Only delivered orders can be returned');
+    }
+
+    // Check for existing returns
+    const [existingReturns] = await connection.execute(
+      'SELECT * FROM returns WHERE order_id = ? AND return_status != ?',
+      [order_id, 'Rejected']
+    );
+
+    console.log('Existing returns check:', existingReturns);
+
+    if (existingReturns.length > 0) {
+      throw new Error('A return request already exists for this order');
+    }
+
+    // Create the return record
+    const [returnResult] = await connection.execute(
+      `INSERT INTO returns (
+        order_id, 
+        user_id, 
+        return_date, 
+        return_status, 
+        approval
+      ) VALUES (?, ?, CURRENT_DATE, ?, FALSE)`,
+      [order_id, user_id, 'Pending']
+    );
+
+    const return_id = returnResult.insertId;
+    console.log('Created return record:', { return_id });
+
+    // Process each return item
+    for (const item of items) {
+      console.log('Processing item:', item);
+
+      // Verify order item exists and belongs to this order
+      const [orderItemCheck] = await connection.execute(
+        `SELECT oi.*, p.product_id 
+         FROM order_items oi
+         JOIN products p ON oi.product_id = p.product_id
+         WHERE oi.order_item_id = ? AND oi.order_id = ?`,
+        [item.order_item_id, order_id]
+      );
+
+      console.log('Order item check result:', orderItemCheck);
+
+      if (orderItemCheck.length === 0) {
+        throw new Error(`Order item ${item.order_item_id} not found or does not belong to this order`);
+      }
+
+      // Check if quantity being returned doesn't exceed original order quantity
+      if (item.quantity > orderItemCheck[0].quantity) {
+        throw new Error(`Cannot return more items than originally ordered (Order Item ID: ${item.order_item_id})`);
+      }
+
+      // Insert return item
+      await connection.execute(
+        `INSERT INTO return_items (
+          return_id, 
+          product_id, 
+          quantity
+        ) VALUES (?, ?, ?)`,
+        [return_id, orderItemCheck[0].product_id, item.quantity]
+      );
+
+      console.log('Inserted return item');
+    }
+
+    await connection.commit();
+    
+    res.status(201).json({ 
+      message: 'Return request created successfully',
+      return_id: return_id,
+      status: 'Pending'
+    });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error processing return:', error);
+    console.error('Stack trace:', error.stack);
+    res.status(400).json({ 
+      error: error.message || 'Failed to create return request'
+    });
+  } finally {
+    connection.release();
+  }
+});
+
 // Get all returns for the logged-in user
 router.get('/customer/returns', async (req, res) => {
   const connection = await pool.getConnection();
@@ -384,7 +503,6 @@ router.get('/customer/returns', async (req, res) => {
     connection.release();
   }
 });
-
 
 // Get specific return details
 router.get('/customer/returns/:returnId', async (req, res) => {
