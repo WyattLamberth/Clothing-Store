@@ -8,10 +8,12 @@ import InventoryReport from '../components/InventoryReport';
 import ReturnsManagement from '../components/ReturnsManagement';
 import UserManagement from '../components/UserManagement';
 import CustomerAnalytics from '../components/CustomerAnalytics';
+import ActivityLogs from '../components/ActivityLogs';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("users");
   const [activeReport, setActiveReport] = useState("sales"); // Track active report
+
 
   const sections = [
     { id: "users", label: "Users & Access", icon: Users },
@@ -31,7 +33,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header with User Info */}
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-gray-600">Manage your store, users, and system settings</p>
@@ -47,7 +49,7 @@ const AdminDashboard = () => {
                 onClick={() => {
                   setActiveTab(id);
                   if (id === "reports") {
-                    setActiveReport("sales"); // Default to sales report when clicking Reports tab
+                    setActiveReport("sales");
                   }
                 }}
                 className={`flex items-center gap-2 py-4 px-4 border-b-2 font-medium text-sm transition-colors
@@ -64,7 +66,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Reports Sub-Navigation (only show when reports tab is active) */}
+      {/* Reports Sub-Navigation */}
       {activeTab === "reports" && (
         <div className="mb-6">
           <div className="bg-gray-100 rounded-lg p-2 flex gap-2">
@@ -99,12 +101,7 @@ const AdminDashboard = () => {
             {activeReport === "customer-analytics" && <CustomerAnalytics />}
           </>
         )}
-        {activeTab === "activity" && (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Activity Logs</h2>
-            <p className="text-gray-600">System activity logs will be displayed here</p>
-          </div>
-        )}
+        {activeTab === "activity" && <ActivityLogs />}
         {activeTab === "settings" && (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">System Settings</h2>

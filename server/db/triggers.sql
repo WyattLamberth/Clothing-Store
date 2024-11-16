@@ -37,8 +37,13 @@ CREATE TRIGGER log_user_action_update_product
 AFTER UPDATE ON products
 FOR EACH ROW
 BEGIN
-    INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
-    VALUES ('UPDATE', NOW(), 'products', @current_user_id);
+	IF @current_user_id IS NULL THEN
+		INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+		VALUES ('SYSTEM TRIGGER', NOW(), 'products', @current_user_id);
+    ELSE
+		INSERT INTO activity_logs (action, timestamp, entity_affected, user_id)
+		VALUES ('UPDATE', NOW(), 'products', @current_user_id);
+    END IF;
 END$$
 
 -- Trigger for DELETE action on products table
