@@ -73,7 +73,7 @@ CREATE TABLE orders (
   order_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
   shipping_address_id INT,
-  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
+  order_status ENUM('Pending', 'Shipped', 'Delivered', 'RETURNED') NOT NULL,
   order_date DATE NOT NULL,
   shipping_cost DECIMAL(10,2) DEFAULT 0.00,
   payment_method VARCHAR(20) NOT NULL,
