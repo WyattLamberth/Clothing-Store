@@ -392,13 +392,6 @@ BEGIN
         SET total_amount = order_total + shipping_cost 
         WHERE order_id = current_order_id;
         
-        -- Create transaction record
-        INSERT INTO transactions (
-            order_id,
-            transaction_date,
-            total_amount,
-            payment_status
-        )
         VALUES (
             current_order_id,
             (SELECT order_date FROM orders WHERE order_id = current_order_id),
