@@ -723,7 +723,6 @@ router.post('/discount', async (req, res) => {
   }
 });
 
-
 // Get all discounts API
 router.get('/all_discounts', async (req, res) => {
   const connection = await pool.getConnection();

@@ -422,6 +422,64 @@ router.get('/users/:userId/orders',
     }
   });
 
+  // Order Item Management
+// Post
+router.post('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const { order_id, product_id, quantity, unit_price, total_item_price } = req.body;
+    const OrderItemsQuery = 'INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_item_price) VALUES (?, ?, ?, ?, ?)';
+    const [OrderItemsResult] = await connection.execute(OrderItemsQuery, [order_id, product_id, quantity, unit_price, total_item_price]);
+    const order_item_id = OrderItemsResult.insertId;
+    await connection.commit();
+
+    res.status(201).json({ message: 'Order item created successfully', order_item_id: order_item_id });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error creating order:', error);
+    res.status(400).json({ error: 'Error creating order item' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get all order items
+router.get('/order_items', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItems] = await connection.execute(`
+      SELECT oi.*, p.category_id
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+    `);
+    res.status(200).json(orderItems);
+  } catch (error) {
+    console.error('Error fetching order items:', error);
+    res.status(500).json({ error: 'Failed to fetch order items' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Get order item via order item ID
+router.get('/order_items/:order_item_id', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const [orderItem] = await connection.execute(
+      'SELECT * FROM order_items WHERE order_item_id = ?',
+      [req.params.order_item_id]
+    );
+    if (orderItem.length === 0) return res.status(404).json({ error: 'Order item not found' });
+    res.status(200).json(orderItem[0]);
+  } catch (error) {
+    console.error('Error fetching order item:', error);
+    res.status(500).json({ error: 'Failed to fetch order item' });
+  } finally {
+    connection.release();
+  }
+});
+
 router.post('/payment', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -1439,6 +1497,33 @@ router.put('/notifications/:id/read', authMiddleware.customerOnly, async (req, r
     res.status(500).json({ error: 'Failed to mark notification as read' });
   }
 });
+
+router.get('/active_discounts', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    // Query to get all active discounts
+    const discountsQuery = `
+      SELECT d.*, s.event_name, s.start_date, s.end_date, s.product_id, s.category_id
+      FROM discounts d
+      JOIN sale_events s ON d.sale_event_id = s.sale_event_id
+      WHERE CURDATE() BETWEEN s.start_date AND s.end_date
+    `;
+
+    const [discountsResult] = await connection.execute(discountsQuery);
+
+    if (discountsResult.length === 0) {
+      return res.status(404).json({ message: 'No active discounts found.' });
+    }
+
+    res.status(200).json(discountsResult);
+  } catch (error) {
+    console.error('Error retrieving discounts:', error);
+    res.status(500).json({ error: 'Error retrieving discounts' });
+  } finally {
+    connection.release();
+  }
+});
+
 
 
 module.exports = router;
