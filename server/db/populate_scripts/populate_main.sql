@@ -227,39 +227,6 @@ INSERT INTO roles (role_id, role_name) VALUES
 (2, 'Employee'),
 (3, 'Admin');
 
--- Admin Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3, 3001),
-(3, 3002),
-(3, 3003),
-(3, 3004),
-(3, 3005),
-(3, 3006),
-(3, 3007),
-(3, 3008),
-(3, 3009),
-(3, 3010);
-
--- Employee Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(2, 2001),
-(2, 2002),
-(2, 2003),
-(2, 2004),
-(2, 2005),
-(2, 2006),
-(2, 2007);
-
--- Customer Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(1, 1001),
-(1, 1002),
-(1, 1003),
-(1, 1004),
-(1, 1005),
-(1, 1006),
-(1, 1007);
-
 DELIMITER //
 
 -- Procedure to populate categories
