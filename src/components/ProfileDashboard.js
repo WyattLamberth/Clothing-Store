@@ -18,6 +18,7 @@ const ProfileDashboard = () => {
   const [expandedOrders, setExpandedOrders] = useState({});
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [returnConfirmation, setReturnConfirmation] = useState(null); 
   const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
   const [showCardForm, setShowCardForm] = useState(false);
@@ -227,6 +228,11 @@ const ProfileDashboard = () => {
 
   // Add this handler for successful returns
   const handleReturnSuccess = () => {
+    setReturnConfirmation({
+      orderId: selectedOrder.order_id,
+      returnDate: new Date().toISOString().split("T")[0], // Today's date
+      refundedAmount: selectedOrder.returned_amount || 0, // Replace with actual amount if available
+    });
     // Refresh orders or show success message
     setShowReturnForm(false);
     setSelectedOrder(null);
@@ -824,6 +830,30 @@ const ProfileDashboard = () => {
           onSuccess={handleReturnSuccess}
         />
       )}
+
+      {returnConfirmation && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md text-center shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4">Return Confirmation</h2>
+            <p>Thank you for your return request. </p>
+            <div className="mt-4">
+              <p>
+                <strong>Order ID:</strong> #{returnConfirmation.orderId}
+              </p>
+              <p>
+                <strong>Return Date:</strong> {returnConfirmation.returnDate}
+              </p>
+            </div>
+            <button
+              onClick={() => setReturnConfirmation(null)}
+              className="mt-6 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
