@@ -971,6 +971,12 @@ router.delete('/sale-event/:sale_event_id', async (req, res) => {
   }
 });
 
-
-
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const [logs] = await pool.query('SELECT * FROM activity_logs ORDER BY log_id ASC');
+    res.status(200).json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching activity logs' });
+  }
+});
 module.exports = router;
