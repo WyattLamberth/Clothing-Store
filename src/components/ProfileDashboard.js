@@ -19,6 +19,8 @@ const ProfileDashboard = () => {
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState('All'); // State for order status filter
+  const [orderDateFilter, setOrderDateFilter] = useState({ start: '', end: '' });
+  const [orderAmountFilter, setOrderAmountFilter] = useState({ min: '', max: '' });
   const [returnConfirmation, setReturnConfirmation] = useState(null); 
   const [orderItems, setOrderItems] = useState({});
   const [cards, setCards] = useState([]);
@@ -126,10 +128,23 @@ const ProfileDashboard = () => {
     setOrderStatusFilter(e.target.value);
   };
 
-  const filteredOrders =
-  orderStatusFilter === 'All'
-    ? orders
-    : orders.filter((order) => order.order_status === orderStatusFilter);
+  const handleDateFilterChange = (e) => {
+    const { name, value } = e.target;
+    setOrderDateFilter((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleAmountFilterChange = (e) => {
+    const { name, value } = e.target;
+    setOrderAmountFilter((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -324,6 +339,38 @@ const ProfileDashboard = () => {
     setSelectedOrder(order);
     setShowReturnForm(true);
   };
+ 
+  const filteredOrders = orders.filter((order) => {
+    // Filter by status
+    if (orderStatusFilter !== 'All' && order.order_status !== orderStatusFilter) {
+      return false;
+    }
+  
+    // Filter by date range
+    if (orderDateFilter.start || orderDateFilter.end) {
+      const orderDate = new Date(order.order_date);
+      const startDate = orderDateFilter.start ? new Date(orderDateFilter.start) : null;
+      const endDate = orderDateFilter.end ? new Date(orderDateFilter.end) : null;
+  
+      if ((startDate && orderDate < startDate) || (endDate && orderDate > endDate)) {
+        return false;
+      }
+    }
+  
+    // Filter by amount range
+    if (orderAmountFilter.min || orderAmountFilter.max) {
+      const amount = parseFloat(order.total_amount);
+      const minAmount = orderAmountFilter.min ? parseFloat(orderAmountFilter.min) : null;
+      const maxAmount = orderAmountFilter.max ? parseFloat(orderAmountFilter.max) : null;
+  
+      if ((minAmount && amount < minAmount) || (maxAmount && amount > maxAmount)) {
+        return false;
+      }
+    }
+  
+    return true;
+  });
+  
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -751,97 +798,164 @@ const ProfileDashboard = () => {
           </div>
         </div>
       ) : (
-        <div className="orders-list grid grid-cols-1 gap-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Your Orders</h2>
-            <select
-              value={orderStatusFilter}
-              onChange={handleStatusFilterChange}
-              className="p-2 border rounded"
-            >
-              <option value="All">All</option>
-              <option value="Pending">Pending</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="RETURNED">RETURNED</option>
-            </select>
-          </div>
-          {filteredOrders.length === 0 ? (
-            <p>No orders found for the selected status.</p>
-          ) : (
-            filteredOrders.map((order) => (
-              <div
-                key={order.order_id}
-                className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => toggleOrderExpansion(order.order_id)}
-              >
-                <div className="flex justify-between items-center">
-                  <div className="flex-grow">
-                    <div className="text-gray-700 font-semibold">
-                      Status: {order.order_status || 'Unknown'}
-                    </div>
-                    <div className="text-gray-500">
-                      Order Date: {new Date(order.order_date).toLocaleDateString()}
-                    </div>
-                    <div className="text-gray-900 font-bold mt-2">
-                      Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
-                    </div>
+          <div className="orders-list grid grid-cols-1 gap-4">
+            <div className="flex flex-col space-y-4 mb-4">
+              <h2 className="text-xl font-semibold">Your Orders</h2>
+
+              {/* Filters */}
+              <div className="flex flex-wrap justify-between items-center gap-4">
+                {/* Status Filter */}
+                <select
+                  value={orderStatusFilter}
+                  onChange={handleStatusFilterChange}
+                  className="p-2 border rounded"
+                >
+                  <option value="All">All</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="RETURNED">RETURNED</option>
+                </select>
+
+                {/* Date Filter */}
+                <div className="flex space-x-4 items-center">
+                  <div className="flex flex-col">
+                    <label htmlFor="start-date" className="text-sm font-medium text-gray-600">
+                      From
+                    </label>
+                    <input
+                      id="start-date"
+                      type="date"
+                      name="start"
+                      value={orderDateFilter.start}
+                      onChange={handleDateFilterChange}
+                      className="p-2 border rounded"
+                      placeholder="Start Date"
+                    />
                   </div>
-                  {/* Add chevron indicator that rotates when expanded */}
-                  <div className="flex items-center text-gray-500">
-                    <div className="mr-2">View Details</div>
-                    <svg
-                      className={`w-6 h-6 transform transition-transform ${
-                        expandedOrders[order.order_id] ? 'rotate-180' : ''
-                      }`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
+                  <div className="flex flex-col">
+                    <label htmlFor="end-date" className="text-sm font-medium text-gray-600">
+                      To
+                    </label>
+                    <input
+                      id="end-date"
+                      type="date"
+                      name="end"
+                      value={orderDateFilter.end}
+                      onChange={handleDateFilterChange}
+                      className="p-2 border rounded"
+                      placeholder="End Date"
+                    />
                   </div>
                 </div>
 
-                {/* Expanded order items */}
-                {expandedOrders[order.order_id] && orderItems[order.order_id] && Array.isArray(orderItems[order.order_id]) && (
-                  <div className="order-items mt-4">
-                    <div className="border-t pt-4 mt-4">
-                      <h3 className="font-semibold mb-3">Order Items</h3>
-                      {orderItems[order.order_id].map((item) => (
-                        <div key={item.order_item_id} className="flex justify-between p-2 border-b">
-                          <div className="flex items-center space-x-4">
-                            <img src={item.image_path} alt={item.product_name} className="w-16 h-16 object-cover rounded" />
-                            <span>{item.product_name}</span>
-                          </div>
-                          <span>Quantity: {item.quantity}</span>
-                          <span>Price: ${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
-                        </div>
-                      ))}
-                      {order.order_status === 'Delivered' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReturnRequest(order);
-                          }}
-                          className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
-                        >
-                          Request Return
-                        </button>
-                      )}
+
+                {/* Amount Filter */}
+                <div className="flex space-x-2">
+                  <input
+                    type="number"
+                    name="min"
+                    value={orderAmountFilter.min}
+                    onChange={handleAmountFilterChange}
+                    placeholder="Min Amount"
+                    className="p-2 border rounded w-24"
+                  />
+                  <input
+                    type="number"
+                    name="max"
+                    value={orderAmountFilter.max}
+                    onChange={handleAmountFilterChange}
+                    placeholder="Max Amount"
+                    className="p-2 border rounded w-24"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Filtered Orders */}
+            {filteredOrders.length === 0 ? (
+              <p>No orders found for the selected filters.</p>
+            ) : (
+              filteredOrders.map((order) => (
+                <div
+                  key={order.order_id}
+                  className="order-item bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => toggleOrderExpansion(order.order_id)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex-grow">
+                      <div className="text-gray-700 font-semibold">
+                        Status: {order.order_status || 'Unknown'}
+                      </div>
+                      <div className="text-gray-500">
+                        Order Date: {new Date(order.order_date).toLocaleDateString()}
+                      </div>
+                      <div className="text-gray-900 font-bold mt-2">
+                        Total Amount: ${parseFloat(order.total_amount).toFixed(2)}
+                      </div>
+                    </div>
+                    {/* Chevron for expansion */}
+                    <div className="flex items-center text-gray-500">
+                      <div className="mr-2">View Details</div>
+                      <svg
+                        className={`w-6 h-6 transform transition-transform ${
+                          expandedOrders[order.order_id] ? 'rotate-180' : ''
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Expanded Order Items */}
+                  {expandedOrders[order.order_id] &&
+                    orderItems[order.order_id] &&
+                    Array.isArray(orderItems[order.order_id]) && (
+                      <div className="order-items mt-4">
+                        <div className="border-t pt-4 mt-4">
+                          <h3 className="font-semibold mb-3">Order Items</h3>
+                          {orderItems[order.order_id].map((item) => (
+                            <div key={item.order_item_id} className="flex justify-between p-2 border-b">
+                              <div className="flex items-center space-x-4">
+                                <img
+                                  src={item.image_path}
+                                  alt={item.product_name}
+                                  className="w-16 h-16 object-cover rounded"
+                                />
+                                <span>{item.product_name}</span>
+                              </div>
+                              <span>Quantity: {item.quantity}</span>
+                              <span>Price: ${parseFloat(item.unit_price * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                          {order.order_status === 'Delivered' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReturnRequest(order);
+                              }}
+                              className="mt-4 w-full text-blue-500 bg-gray-100 p-2 rounded hover:bg-blue-100"
+                            >
+                              Request Return
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                </div>
             ))
           )}
         </div>
+
       )}
       {showReturnForm && selectedOrder && (
         <ReturnRequestForm
