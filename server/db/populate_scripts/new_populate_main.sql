@@ -40,7 +40,7 @@ CREATE TABLE payment (
   cardholder_name VARCHAR(100) NOT NULL,
   card_number CHAR(16) UNIQUE,
   expiration_date CHAR(5) NOT NULL,
-  cvv CHAR(3) UNIQUE,
+  cvv CHAR(4),
   user_id INT,
   billing_address_id INT
 );

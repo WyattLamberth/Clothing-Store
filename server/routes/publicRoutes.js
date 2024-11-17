@@ -18,16 +18,32 @@ router.post('/register', async (req, res) => {
       line_1, line_2, city, state, zip
     } = req.body;
 
+    // Insert address
     const addressQuery = 'INSERT INTO address (line_1, line_2, city, state, zip) VALUES (?, ?, ?, ?, ?)';
     const [addressResult] = await connection.execute(addressQuery, [line_1, line_2, city, state, zip]);
     const address_id = addressResult.insertId;
 
+    // Hash password
     const password_hash = await bcrypt.hash(password, 10);
-    const userQuery = 'INSERT INTO users (first_name, last_name, username, email, phone_number, password_hash, role_id, address_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    const [userResult] = await connection.execute(userQuery, [first_name, last_name, username, email, phone_number, password_hash, role_id, address_id]);
+
+    // Updated user query to include active field
+    const userQuery = `
+      INSERT INTO users (
+        first_name, last_name, username, email, phone_number, 
+        password_hash, role_id, address_id, active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+    `;
+    
+    const [userResult] = await connection.execute(userQuery, [
+      first_name, last_name, username, email, phone_number,
+      password_hash, role_id || 1, address_id
+    ]);
 
     await connection.commit();
-    res.status(201).json({ message: 'User registered successfully', userId: userResult.insertId });
+    res.status(201).json({ 
+      message: 'User registered successfully', 
+      userId: userResult.insertId
+    });
   } catch (error) {
     await connection.rollback();
     console.error('Registration error:', error);
@@ -42,12 +58,15 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('Login attempt for email:', email);
 
-    const query = 'SELECT * FROM users WHERE email = ?';
+    // Updated query to check active status
+    const query = 'SELECT * FROM users WHERE email = ? AND active = TRUE';
     const [rows] = await pool.execute(query, [email]);
 
     if (rows.length === 0) {
-      console.log('No user found with email:', email);
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log('No active user found with email:', email);
+      return res.status(401).json({ 
+        error: 'Invalid credentials or account has been deactivated'
+      });
     }
 
     const user = rows[0];
@@ -66,7 +85,12 @@ router.post('/login', async (req, res) => {
     );
 
     console.log('Login successful for user:', email);
-    res.json({ token, userId: user.user_id, role: user.role_id });
+    res.json({ 
+      token, 
+      userId: user.user_id, 
+      role: user.role_id,
+      active: user.active // Include active status in response
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ 
@@ -212,7 +236,6 @@ router.get('/categories/name/:name/products', async (req, res) => {
     res.status(500).json({ message: 'An error occurred while fetching.' });
   }
 });
-
 
 router.get('/filter/:name/:sex/:priceMin/:priceMax/products/LowtoHigh', async (req, res) => {
   try {

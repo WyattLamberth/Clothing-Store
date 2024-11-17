@@ -9,32 +9,26 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [userId, setUserId] = useState(() => localStorage.getItem('userId') || '');
 
-  // Add the new mergeGuestCart helper function
   const mergeGuestCart = async () => {
     try {
-      // Get guest cart from localStorage
       const guestCart = JSON.parse(localStorage.getItem('cart') || '[]');
       
       if (guestCart.length > 0) {
         console.log('Merging guest cart:', guestCart);
   
-        // First get the existing cart from database
         try {
           const existingCartResponse = await api.get('/shopping_cart');
           const existingCart = existingCartResponse.data.cartItems || [];
   
-          // Merge the carts
           for (const guestItem of guestCart) {
             const existingItem = existingCart.find(item => item.product_id === guestItem.product_id);
             
             if (existingItem) {
-              // If item exists, update quantity
               await api.put('/cart-items/update', {
                 product_id: guestItem.product_id,
                 quantity: existingItem.quantity + guestItem.quantity
               });
             } else {
-              // If item is new, add it
               await api.post('/cart-items/add', {
                 product_id: guestItem.product_id,
                 quantity: guestItem.quantity,
@@ -43,7 +37,6 @@ export const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           if (error.response?.status === 404) {
-            // If no cart exists, create one and add all items
             try {
               await api.post('/shopping_cart/create');
               for (const item of guestCart) {
@@ -58,7 +51,6 @@ export const AuthProvider = ({ children }) => {
           }
         }
   
-        // Clear guest cart after successful merge
         localStorage.setItem('cart', '[]');
         console.log('Guest cart merged successfully');
       }
@@ -72,6 +64,11 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/login', { email, password });
       const data = response.data;
 
+      // If user is not active, prevent login
+      if (!data.active) {
+        throw new Error('This account has been deactivated. Please contact support.');
+      }
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
       localStorage.setItem('userId', data.userId);
@@ -81,13 +78,12 @@ export const AuthProvider = ({ children }) => {
       setUserId(data.userId);
       setIsAuthenticated(true);
 
-      // Add cart merging after successful login
       await mergeGuestCart();
 
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      throw error; // Propagate error to login component
     }
   };
 
@@ -105,6 +101,7 @@ export const AuthProvider = ({ children }) => {
           email: userData.email,
           phone_number: userData.phone_number,
           password: userData.password,
+          active: true, // Default to active for new registrations
           role_id: userData.role_id || 1,
           line_1: userData.line_1,
           line_2: userData.line_2 || null,
@@ -115,7 +112,6 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        // Add automatic login and cart merging after successful registration
         const loginSuccess = await login(userData.email, userData.password);
         if (loginSuccess) {
           return true;
@@ -145,18 +141,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkAuth = () => {
-    console.log('Checking auth - before:', {
-      isAuthenticated,
-      role,
-      token,
-      userId,
-      localStorage: {
-        token: localStorage.getItem('token'),
-        role: localStorage.getItem('role'),
-        userId: localStorage.getItem('userId')
-      }
-    });
-
     const storedToken = localStorage.getItem('token');
     const storedUserId = localStorage.getItem('userId');
 
@@ -166,22 +150,8 @@ export const AuthProvider = ({ children }) => {
       setRole(localStorage.getItem('role') || '');
       setUserId(storedUserId || '');
     }
-
-    console.log('Checking auth - after:', {
-      isAuthenticated,
-      role,
-      token,
-      userId,
-      localStorage: {
-        token: localStorage.getItem('token'),
-        role: localStorage.getItem('role'),
-        userId: localStorage.getItem('userId')
-      }
-    });
   };
 
-  // Check auth status when component mounts
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAuth();
   }, []);

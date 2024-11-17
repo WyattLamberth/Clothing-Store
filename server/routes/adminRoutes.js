@@ -20,8 +20,8 @@ const storage = multer.diskStorage({
     cb(null, file.filename);
   }
 });
-const upload = multer({ storage: storage });
 
+const upload = multer({ storage: storage });
 
 // Apply adminOnly middleware to all routes
 router.use(authMiddleware.adminOnly);
@@ -260,6 +260,58 @@ router.delete('/users/:userId', async (req, res) => {
     connection.release();
   }
 }); 
+
+// Optional: Add route to deactivate user (Admin only)
+router.put('/users/:userId/deactivate', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.execute(
+      'UPDATE users SET active = FALSE WHERE user_id = ?',
+      [req.params.userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await connection.commit();
+    res.json({ message: 'User account deactivated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error deactivating user:', error);
+    res.status(500).json({ error: 'Failed to deactivate user' });
+  } finally {
+    connection.release();
+  }
+});
+
+// Optional: Add route to reactivate user (Admin only)
+router.put('/users/:userId/activate', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const [result] = await connection.execute(
+      'UPDATE users SET active = TRUE WHERE user_id = ?',
+      [req.params.userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    await connection.commit();
+    res.json({ message: 'User account activated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error activating user:', error);
+    res.status(500).json({ error: 'Failed to activate user' });
+  } finally {
+    connection.release();
+  }
+});
 
 // ADDRESS MANAGEMENT 
 
