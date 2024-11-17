@@ -30,7 +30,7 @@ const EditProductModal = ({ product, onClose, onSave }) => {
         color: product.color || '',
         brand: product.brand || '',
         category_id: product.category_id || '',
-        image: null
+        image: product.image_path || ''
       });
       setImagePreview(product.image_path ? `/images/${product.image_path}` : '');
     }
@@ -210,14 +210,21 @@ const EditProductModal = ({ product, onClose, onSave }) => {
             {/* Image Preview */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Product Image</label>
-              {imagePreview && <img src={imagePreview} alt="Image Preview" className="mt-2 w-32 h-32 object-cover" />}
-              <input
-                type="file"
-                name="image"
-                onChange={handleFileChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2"
-              />
+              <div className="mt-2">
+                <input
+                  type="file"
+                  name="image"
+                  onChange={handleFileChange}
+                  className="block w-full rounded-md border border-gray-300 shadow-sm p-2"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {formData.image instanceof File
+                    ? 'New image selected'
+                    : `Current Image Path: ${product.image_path || 'No image uploaded'}`}
+                </p>
+              </div>
             </div>
+
 
             <div className="flex justify-end space-x-3 mt-6">
               <button

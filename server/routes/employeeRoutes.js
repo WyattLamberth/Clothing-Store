@@ -136,50 +136,62 @@ router.post('/products', upload.single('image'), async (req, res) => {
 router.put('/products/:productId', upload.single('image'), async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    // Set current user for auditing, if required
+    // Set current user for auditing (if required)
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     await connection.beginTransaction();
+
     // Destructure and sanitize incoming data
     const { 
       product_name, category_id, description, price, 
       stock_quantity, reorder_threshold, size, color, brand 
     } = req.body;
-    let image_path = req.file ? path.basename(req.file.path) : '';
-    let updateProductQuery;
-    let queryParams = [
-      product_name, category_id, description, price, 
-      stock_quantity, reorder_threshold, size, color, brand,
-      req.params.productId
-    ];
-    // Update query with image update
-    updateProductQuery = `
+
+    const productId = req.params.productId;
+    const image_path = req.file ? path.basename(req.file.path) : null;
+
+    // Prepare base update query and parameters
+    let updateProductQuery = `
       UPDATE products 
       SET product_name = ?, category_id = ?, description = ?, 
           price = ?, stock_quantity = ?, reorder_threshold = ?, 
-          size = ?, color = ?, brand = ?, image_path = ?
-      WHERE product_id = ?
+          size = ?, color = ?, brand = ?
     `;
-    queryParams.splice(-1, 0, image_path); // Insert image_path into query params
+    const queryParams = [
+      product_name, category_id, description, price, 
+      stock_quantity, reorder_threshold, size, color, brand
+    ];
+
+    // Add image_path to the query only if a new image is uploaded
+    if (image_path) {
+      updateProductQuery += `, image_path = ?`;
+      queryParams.push(image_path);
+    }
+
+    // Add WHERE clause
+    updateProductQuery += ` WHERE product_id = ?`;
+    queryParams.push(productId);
+
     // Execute the update query
     const [result] = await connection.execute(updateProductQuery, queryParams);
+
     // Commit if the update was successful
-    await connection.commit();
     if (result.affectedRows === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: 'Product not found' });
     }
+
+    await connection.commit();
     res.status(200).json({ message: 'Product updated successfully' });
   } catch (error) {
+    // Rollback on error and respond with a single error message
     await connection.rollback();
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Error deleting product' });
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Error deleting product' });
-    console.error('Error updating product:', error); // Log error for debugging
-    res.status(400).json({ error: 'Error updating product' });
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product' });
   } finally {
     connection.release();
   }
 });
+
 
 router.delete('/products/:productId', async (req, res) => {
   const connection = await pool.getConnection();
