@@ -618,7 +618,7 @@ router.post('/payment', async (req, res) => {
     }
 
     // Validate card number format (16 digits)
-    if (!/^\d{16}$/.test(card_number)) {
+    if (!/^\d{15,16}$/.test(card_number)) {
       throw new Error('Invalid card number format');
     }
 
