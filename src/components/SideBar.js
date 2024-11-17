@@ -211,7 +211,7 @@ const SideBar = ({ selectedCategories, setSelectedCategories, selectedGender, se
 
                             {/* Max Price Slider */}
                             <div>
-                                <label className="block text-sm font-medium">Max Price</label>
+                                <label className="block text-sm font-medium mb-1">Max Price</label>
                                 <Range
                                     step={STEP}
                                     min={MIN}
