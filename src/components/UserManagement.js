@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, UserPlus, Mail, Phone, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, UserPlus, Mail, Phone, MapPin, Power } from 'lucide-react';
 import api from '../utils/api';
 
 const UserManagement = () => {
@@ -9,6 +9,7 @@ const UserManagement = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activatingUser, setActivatingUser] = useState(null);
     const [error, setError] = useState(null);
     const [stats, setStats] = useState({
         totalUsers: 0,
@@ -29,7 +30,7 @@ const UserManagement = () => {
             setLoading(true);
             const response = await api.get('/admin/users');
             const usersData = response.data;
-            
+
             // No need for Promise.all since the addresses are included
             setUsers(usersData);
             setStats({
@@ -103,7 +104,7 @@ const UserManagement = () => {
                 phone_number: formData.phone_number,
                 role_id: formData.role_id
             });
-    
+
             // If there's an address, update it
             if (formData.address_id) {
                 await api.put(`/admin/address/${formData.address_id}`, {
@@ -114,7 +115,7 @@ const UserManagement = () => {
                     zip: formData.zip
                 });
             }
-    
+
             fetchUsers();
             setShowEditModal(false);
             setSelectedUser(null);
@@ -124,6 +125,22 @@ const UserManagement = () => {
             console.error('Error updating user:', err);
         }
     };
+
+    const handleToggleActivation = async (userId, currentStatus) => {
+        try {
+            const endpoint = currentStatus ? 'deactivate' : 'activate';
+            await api.put(`/admin/users/${userId}/${endpoint}`);
+            fetchUsers(); // Refresh user list
+            setError(null);
+        } catch (err) {
+            setError(`Failed to ${currentStatus ? 'deactivate' : 'activate'} user. Please try again.`);
+            console.error('Error toggling user activation:', err);
+        } finally {
+            setActivatingUser(null);
+        }
+    };
+
+
 
     // Delete user
     const handleDelete = async (userId) => {
@@ -139,13 +156,19 @@ const UserManagement = () => {
         }
     };
 
+    // Update renderUserRow to include activation toggle
     const renderUserRow = (user) => (
-        <tr key={user.user_id}>
+        <tr key={user.user_id} className={!user.active ? 'bg-gray-50' : ''}>
             <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
                     <div>
                         <div className="text-sm font-medium text-gray-900">
                             {user.first_name} {user.last_name}
+                            {!user.active && (
+                                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Inactive
+                                </span>
+                            )}
                         </div>
                         <div className="text-sm text-gray-500">@{user.username}</div>
                     </div>
@@ -170,7 +193,7 @@ const UserManagement = () => {
                         {user.address.line_1}
                         {user.address.line_2 && `, ${user.address.line_2}`}
                         {user.address.city && `, ${user.address.city}`}
-                        {user.address.state && `, ${user.address.state}`} 
+                        {user.address.state && `, ${user.address.state}`}
                         {user.address.zip && ` ${user.address.zip}`}
                     </>
                 ) : (
@@ -194,6 +217,14 @@ const UserManagement = () => {
                     >
                         <Trash2 className="h-5 w-5" />
                     </button>
+                    <button
+                        onClick={() => handleToggleActivation(user.user_id, user.active)}
+                        disabled={activatingUser === user.user_id}
+                        className={`${user.active ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'
+                            }`}
+                    >
+                        <Power className="h-5 w-5" />
+                    </button>
                 </div>
             </td>
         </tr>
@@ -208,6 +239,7 @@ const UserManagement = () => {
             phone_number: initialData?.phone_number || '',
             role_id: initialData?.role_id || '1',
             password: '',
+            active: initialData?.active ?? true,
             address_id: initialData?.address_id || null,  // Add this line
             line_1: initialData?.address?.line_1 || '',
             line_2: initialData?.address?.line_2 || '',
@@ -239,6 +271,18 @@ const UserManagement = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Add Account Status field */}
+                            <div className="mt-4">
+                                <label className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.active}
+                                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-700">Account Active</span>
+                                </label>
+                            </div>
                             {/* Personal Information */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>

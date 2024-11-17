@@ -48,6 +48,7 @@ router.get('/users', async (req, res) => {
       username: user.username,
       email: user.email,
       phone_number: user.phone_number,
+      active: user.active,
       role_id: user.role_id,
       address_id: user.address_id,
       date_joined: user.date_joined,
