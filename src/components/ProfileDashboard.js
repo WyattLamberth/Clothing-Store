@@ -4,7 +4,6 @@ import { useAuth } from '../AuthContext';
 import api from '../utils/api';
 import { Link } from 'react-router-dom';
 import ReturnRequestForm from './ReturnRequestForm';
-import { set } from '@kitware/vtk.js/macros';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
