@@ -165,11 +165,18 @@ const Checkout = () => {
     // Validate expiration date (MM/YY format)
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiration_date)) {
       errors.expiration_date = 'Expiration date must be in MM/YY format.';
+    } else {
+      // Check if the card is expired
+      const [month, year] = expiration_date.split('/');
+      const expirationDate = new Date(`20${year}`, month - 1); // Convert MM/YY to a Date object
+      const currentDate = new Date();
+      if (expirationDate < currentDate) {
+        errors.expiration_date = 'This card has expired.';
+      }
     }
-  
     // Validate CVV (must be 3 digits)
-    if (!/^\d{3}$/.test(cvv)) {
-      errors.cvv = 'CVV must be 3 digits.';
+    if (!/^\d{3,4}$/.test(cvv)) {
+      errors.cvv = 'CVV must be 3-4 digits.';
     }
   
     // Validate billing address
@@ -228,7 +235,21 @@ const Checkout = () => {
       }));
     } catch (error) {
       console.error('Error adding payment method:', error);
-      setErrors((prevErrors) => ({ ...prevErrors, payment: { general: 'Failed to add payment method. Please try again.' } }));
+  
+      const serverMessage =
+        error.response && error.response.data && error.response.data.message
+          ? error.response.data.message
+          : 'This card number already exists. Please use a different card.';
+  
+      // Handle duplicate card error
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        payment: {
+          card_number: serverMessage.includes('Duplicate entry')
+            ? 'This card number already exists. Please use a different card.'
+            : serverMessage,
+        },
+      }));
     }
   };
   
