@@ -3,11 +3,13 @@ import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
 import SideBar from '../components/SideBar';
 import CartOverlay from '../components/CartOverlay';
+import SearchBar from '../components/SearchBar';
 import { useAuth } from '../AuthContext';
 
 const ShopPage = () => {
   const [categoriesName, setCategoriesName] = useState([]);
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [showOverlay, setShowOverlay] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cart, setCart] = useState([]);
@@ -22,6 +24,25 @@ const ShopPage = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedGender, setSelectedGender] = useState([]);
   const [priceRange, setPriceRange] = useState({ min: priceMin, max: priceMax });
+
+  const handleSearch = async (query) => {
+    try {
+      if (!query) {
+        setFilteredProducts(products); // Reset to all products when search query is empty
+        return;
+      }
+
+      const response = await api.get('/products/search', {
+        params: { query },
+      });
+
+      setFilteredProducts(response.data); // Update filtered products
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setFilteredProducts([]); // Reset filtered products on error
+    }
+  };
+
   useEffect(() => {
     const fetchCategoriesName = async () => {
       try {
@@ -58,6 +79,7 @@ const ShopPage = () => {
           response = await api.get(`/filter/${categoryName}/${sex}/${priceRange.min}/${priceRange.max}/products`);
         }
         setProducts(response.data);
+        setFilteredProducts(response.data);
       } catch (error) {
         console.error('Error fetching products:', error);
       }
@@ -140,9 +162,13 @@ const ShopPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto px-4 py-4">
+      {/* Search Bar */}
+      <div className="mb-6">
+        <SearchBar onSearch={handleSearch} />
+      </div>
       <h1 className="text-2xl font-bold mb-6"></h1>
-            {/* Sort Bar */}
+        {/* Sort Bar */}
         <div className="flex items-center justify-end">
           <label htmlFor="sort" className="font-medium mr-2">Sort by:</label>
           <select
@@ -173,12 +199,12 @@ const ShopPage = () => {
         </div>
       
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map(product => (
+          {(filteredProducts.length > 0 ? filteredProducts : products).map((product) => (
             <ProductCard
               key={product.product_id}
               product={product}
               onAddToCart={() => addToCart(product)}
-              isInCart={!!cart.find(item => item.product_id === product.product_id)}
+              isInCart={!!cart.find((item) => item.product_id === product.product_id)}
             />
           ))}
         </div>
