@@ -12,51 +12,46 @@ const ShoppingCart = ({ cartItems = [], onRemoveItem, onUpdateQuantity, isAuthen
     return sum + price * item.quantity;
   }, 0);
 
-  const fetchStock = async () => {
-    const stockPromises = cartItems.map(async (item) => {
-      try {
-        const response = await api.get(`/products/${item.product_id}`);
-        return { product_id: item.product_id, stock: response.data.stock_quantity };
-      } catch (error) {
-        console.error(`Failed to fetch stock for product_id ${item.product_id}:`, error);
-        return { product_id: item.product_id, stock: null };
-      }
-    });
-
-    const results = await Promise.all(stockPromises);
-    const stockData = results.reduce((acc, curr) => {
-      acc[curr.product_id] = curr.stock;
-      return acc;
-    }, {});
-
-    setStockInfo(stockData);
-  };
-
+  // Fetch stock only once when cart items change
   useEffect(() => {
     if (cartItems.length > 0) {
-      fetchStock(); // Initial fetch
-  
-      // Adjust quantities based on stock
-      cartItems.forEach((item) => {
-        const stock = stockInfo[item.product_id];
-        if (stock !== null && item.quantity > stock) {
-          onUpdateQuantity(item.product_id, stock); // Set quantity to stock if it's greater
-        }
-      });
-  
-      // Set up periodic stock updates
-      const intervalId = setInterval(fetchStock, 2000); // Update every 10 seconds
-  
-      // Clean up interval on unmount
-      return () => clearInterval(intervalId);
-    }
-  }, [cartItems, stockInfo]);
+      const fetchStock = async () => {
+        const stockPromises = cartItems.map(async (item) => {
+          try {
+            const response = await api.get(`/products/${item.product_id}`);
+            return { product_id: item.product_id, stock: response.data.stock_quantity };
+          } catch (error) {
+            console.error(`Failed to fetch stock for product_id ${item.product_id}:`, error);
+            return { product_id: item.product_id, stock: null };
+          }
+        });
 
+        const results = await Promise.all(stockPromises);
+        const stockData = results.reduce((acc, curr) => {
+          acc[curr.product_id] = curr.stock;
+          return acc;
+        }, {});
+
+        setStockInfo(stockData);
+      };
+
+      fetchStock();
+      
+      // Optionally, if you really need periodic updates, use a longer interval
+      // const intervalId = setInterval(fetchStock, 30000); // Every 30 seconds instead
+      // return () => clearInterval(intervalId);
+    }
+  }, [cartItems]); // Only depend on cartItems
+
+  // Adjust quantities once when stock info changes
   useEffect(() => {
     cartItems.forEach((item) => {
       const stock = stockInfo[item.product_id];
+      if (stock !== null && item.quantity > stock) {
+        onUpdateQuantity(item.product_id, stock);
+      }
     });
-  }, [cartItems, stockInfo]);
+  }, [stockInfo]); // Run only when stockInfo changes
 
   const handleCheckout = () => {
     if (isAuthenticated) {
