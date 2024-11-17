@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import api from '../utils/api';
 import { Link } from 'react-router-dom';
 import ReturnRequestForm from './ReturnRequestForm';
+import { set } from '@kitware/vtk.js/macros';
 
 const ProfileDashboard = () => {
   const { userId } = useAuth();
@@ -123,6 +124,8 @@ const ProfileDashboard = () => {
 
   const validatePaymentInfo = () => {
     const { cardholder_name, card_number, expiration_date, cvv, billing_address } = cardDetails;
+    
+    // Clear previous errors
     const validationErrors = {};
   
     // Validate each field
@@ -138,13 +141,13 @@ const ProfileDashboard = () => {
       // Check if expiration date is not expired
       const [month, year] = expiration_date.split('/');
       const currentDate = new Date();
-      const expirationDate = new Date(`20${year}`, month - 1); // Year is prefixed with "20" for full year
+      const expirationDate = new Date(`20${year}`, month - 1); // Full year from MM/YY
       if (expirationDate < currentDate) {
         validationErrors.expiration_date = 'Card has expired.';
       }
     }
-    if (!/^\d{3}$/.test(cvv)) {
-      validationErrors.cvv = 'CVV must be 3 digits.';
+    if (!/^\d{3,4}$/.test(cvv)) {
+      validationErrors.cvv = 'CVV must be 3-4 digits.';
     }
     if (!billing_address.line_1) {
       validationErrors['billing_address.line_1'] = 'Billing address line 1 is required.';
@@ -165,6 +168,7 @@ const ProfileDashboard = () => {
     // Return whether the form is valid
     return Object.keys(validationErrors).length === 0;
   };
+  
   
   
   
@@ -223,7 +227,7 @@ const ProfileDashboard = () => {
       const formatted = numbersOnly.slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
       setCardDetails(prev => ({ ...prev, [name]: formatted }));
     } else if (name === 'cvv') {
-      const numbersOnly = value.replace(/\D/g, '').slice(0, 3);
+      const numbersOnly = value.replace(/\D/g, '').slice(0, 4);
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
     } else if (['cardholder_name'].includes(name)) { // Ensure cardholder_name is handled
       setCardDetails((prev) => ({ ...prev, [name]: value }));
@@ -254,35 +258,39 @@ const ProfileDashboard = () => {
 
   const handleAddOrUpdateCard = async (e) => {
     e.preventDefault();
-    
-      if (!validatePaymentInfo()) {
-    return; // Stop if validation fails
-  }
+  
+    // Clear existing errors
+    setErrors({});
+  
+    if (!validatePaymentInfo()) {
+      return; // Stop if validation fails
+    }
+  
     try {
       if (isEditingCard) {
         await api.put(`/payment/${editCardId}`, {
           ...cardDetails,
-          user_id: userId
+          user_id: userId,
         });
         setUpdateSuccess('Payment method updated successfully');
       } else {
         const addressResponse = await api.post('/address', cardDetails.billing_address);
         const billing_address_id = addressResponse.data.address_id;
-
+  
         await api.post('/payment', {
           ...cardDetails,
           user_id: userId,
-          billing_address_id
+          billing_address_id,
         });
         setUpdateSuccess('Payment method added successfully');
       }
-
+  
       const response = await api.get(`/payment/user/${userId}`);
       setCards(response.data || []);
       setShowCardForm(false);
       setIsEditingCard(false);
       setEditCardId(null);
-
+  
       setCardDetails({
         cardholder_name: '',
         card_number: '',
@@ -294,13 +302,30 @@ const ProfileDashboard = () => {
           city: '',
           state: '',
           zip: '',
-        }
+        },
       });
+  
+      setErrors({}); // Clear errors after successful operation
     } catch (error) {
       console.error('Error adding or updating payment method:', error);
-      setError('Failed to add or update payment method');
+  
+      const serverMessage =
+        error.response && error.response.data && error.response.data.message
+          ? error.response.data.message
+          : 'This card is already in use. Please use a different card.';
+  
+      // Handle duplicate card error
+      setErrors((prev) => ({
+        ...prev,
+        card_number: serverMessage.includes('Duplicate entry')
+          ? 'This card number already exists. Please use a different card.'
+          : serverMessage,
+      }));
     }
   };
+  
+  
+  
 
   // Removed duplicate handleReturnRequest function
 
@@ -667,6 +692,7 @@ const ProfileDashboard = () => {
                   setShowCardForm(!showCardForm);
                   setIsEditingCard(false);
                   setEditCardId(null);
+                  setErrors({});
                   setCardDetails({
                     cardholder_name: '',
                     card_number: '',
@@ -742,7 +768,8 @@ const ProfileDashboard = () => {
                         name="cvv"
                         value={cardDetails.cvv}
                         onChange={handleInputChange}
-                        placeholder="123"
+                        maxLength={4} 
+                        placeholder="123/1234"
                         className={`w-full p-3 border rounded-lg focus:outline-none ${
                           errors.cvv ? 'border-red-500' : 'border-gray-300'
                         }`}
@@ -839,6 +866,20 @@ const ProfileDashboard = () => {
                       setShowCardForm(false);
                       setIsEditingCard(false);
                       setEditCardId(null);
+                      setErrors({});
+                      setCardDetails({
+                        cardholder_name: '',
+                        card_number: '',
+                        expiration_date: '',
+                        cvv: '',
+                        billing_address: {
+                          line_1: '',
+                          line_2: '',
+                          city: '',
+                          state: '',
+                          zip: '',
+                        },
+                      });
                     }}
                     className="py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
                   >
