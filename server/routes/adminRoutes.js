@@ -524,6 +524,15 @@ router.delete('/roles/:roleId/permissions/:permissionId', async (req, res) => {
 });
 
 // System Monitoring (Permission: 1003)
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const [logs] = await pool.query('SELECT * FROM activity_logs ORDER BY timestamp DESC');
+    res.status(200).json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching activity logs' });
+  }
+});
+
 router.get('/activity-logs/user/:userId', async (req, res) => {
   try {
     const [logs] = await pool.execute(
@@ -781,146 +790,6 @@ router.get('/reports/sales-analytics', async (req, res) => {
     res.status(500).json({
       message: 'Error generating sales report',
       error: error.message
-    });
-  } finally {
-    connection.release();
-  }
-});
-
-router.get('/reports/returns-analytics', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { timeRange, startDate, endDate } = req.query;
-
-    // Calculate return rates and refund analytics by customer segment
-    const [returnAnalytics] = await connection.execute(`
-      WITH CustomerSegments AS (
-        SELECT 
-          u.user_id,
-          CASE
-            WHEN COUNT(DISTINCT o.order_id) = 1 THEN 'New'
-            WHEN COUNT(DISTINCT o.order_id) BETWEEN 2 AND 3 THEN 'Returning'
-            ELSE 'Loyal'
-          END as customer_type,
-          COUNT(DISTINCT o.order_id) as total_orders,
-          SUM(o.total_amount) as total_spent
-        FROM users u
-        JOIN orders o ON u.user_id = o.user_id
-        WHERE o.order_date BETWEEN ? AND ?
-        GROUP BY u.user_id
-      ),
-      ReturnStats AS (
-        SELECT 
-          cs.user_id,
-          cs.customer_type,
-          cs.total_orders,
-          cs.total_spent,
-          COUNT(DISTINCT r.return_id) as return_count,
-          COUNT(DISTINCT ri.product_id) as returned_items,
-          ABS(COALESCE(SUM(ref.refund_amount), 0)) as total_refunded
-        FROM CustomerSegments cs
-        LEFT JOIN returns r ON cs.user_id = r.user_id
-        LEFT JOIN return_items ri ON r.return_id = ri.return_id
-        LEFT JOIN refunds ref ON r.return_id = ref.return_id
-        WHERE r.return_date BETWEEN ? AND ? OR r.return_date IS NULL
-        GROUP BY cs.user_id, cs.customer_type, cs.total_orders, cs.total_spent
-      )
-      SELECT 
-        customer_type as segment,
-        COUNT(DISTINCT user_id) as customer_count,
-        ROUND(AVG(return_count), 2) as avg_returns_per_customer,
-        ROUND(100 * SUM(CASE WHEN return_count > 0 THEN 1 ELSE 0 END) / COUNT(*), 2) as pct_customers_with_returns,
-        ROUND(100 * SUM(returned_items) / SUM(total_orders), 2) as return_rate,
-        ROUND(AVG(CASE WHEN return_count > 0 THEN total_refunded ELSE 0 END), 2) as avg_refund_amount,
-        ROUND(100 * SUM(total_refunded) / SUM(total_spent), 2) as refund_rate
-      FROM ReturnStats
-      GROUP BY customer_type
-    `, [startDate, endDate, startDate, endDate]);
-
-    // Analyze return reasons and categories with highest returns
-    const [returnReasons] = await connection.execute(`
-      SELECT 
-        p.category_id,
-        c.name as category_name,
-        COUNT(DISTINCT r.return_id) as return_count,
-        COUNT(DISTINCT ri.product_id) as products_returned,
-        COUNT(DISTINCT r.user_id) as customers_returning,
-        ROUND(ABS(SUM(COALESCE(ref.refund_amount, 0))), 2) as total_refunded,
-        ROUND(AVG(DATEDIFF(r.return_date, o.order_date)), 0) as avg_days_to_return
-      FROM returns r
-      JOIN return_items ri ON r.return_id = ri.return_id
-      JOIN products p ON ri.product_id = p.product_id
-      JOIN categories c ON p.category_id = c.category_id
-      JOIN orders o ON r.order_id = o.order_id
-      LEFT JOIN refunds ref ON r.return_id = ref.return_id
-      WHERE r.return_date BETWEEN ? AND ?
-      GROUP BY p.category_id, c.name
-      ORDER BY return_count DESC
-    `, [startDate, endDate]);
-
-    // Calculate monthly return trends
-    const [returnTrends] = await connection.execute(`
-      WITH MonthlyStats AS (
-        SELECT 
-          DATE_FORMAT(r.return_date, '%Y-%m') as month,
-          COUNT(DISTINCT r.return_id) as returns,
-          COUNT(DISTINCT o.order_id) as total_orders,
-          ABS(COALESCE(SUM(ref.refund_amount), 0)) as refund_amount,
-          SUM(o.total_amount) as total_sales
-        FROM orders o
-        LEFT JOIN returns r ON o.order_id = r.order_id
-        LEFT JOIN refunds ref ON r.return_id = ref.return_id
-        WHERE (o.order_date BETWEEN ? AND ?) OR (r.return_date BETWEEN ? AND ?)
-        GROUP BY DATE_FORMAT(r.return_date, '%Y-%m')
-      )
-      SELECT 
-        month,
-        returns,
-        total_orders,
-        ROUND(100 * returns / NULLIF(total_orders, 0), 2) as return_rate,
-        refund_amount,
-        ROUND(100 * refund_amount / NULLIF(total_sales, 0), 2) as refund_rate
-      FROM MonthlyStats
-      ORDER BY month
-    `, [startDate, endDate, startDate, endDate]);
-
-    // Get top products with returns
-    const [problematicProducts] = await connection.execute(`
-      SELECT 
-        p.product_id,
-        p.product_name,
-        p.category_id,
-        c.name as category_name,
-        COUNT(DISTINCT r.return_id) as return_count,
-        COUNT(DISTINCT r.user_id) as unique_customers_returning,
-        ROUND(ABS(SUM(COALESCE(ref.refund_amount, 0))), 2) as total_refunded,
-        ROUND(AVG(DATEDIFF(r.return_date, o.order_date)), 0) as avg_days_to_return
-      FROM products p
-      JOIN order_items oi ON p.product_id = oi.product_id
-      JOIN orders o ON oi.order_id = o.order_id
-      JOIN returns r ON o.order_id = r.order_id
-      JOIN return_items ri ON r.return_id = ri.return_id AND ri.product_id = p.product_id
-      JOIN categories c ON p.category_id = c.category_id
-      LEFT JOIN refunds ref ON r.return_id = ref.return_id
-      WHERE r.return_date BETWEEN ? AND ?
-      GROUP BY p.product_id, p.product_name, p.category_id, c.name
-      HAVING return_count > 1
-      ORDER BY return_count DESC
-      LIMIT 10
-    `, [startDate, endDate]);
-
-    res.json({
-      returnAnalytics,
-      returnReasons,
-      returnTrends,
-      problematicProducts
-    });
-
-  } catch (error) {
-    console.error('Error generating returns analytics:', error);
-    res.status(500).json({ 
-      message: 'Error generating returns analytics', 
-      error: error.message 
     });
   } finally {
     connection.release();
