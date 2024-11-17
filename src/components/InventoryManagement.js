@@ -15,9 +15,14 @@ const InventoryManagement = () => {
     totalValue: 0
   });
 
+  // Function to trigger refresh
+  const refreshData = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   useEffect(() => {
     fetchStats();
-  }, [refreshTrigger]);
+  }, [refreshTrigger]); // This will re-fetch stats whenever refreshTrigger changes
 
   const fetchStats = async () => {
     try {
@@ -43,9 +48,29 @@ const InventoryManagement = () => {
     }
   };
 
-  const handleProductAdded = () => {
-    setShowAddModal(false);
-    setRefreshTrigger(prev => prev + 1);
+  const handleProductAdded = async () => {
+    try {
+      await refreshData(); // Refresh data immediately after adding product
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Error handling product addition:', error);
+    }
+  };
+
+  const handleProductUpdated = async () => {
+    try {
+      await refreshData(); // Refresh data when a product is updated
+    } catch (error) {
+      console.error('Error handling product update:', error);
+    }
+  };
+
+  const handleRestockComplete = async () => {
+    try {
+      await refreshData(); // Refresh data when restock is complete
+    } catch (error) {
+      console.error('Error handling restock completion:', error);
+    }
   };
 
   const AddProductModal = ({ onClose, onProductAdded }) => (
@@ -58,7 +83,10 @@ const InventoryManagement = () => {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <AddProductForm onProductAdded={onProductAdded} />
+          <AddProductForm 
+            onProductAdded={onProductAdded}
+            refreshData={refreshData} // Pass refresh function to form
+          />
         </div>
       </div>
     </div>
@@ -69,13 +97,22 @@ const InventoryManagement = () => {
       {/* Header Section */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Inventory Management</h2>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Add Product</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={refreshData}
+            className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-200"
+          >
+            <RotateCcw className="h-5 w-5" />
+            <span>Refresh</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -114,7 +151,10 @@ const InventoryManagement = () => {
         {/* Main Product List */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow">
           <div className="p-6">
-            <ProductList refreshTrigger={refreshTrigger} />
+            <ProductList 
+              refreshTrigger={refreshTrigger} 
+              onProductUpdated={handleProductUpdated}
+            />
           </div>
         </div>
 
@@ -124,7 +164,7 @@ const InventoryManagement = () => {
             <h3 className="text-lg font-semibold mb-4">Low Stock Alerts</h3>
             <LowStockAlerts 
               refreshTrigger={refreshTrigger}
-              onRestock={() => setRefreshTrigger(prev => prev + 1)} 
+              onRestock={handleRestockComplete}
             />
           </div>
         </div>
