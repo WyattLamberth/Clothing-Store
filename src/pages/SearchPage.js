@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import ProductCard from '../components/ProductCard';
 import CartOverlay from '../components/CartOverlay';
+import SearchBar from '../components/SearchBar';
 import { useAuth } from '../AuthContext';
 
 const useQuery = () => new URLSearchParams(useLocation().search);
@@ -14,6 +15,7 @@ const SearchPage = () => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [cart, setCart] = useState([]);
+  const navigate = useNavigate();
   const { isAuthenticated, userId } = useAuth();
 
   useEffect(() => {
@@ -68,6 +70,10 @@ const SearchPage = () => {
     initializeCart();
   }, [isAuthenticated]);
 
+  const handleSearch = (newQuery) => {
+    navigate(`/search?query=${newQuery}`);
+  };
+
   const addToCart = async (product) => {
     try {
       let updatedCart = [...cart];
@@ -108,7 +114,11 @@ const SearchPage = () => {
 
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto px-4 py-4">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <SearchBar onSearch={handleSearch} />
+        </div>
       <h1 className="text-3xl font-bold mb-6">Result For "{query}"</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {results.map(product => (
