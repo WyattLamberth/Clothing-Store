@@ -18,6 +18,7 @@ CREATE TABLE users (
   email VARCHAR(255) UNIQUE NOT NULL,
   phone_number VARCHAR(20) UNIQUE,
   password_hash VARBINARY(64) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
   role_id INT NOT NULL DEFAULT 1,
   address_id INT,
   date_joined DATE NOT NULL DEFAULT (CURRENT_DATE)
