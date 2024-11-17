@@ -28,6 +28,7 @@ const ProfileDashboard = () => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [isEditingCard, setIsEditingCard] = useState(false);
   const [editCardId, setEditCardId] = useState(null);
+  const [errors, setErrors] = useState({});
   const [cardDetails, setCardDetails] = useState({
     cardholder_name: '',
     card_number: '',
@@ -121,6 +122,57 @@ const ProfileDashboard = () => {
     }
   };
 
+  const validatePaymentInfo = () => {
+    const { cardholder_name, card_number, expiration_date, cvv, billing_address } = cardDetails;
+    
+    // Clear previous errors
+    const validationErrors = {};
+  
+    // Validate each field
+    if (!cardholder_name) {
+      validationErrors.cardholder_name = 'Cardholder name is required.';
+    }
+    if (!/^\d{16}$/.test(card_number)) {
+      validationErrors.card_number = 'Card number must be 16 digits.';
+    }
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiration_date)) {
+      validationErrors.expiration_date = 'Expiration date must be in MM/YY format.';
+    } else {
+      // Check if expiration date is not expired
+      const [month, year] = expiration_date.split('/');
+      const currentDate = new Date();
+      const expirationDate = new Date(`20${year}`, month - 1); // Full year from MM/YY
+      if (expirationDate < currentDate) {
+        validationErrors.expiration_date = 'Card has expired.';
+      }
+    }
+    if (!/^\d{3,4}$/.test(cvv)) {
+      validationErrors.cvv = 'CVV must be 3-4 digits.';
+    }
+    if (!billing_address.line_1) {
+      validationErrors['billing_address.line_1'] = 'Billing address line 1 is required.';
+    }
+    if (!billing_address.city) {
+      validationErrors['billing_address.city'] = 'Billing city is required.';
+    }
+    if (!billing_address.state) {
+      validationErrors['billing_address.state'] = 'Billing state is required.';
+    }
+    if (!billing_address.zip) {
+      validationErrors['billing_address.zip'] = 'Billing ZIP code is required.';
+    }
+  
+    // Update the state with errors
+    setErrors(validationErrors);
+  
+    // Return whether the form is valid
+    return Object.keys(validationErrors).length === 0;
+  };
+  
+  
+  
+  
+
   const handleTabClick = (tab) => {
     setActiveTab(tab);
   };
@@ -175,7 +227,7 @@ const ProfileDashboard = () => {
       const formatted = numbersOnly.slice(0, 4).replace(/(\d{2})(\d)/, '$1/$2');
       setCardDetails(prev => ({ ...prev, [name]: formatted }));
     } else if (name === 'cvv') {
-      const numbersOnly = value.replace(/\D/g, '').slice(0, 3);
+      const numbersOnly = value.replace(/\D/g, '').slice(0, 4);
       setCardDetails(prev => ({ ...prev, [name]: numbersOnly }));
     } else if (['cardholder_name'].includes(name)) { // Ensure cardholder_name is handled
       setCardDetails((prev) => ({ ...prev, [name]: value }));
@@ -206,31 +258,39 @@ const ProfileDashboard = () => {
 
   const handleAddOrUpdateCard = async (e) => {
     e.preventDefault();
+  
+    // Clear existing errors
+    setErrors({});
+  
+    if (!validatePaymentInfo()) {
+      return; // Stop if validation fails
+    }
+  
     try {
       if (isEditingCard) {
         await api.put(`/payment/${editCardId}`, {
           ...cardDetails,
-          user_id: userId
+          user_id: userId,
         });
         setUpdateSuccess('Payment method updated successfully');
       } else {
         const addressResponse = await api.post('/address', cardDetails.billing_address);
         const billing_address_id = addressResponse.data.address_id;
-
+  
         await api.post('/payment', {
           ...cardDetails,
           user_id: userId,
-          billing_address_id
+          billing_address_id,
         });
         setUpdateSuccess('Payment method added successfully');
       }
-
+  
       const response = await api.get(`/payment/user/${userId}`);
       setCards(response.data || []);
       setShowCardForm(false);
       setIsEditingCard(false);
       setEditCardId(null);
-
+  
       setCardDetails({
         cardholder_name: '',
         card_number: '',
@@ -242,13 +302,30 @@ const ProfileDashboard = () => {
           city: '',
           state: '',
           zip: '',
-        }
+        },
       });
+  
+      setErrors({}); // Clear errors after successful operation
     } catch (error) {
       console.error('Error adding or updating payment method:', error);
-      setError('Failed to add or update payment method');
+  
+      const serverMessage =
+        error.response && error.response.data && error.response.data.message
+          ? error.response.data.message
+          : 'This card is already in use. Please use a different card.';
+  
+      // Handle duplicate card error
+      setErrors((prev) => ({
+        ...prev,
+        card_number: serverMessage.includes('Duplicate entry')
+          ? 'This card number already exists. Please use a different card.'
+          : serverMessage,
+      }));
     }
   };
+  
+  
+  
 
   // Removed duplicate handleReturnRequest function
 
@@ -615,6 +692,7 @@ const ProfileDashboard = () => {
                   setShowCardForm(!showCardForm);
                   setIsEditingCard(false);
                   setEditCardId(null);
+                  setErrors({});
                   setCardDetails({
                     cardholder_name: '',
                     card_number: '',
@@ -637,111 +715,148 @@ const ProfileDashboard = () => {
             </div>
 
             {showCardForm && (
-              <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+              <form onSubmit={handleAddOrUpdateCard} className="mb-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Cardholder Name</label>
                   <input
                     type="text"
                     name="cardholder_name"
                     value={cardDetails.cardholder_name}
                     onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                    required
+                    className={`w-full p-3 border rounded-lg focus:outline-none ${
+                      errors.cardholder_name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter cardholder name"
                   />
+                  {errors.cardholder_name && <p className="text-sm text-red-500 mt-1">{errors.cardholder_name}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Card Number</label>
                     <input
                       type="text"
                       name="card_number"
                       value={cardDetails.card_number}
                       onChange={handleInputChange}
-                      placeholder="1234567890123456"
-                      className="w-full p-2 border rounded"
-                      required
+                      placeholder="1234 5678 9012 3456"
+                      className={`w-full p-3 border rounded-lg focus:outline-none ${
+                        errors.card_number ? 'border-red-500' : 'border-gray-300'
+                      }`}
                     />
+                    {errors.card_number && <p className="text-sm text-red-500 mt-1">{errors.card_number}</p>}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Expiry</label>
                       <input
                         type="text"
                         name="expiration_date"
                         value={cardDetails.expiration_date}
                         onChange={handleInputChange}
                         placeholder="MM/YY"
-                        className="w-full p-2 border rounded"
-                        required
+                        className={`w-full p-3 border rounded-lg focus:outline-none ${
+                          errors.expiration_date ? 'border-red-500' : 'border-gray-300'
+                        }`}
                       />
+                      {errors.expiration_date && <p className="text-sm text-red-500 mt-1">{errors.expiration_date}</p>}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">CVV</label>
                       <input
                         type="text"
                         name="cvv"
                         value={cardDetails.cvv}
                         onChange={handleInputChange}
-                        placeholder="123"
-                        className="w-full p-2 border rounded"
-                        required
+                        maxLength={4} 
+                        placeholder="123/1234"
+                        className={`w-full p-3 border rounded-lg focus:outline-none ${
+                          errors.cvv ? 'border-red-500' : 'border-gray-300'
+                        }`}
                       />
+                      {errors.cvv && <p className="text-sm text-red-500 mt-1">{errors.cvv}</p>}
                     </div>
                   </div>
                 </div>
-                <div className="space-y-4 mt-4">
-                  <h3 className="font-medium">Billing Address</h3>
-                  <input
-                    type="text"
-                    name="billing_address.line_1"
-                    value={cardDetails.billing_address.line_1}
-                    onChange={handleInputChange}
-                    placeholder="Street Address"
-                    className="w-full p-2 border rounded"
-                    required
-                  />
+
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-700">Billing Address</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      name="billing_address.line_1"
+                      value={cardDetails.billing_address.line_1}
+                      onChange={handleInputChange}
+                      placeholder="Street Address"
+                      className={`w-full p-3 border rounded-lg focus:outline-none ${
+                        errors['billing_address.line_1'] ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {errors['billing_address.line_1'] && (
+                      <p className="text-sm text-red-500 mt-1">{errors['billing_address.line_1']}</p>
+                    )}
+                  </div>
                   <input
                     type="text"
                     name="billing_address.line_2"
                     value={cardDetails.billing_address.line_2}
                     onChange={handleInputChange}
                     placeholder="Apt, Suite, etc. (optional)"
-                    className="w-full p-2 border rounded"
+                    className="w-full p-3 border rounded-lg focus:outline-none border-gray-300"
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      name="billing_address.city"
-                      value={cardDetails.billing_address.city}
-                      onChange={handleInputChange}
-                      placeholder="City"
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                    <input
-                      type="text"
-                      name="billing_address.state"
-                      value={cardDetails.billing_address.state}
-                      onChange={handleInputChange}
-                      placeholder="State"
-                      className="w-full p-2 border rounded"
-                      required
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        name="billing_address.city"
+                        value={cardDetails.billing_address.city}
+                        onChange={handleInputChange}
+                        placeholder="City"
+                        className={`w-full p-3 border rounded-lg focus:outline-none ${
+                          errors['billing_address.city'] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors['billing_address.city'] && (
+                        <p className="text-sm text-red-500 mt-1">{errors['billing_address.city']}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        name="billing_address.state"
+                        value={cardDetails.billing_address.state}
+                        onChange={handleInputChange}
+                        placeholder="State"
+                        className={`w-full p-3 border rounded-lg focus:outline-none ${
+                          errors['billing_address.state'] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors['billing_address.state'] && (
+                        <p className="text-sm text-red-500 mt-1">{errors['billing_address.state']}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        name="billing_address.zip"
+                        value={cardDetails.billing_address.zip}
+                        onChange={handleInputChange}
+                        placeholder="ZIP Code"
+                        className={`w-full p-3 border rounded-lg focus:outline-none ${
+                          errors['billing_address.zip'] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors['billing_address.zip'] && (
+                        <p className="text-sm text-red-500 mt-1">{errors['billing_address.zip']}</p>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    name="billing_address.zip"
-                    value={cardDetails.billing_address.zip}
-                    onChange={handleInputChange}
-                    placeholder="ZIP Code"
-                    className="w-full p-2 border rounded"
-                    required
-                  />
                 </div>
-                <div className="flex justify-between">
+
+                <div className="flex justify-between mt-6">
                   <button
                     type="submit"
-                    className="py-2 px-4 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                    className="py-3 px-6 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
                     {isEditingCard ? 'Update Payment Method' : 'Add Payment Method'}
                   </button>
@@ -751,6 +866,20 @@ const ProfileDashboard = () => {
                       setShowCardForm(false);
                       setIsEditingCard(false);
                       setEditCardId(null);
+                      setErrors({});
+                      setCardDetails({
+                        cardholder_name: '',
+                        card_number: '',
+                        expiration_date: '',
+                        cvv: '',
+                        billing_address: {
+                          line_1: '',
+                          line_2: '',
+                          city: '',
+                          state: '',
+                          zip: '',
+                        },
+                      });
                     }}
                     className="py-2 px-4 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
                   >
@@ -758,6 +887,7 @@ const ProfileDashboard = () => {
                   </button>
                 </div>
               </form>
+
             )}
 
             {/* Display saved cards only if not editing or adding a card */}
