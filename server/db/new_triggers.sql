@@ -87,6 +87,20 @@ BEGIN
     END IF;
 END$$
 
+-- Notify customers of return status changes
+CREATE TRIGGER notify_return_status_change
+AFTER UPDATE ON returns
+FOR EACH ROW
+BEGIN
+    INSERT INTO notifications (user_id, message, notification_date, read_status)
+    VALUES (
+        NEW.user_id, 
+        CONCAT('Your return request for order #', NEW.order_id, ' has been ', LOWER(NEW.return_status), '.'), 
+        NOW(), 
+        FALSE
+    );
+END$$
+
 -- Notify all customers of new sale events
 CREATE TRIGGER notify_new_sale_event
 AFTER INSERT ON sale_events
