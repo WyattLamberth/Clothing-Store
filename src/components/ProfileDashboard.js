@@ -132,8 +132,8 @@ const ProfileDashboard = () => {
     if (!cardholder_name) {
       validationErrors.cardholder_name = 'Cardholder name is required.';
     }
-    if (!/^\d{16}$/.test(card_number)) {
-      validationErrors.card_number = 'Card number must be 16 digits.';
+    if (!/^\d{15,16}$/.test(card_number)) {
+      validationErrors.card_number = 'Card number must be 15 or 16 digits.';
     }
     if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiration_date)) {
       validationErrors.expiration_date = 'Expiration date must be in MM/YY format.';

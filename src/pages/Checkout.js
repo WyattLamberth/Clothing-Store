@@ -158,8 +158,8 @@ const Checkout = () => {
     }
   
     // Validate card number (must be 16 digits)
-    if (!/^\d{16}$/.test(card_number)) {
-      errors.card_number = 'Card number must be 16 digits.';
+    if (!/^\d{15,16}$/.test(card_number)) {
+      errors.card_number = 'Card number must be 15 or 16 digits.';
     }
   
     // Validate expiration date (MM/YY format)
@@ -410,7 +410,7 @@ return (
               {errors.payment.card_number && <p className="text-red-500">{errors.payment.card_number}</p>}
               <input type="text" name="expiration_date" placeholder="Expiration Date (MM/YY)" value={paymentInfo.newCardDetails.expiration_date} onChange={(e) => setPaymentInfo({ ...paymentInfo, newCardDetails: { ...paymentInfo.newCardDetails, expiration_date: e.target.value }})} required className="border rounded px-4 py-2 w-full" />
               {errors.payment.expiration_date && <p className="text-red-500">{errors.payment.expiration_date}</p>}
-              <input type="text" name="cvv" placeholder="CVV" value={paymentInfo.newCardDetails.cvv} onChange={(e) => setPaymentInfo({ ...paymentInfo, newCardDetails: { ...paymentInfo.newCardDetails, cvv: e.target.value }})} required className="border rounded px-4 py-2 w-full" />
+              <input type="text" name="cvv" placeholder="CVV" maxLength={4} value={paymentInfo.newCardDetails.cvv} onChange={(e) => setPaymentInfo({ ...paymentInfo, newCardDetails: { ...paymentInfo.newCardDetails, cvv: e.target.value }})} required className="border rounded px-4 py-2 w-full" />
               {errors.payment.cvv && <p className="text-red-500">{errors.payment.cvv}</p>}
               <h3>Billing Address</h3>
               <input type="text" name="line_1" placeholder="Street Address" value={paymentInfo.newCardDetails.billing_address.line_1} onChange={(e) => setPaymentInfo(prev => ({ ...prev, newCardDetails: { ...prev.newCardDetails, billing_address: { ...prev.newCardDetails.billing_address, line_1: e.target.value }}}))} required className="border rounded px-4 py-2 w-full" />
