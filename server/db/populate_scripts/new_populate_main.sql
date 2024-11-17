@@ -73,7 +73,7 @@ CREATE TABLE orders (
   order_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
   shipping_address_id INT,
-  order_status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled', 'RETURNED') NOT NULL,
+  order_status ENUM('Pending', 'Shipped', 'Delivered', 'RETURNED') NOT NULL,
   order_date DATE NOT NULL,
   shipping_cost DECIMAL(10,2) DEFAULT 0.00,
   payment_method VARCHAR(20) NOT NULL,
@@ -90,16 +90,6 @@ CREATE TABLE order_items (
   unit_price DECIMAL(10,2) NOT NULL,
   total_item_price DECIMAL(10,2) NOT NULL,
   CHECK (quantity > 0)
-);
-
--- Transactions table
-CREATE TABLE transactions (
-  transaction_id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT,
-  transaction_date DATE NOT NULL,
-  total_amount DECIMAL(10,2) NOT NULL,
-  payment_status VARCHAR(20) NOT NULL,
-  CHECK (total_amount >= 0)
 );
 
 -- Shopping Cart table
@@ -128,7 +118,7 @@ CREATE TABLE returns (
   user_id INT,
   return_date DATE NOT NULL,
   return_status VARCHAR(20) NOT NULL,
-  CHECK (return_status IN ('Pending', 'Approved', 'Completed', 'Rejected'))
+  CHECK (return_status IN ('Pending', 'Approved', 'Rejected'))
 );
 
 -- Return Items table
@@ -179,18 +169,6 @@ CREATE TABLE sale_events (
   CHECK (end_date > start_date)
 );
 
--- Permissions table
-CREATE TABLE permissions (
-  permission_id INT AUTO_INCREMENT PRIMARY KEY,
-  permission_name VARCHAR(50) NOT NULL
-);
-
--- Role Permissions table
-CREATE TABLE role_permissions (
-  role_id INT,
-  permission_id INT,
-  PRIMARY KEY (role_id, permission_id)
-);
 
 -- Add Foreign Key Constraints
 ALTER TABLE users
@@ -211,9 +189,6 @@ ADD CONSTRAINT fk_order_address FOREIGN KEY (shipping_address_id) REFERENCES add
 ALTER TABLE order_items
 ADD CONSTRAINT fk_order_item_order FOREIGN KEY (order_id) REFERENCES orders(order_id),
 ADD CONSTRAINT fk_order_item_product FOREIGN KEY (product_id) REFERENCES products(product_id);
-
-ALTER TABLE transactions
-ADD CONSTRAINT fk_transaction_order FOREIGN KEY (order_id) REFERENCES orders(order_id);
 
 ALTER TABLE shopping_cart
 ADD CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(user_id);
@@ -239,10 +214,6 @@ ADD CONSTRAINT fk_activity_log_user FOREIGN KEY (user_id) REFERENCES users(user_
 ALTER TABLE notifications
 ADD CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(user_id);
 
-ALTER TABLE role_permissions
-ADD CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles(role_id),
-ADD CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions(permission_id);
-
 -- Create indexes for better performance
 CREATE INDEX idx_user_role ON users(role_id);
 CREATE INDEX idx_product_category ON products(category_id);
@@ -255,73 +226,6 @@ INSERT INTO roles (role_id, role_name) VALUES
 (1, 'Customer'),
 (2, 'Employee'),
 (3, 'Admin');
-
--- Populate permissions table with Admin permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(3001, 'Manage Users'),
-(3002, 'Manage Products'),
-(3003, 'Manage Orders'),
-(3004, 'Configure System Settings'),
-(3005, 'Manage Promotions and Discounts'),
-(3006, 'Manage Payment and Shipping Settings'),
-(3007, 'Review and Publish Content'),
-(3008, 'Manage Inventory'),
-(3009, 'View Customer Feedback and Reviews'),
-(3010, 'Create/Edit/Delete Page Content');
-
--- Populate permissions table with Employee permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(2001, 'Add/Edit/Delete Products'),
-(2002, 'View and Manage all Orders'),
-(2003, 'Manage Inventory'),
-(2004, 'Set Product Prices and Promotions'),
-(2005, 'Respond to Customer Reviews'),
-(2006, 'Process Refunds and Returns'),
-(2007, 'View Customer Reviews and Feedback');
-
--- Populate permissions table with Customer permissions
-INSERT INTO permissions (permission_id, permission_name) VALUES
-(1001, 'Browse and Search Products'),
-(1002, 'Add Products to Cart'),
-(1003, 'Make Purchase and Place Orders'),
-(1004, 'View and Manage Personal Account'),
-(1005, 'View Order History'),
-(1006, 'Submit Product Reviews and Feedback'),
-(1007, 'Manage Shipping Addresses and Payment Information');
-
-
--- Admin Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(3, 3001),
-(3, 3002),
-(3, 3003),
-(3, 3004),
-(3, 3005),
-(3, 3006),
-(3, 3007),
-(3, 3008),
-(3, 3009),
-(3, 3010);
-
--- Employee Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(2, 2001),
-(2, 2002),
-(2, 2003),
-(2, 2004),
-(2, 2005),
-(2, 2006),
-(2, 2007);
-
--- Customer Role Permissions
-INSERT INTO role_permissions (role_id, permission_id) VALUES
-(1, 1001),
-(1, 1002),
-(1, 1003),
-(1, 1004),
-(1, 1005),
-(1, 1006),
-(1, 1007);
 
 DELIMITER //
 
@@ -369,6 +273,22 @@ BEGIN
 END //
 
 -- EVERYTHING BEYOND THIS REQUIRES USERS
+
+-- Create a procedure to create some sale events
+
+CREATE PROCEDURE PopulateSaleEvents()
+BEGIN
+    INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
+    VALUES 
+    ('Black Friday Sale', '2024-11-24', '2024-11-27', 30.00),
+    ('Christmas Clearance Sale', '2024-12-20', '2024-12-25', 25.00),
+    ('Flash Sale', '2024-11-18', '2024-11-19', 40.00),
+    ('New Year’s Blowout', '2024-12-30', '2025-01-02', 35.00),
+    ('Valentine’s Day Special', '2025-02-10', '2025-02-14', 20.00),
+    ('Summer Splash Sale', '2025-06-01', '2025-06-15', 20.00);
+END //
+
+
 
 -- Create a procedure to populate orders and related tables
 
@@ -441,7 +361,7 @@ BEGIN
         VALUES (
             current_user_id,
             current_address_id,
-            ELT(FLOOR(RAND() * 4) + 1, 'Pending', 'Shipped', 'Delivered', 'Cancelled'),
+            ELT(FLOOR(RAND() * 4) + 1, 'Pending', 'Shipped', 'Delivered'),
             DATE_SUB(CURRENT_DATE, INTERVAL FLOOR(RAND() * 365) DAY),
             ROUND(4.99 + RAND() * 15, 2),  -- Random shipping cost between 4.99 and 19.99
             ELT(FLOOR(RAND() * 3) + 1, 'Credit Card', 'PayPal', 'Debit Card'),
@@ -488,190 +408,11 @@ BEGIN
         SET total_amount = order_total + shipping_cost 
         WHERE order_id = current_order_id;
         
-        -- Create transaction record
-        INSERT INTO transactions (
-            order_id,
-            transaction_date,
-            total_amount,
-            payment_status
-        )
-        VALUES (
-            current_order_id,
-            (SELECT order_date FROM orders WHERE order_id = current_order_id),
-            (SELECT total_amount FROM orders WHERE order_id = current_order_id),
-            CASE 
-                WHEN (SELECT order_status FROM orders WHERE order_id = current_order_id) = 'Cancelled' 
-                THEN 'Cancelled'
-                ELSE 'Completed'
-            END
-        );
-        
         SET i = i + 1;
     END WHILE;
     
     -- Clean up
     DROP TEMPORARY TABLE IF EXISTS temp_products;
-    
-    -- Commit transaction
-    COMMIT;
-    
-END //
-
-DELIMITER ;
-
--- Create a procedure to populate sale events and discounts
-DELIMITER //
-
-CREATE PROCEDURE PopulateSalesAndDiscounts(
-    IN num_sales INT,  -- Number of sale events to generate
-    IN start_date DATE,  -- Starting date for sales events
-    IN end_date DATE    -- Ending date for sales events
-)
-BEGIN
-    DECLARE i INT DEFAULT 0;
-    DECLARE current_sale_id INT;
-    DECLARE current_product_id INT;
-    DECLARE current_category_id INT;
-    DECLARE sale_start_date DATE;
-    DECLARE sale_end_date DATE;
-    DECLARE date_range INT;
-    
-    -- Calculate the date range in days
-    SET date_range = DATEDIFF(end_date, start_date);
-    
-    -- Create temporary tables for available products and categories
-    CREATE TEMPORARY TABLE IF NOT EXISTS temp_products 
-    SELECT product_id, category_id 
-    FROM products;
-    
-    CREATE TEMPORARY TABLE IF NOT EXISTS temp_categories 
-    SELECT category_id 
-    FROM categories;
-    
-    -- Start transaction
-    START TRANSACTION;
-    
-    -- Generate sale events
-    WHILE i < num_sales DO
-        -- Randomly decide if this is a product-specific or category-wide sale
-        IF RAND() < 0.7 THEN  -- 70% chance for product-specific sale
-            -- Get random product
-            SELECT product_id, category_id 
-            INTO current_product_id, current_category_id
-            FROM temp_products 
-            ORDER BY RAND() 
-            LIMIT 1;
-            
-            SET current_category_id = NULL;
-        ELSE
-            -- Get random category
-            SELECT category_id 
-            INTO current_category_id
-            FROM temp_categories 
-            ORDER BY RAND() 
-            LIMIT 1;
-            
-            SET current_product_id = NULL;
-        END IF;
-        
-        -- Generate random start date within the specified range
-        SET sale_start_date = DATE_ADD(start_date, INTERVAL FLOOR(RAND() * date_range) DAY);
-        -- Generate end date 3-14 days after start date
-        SET sale_end_date = DATE_ADD(sale_start_date, INTERVAL FLOOR(RAND() * 11 + 3) DAY);
-        
-        -- Create sale event
-        INSERT INTO sale_events (
-            event_name,
-            start_date,
-            end_date,
-            product_id,
-            category_id
-        )
-        VALUES (
-            CASE 
-                WHEN current_product_id IS NOT NULL THEN 
-                    CONCAT(
-                        ELT(FLOOR(RAND() * 4) + 1, 'Flash Sale', 'Special Offer', 'Limited Time Deal', 'Clearance'),
-                        ' - Product #',
-                        current_product_id
-                    )
-                ELSE 
-                    CONCAT(
-                        ELT(FLOOR(RAND() * 4) + 1, 'Category Sale', 'Category Special', 'Department Deal', 'Category Clearance'),
-                        ' - Category #',
-                        current_category_id
-                    )
-            END,
-            sale_start_date,
-            sale_end_date,
-            current_product_id,
-            current_category_id
-        );
-        
-        SET current_sale_id = LAST_INSERT_ID();
-        
-        -- Create corresponding discounts (1-3 per sale event)
-        INSERT INTO discounts (
-            discount_type,
-            discount_percentage,
-            sale_event_id
-        )
-        SELECT 
-            CASE floor(rand() * 3)
-                WHEN 0 THEN 'Regular Discount'
-                WHEN 1 THEN 'Member Discount'
-                WHEN 2 THEN 'Bulk Purchase Discount'
-            END,
-            -- Generate random discount percentage between 5 and 50
-            ROUND(5 + (RAND() * 45), 2),
-            current_sale_id
-        FROM (
-            SELECT 1
-            UNION ALL
-            SELECT 2 WHERE RAND() < 0.5  -- 50% chance for second discount
-            UNION ALL
-            SELECT 3 WHERE RAND() < 0.3  -- 30% chance for third discount
-        ) AS num;
-        
-        -- Create notifications for users about the sale (optional)
-        INSERT INTO notifications (
-            user_id,
-            message,
-            notification_date,
-            read_status
-        )
-        SELECT 
-            user_id,
-            CONCAT(
-                'New sale alert! ',
-                (SELECT event_name FROM sale_events WHERE sale_event_id = current_sale_id),
-                ' starting on ',
-                DATE_FORMAT(sale_start_date, '%M %D')
-            ),
-            CURRENT_TIMESTAMP,
-            FALSE
-        FROM users
-        WHERE RAND() < 0.3;  -- Only notify ~30% of users about each sale
-        
-        -- Log the activity
-        INSERT INTO activity_logs (
-            action,
-            timestamp,
-            entity_affected
-        )
-        VALUES (
-            CONCAT('Created sale event: ', 
-                  (SELECT event_name FROM sale_events WHERE sale_event_id = current_sale_id)),
-            CURRENT_TIMESTAMP,
-            'sale_events'
-        );
-        
-        SET i = i + 1;
-    END WHILE;
-    
-    -- Clean up
-    DROP TEMPORARY TABLE IF EXISTS temp_products;
-    DROP TEMPORARY TABLE IF EXISTS temp_categories;
     
     -- Commit transaction
     COMMIT;
@@ -686,15 +427,11 @@ DELIMITER ;
 CALL PopulateCategories();
 CALL PopulateProducts();
 
--- Generate some initial orders
-CALL PopulateOrders(50, 1, 5);  -- Creates 50 orders with 1-5 items each
+-- Generate some orders and sale events
+-- CALL PopulateOrders(50, 1, 5);  -- Creates 50 orders with 1-5 items each
+-- CALL PopulateSaleEvents();
 
--- Generate some initial sales and discounts
-CALL PopulateSalesAndDiscounts(
-    10,  -- Create 10 sale events
-    CURRENT_DATE,  -- Start from today
-    DATE_ADD(CURRENT_DATE, INTERVAL 30 DAY)  -- Plan sales for next 30 days
-);
+
 
 -- Quick verification
 SELECT 'Users' as table_name, COUNT(*) as record_count FROM users
@@ -703,6 +440,4 @@ SELECT 'Products', COUNT(*) FROM products
 UNION ALL
 SELECT 'Categories', COUNT(*) FROM categories
 UNION ALL
-SELECT 'Orders', COUNT(*) FROM orders
-UNION ALL
-SELECT 'Sale Events', COUNT(*) FROM sale_events;
+SELECT 'Orders', COUNT(*) FROM orders;

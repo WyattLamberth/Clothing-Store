@@ -97,8 +97,7 @@ BEGIN
     
     -- Declare a cursor to iterate over all customers
     DECLARE customer_cursor CURSOR FOR 
-    SELECT user_id FROM users WHERE role_id = 1;  -- Assuming role_id = 1 is for customers
-
+    SELECT user_id FROM users WHERE role_id = 1;  
     DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
     -- Open the cursor and iterate through all customers to insert a notification for each
@@ -113,7 +112,13 @@ BEGIN
 
         -- Insert a notification for each customer
         INSERT INTO notifications (user_id, message, notification_date, read_status)
-        VALUES (customer_id, CONCAT('New sale event: ', NEW.event_name, ' starts on ', NEW.start_date), NOW(), FALSE);
+        VALUES (customer_id, CONCAT('New sale event: ', NEW.event_name, ' starts on ', NEW.start_date), NOW(), FALSE);INSERT INTO notifications (user_id, message, notification_date, read_status)
+        VALUES (
+            customer_id, 
+            CONCAT('New sale event: "', NEW.event_name, '" with a discount of ', NEW.discount_percentage, '% starts on ', NEW.start_date, ' and ends on ', NEW.end_date), 
+            NOW(), 
+            FALSE
+        );
     END LOOP;
 
     CLOSE customer_cursor;
@@ -133,3 +138,4 @@ BEGIN
     WHERE product_id = NEW.product_id;
 END$$
 DELIMITER ;
+
