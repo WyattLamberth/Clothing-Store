@@ -274,6 +274,22 @@ END //
 
 -- EVERYTHING BEYOND THIS REQUIRES USERS
 
+-- Create a procedure to create some sale events
+
+CREATE PROCEDURE PopulateSaleEvents()
+BEGIN
+    INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
+    VALUES 
+    ('Black Friday Sale', '2024-11-24', '2024-11-27', 30.00),
+    ('Christmas Clearance Sale', '2024-12-20', '2024-12-25', 25.00),
+    ('Flash Sale', '2024-11-18', '2024-11-19', 40.00),
+    ('New Year’s Blowout', '2024-12-30', '2025-01-02', 35.00),
+    ('Valentine’s Day Special', '2025-02-10', '2025-02-14', 20.00),
+    ('Summer Splash Sale', '2025-06-01', '2025-06-15', 20.00);
+END //
+
+
+
 -- Create a procedure to populate orders and related tables
 
 CREATE PROCEDURE PopulateOrders(
@@ -345,7 +361,7 @@ BEGIN
         VALUES (
             current_user_id,
             current_address_id,
-            ELT(FLOOR(RAND() * 4) + 1, 'Pending', 'Shipped', 'Delivered', 'Cancelled'),
+            ELT(FLOOR(RAND() * 4) + 1, 'Pending', 'Shipped', 'Delivered'),
             DATE_SUB(CURRENT_DATE, INTERVAL FLOOR(RAND() * 365) DAY),
             ROUND(4.99 + RAND() * 15, 2),  -- Random shipping cost between 4.99 and 19.99
             ELT(FLOOR(RAND() * 3) + 1, 'Credit Card', 'PayPal', 'Debit Card'),
@@ -392,17 +408,6 @@ BEGIN
         SET total_amount = order_total + shipping_cost 
         WHERE order_id = current_order_id;
         
-        VALUES (
-            current_order_id,
-            (SELECT order_date FROM orders WHERE order_id = current_order_id),
-            (SELECT total_amount FROM orders WHERE order_id = current_order_id),
-            CASE 
-                WHEN (SELECT order_status FROM orders WHERE order_id = current_order_id) = 'Cancelled' 
-                THEN 'Cancelled'
-                ELSE 'Completed'
-            END
-        );
-        
         SET i = i + 1;
     END WHILE;
     
@@ -422,27 +427,9 @@ DELIMITER ;
 CALL PopulateCategories();
 CALL PopulateProducts();
 
--- Generate some initial orders
-CALL PopulateOrders(50, 1, 5);  -- Creates 50 orders with 1-5 items each
-
--- Create some sale events
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('Black Friday Sale', '2024-11-24', '2024-11-27', 30.00);
-
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('Christmas Clearance Sale', '2024-12-20', '2024-12-25', 25.00);
-
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('Flash Sale', '2024-11-18', '2024-11-18', 40.00);
-
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('New Year’s Blowout', '2024-12-30', '2025-01-02', 35.00);
-
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('Valentine’s Day Special', '2025-02-10', '2025-02-14', 20.00);
-
-INSERT INTO sale_events (event_name, start_date, end_date, discount_percentage)
-VALUES ('Summer Splash Sale', '2025-06-01', '2025-06-15', 20.00);
+-- Generate some orders and sale events
+-- CALL PopulateOrders(50, 1, 5);  -- Creates 50 orders with 1-5 items each
+-- CALL PopulateSaleEvents();
 
 
 
