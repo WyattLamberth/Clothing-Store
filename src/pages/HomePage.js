@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
-import NotificationBar from '../components/NotificationBar';
 import SearchBar from '../components/SearchBar';
 import backgroundImage from '../images/pic1.jpg';
 import TrendingSection from '../components/TrendingSection';
@@ -158,11 +157,6 @@ const HomePage = () => {
 
   return (
     <div>
-      <NotificationBar 
-        message="Free shipping on orders over $50!" 
-        linkText="Shop Now" 
-        linkUrl="/shop"
-      />
       <div className="container mx-auto px-4 py-4">
         <SearchBar onSearch={handleSearch} />
       </div>
