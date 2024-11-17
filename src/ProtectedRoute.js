@@ -1,21 +1,43 @@
-// src/ProtectedRoute.js
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 const ProtectedRoute = ({ element, requiredRole }) => {
   const { isAuthenticated, role } = useAuth();
+  const location = useLocation();
 
+  // First check authentication
   if (!isAuthenticated) {
-    return <Navigate to="/signin" />;
+    // Save the attempted location for potential redirect after login
+    return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  const adminRoleId = 3; // Update this ID to match your admin role ID if different
-  if (requiredRole === "admin" && role !== adminRoleId) {
-    return <Navigate to="/" />;
+  // Role-based access control
+  const checkRole = () => {
+    // Convert role to number for comparison since it might be stored as string
+    const userRole = Number(role);
+    
+    switch (requiredRole) {
+      case 'admin':
+        return userRole === 3;
+      case 'employee':
+        // Employee routes accessible by both employees and admins
+        return userRole === 2 || userRole === 3;
+      case 'customer':
+        // Customer routes accessible by all authenticated users
+        return userRole >= 1;
+      default:
+        return true;
+    }
+  };
+
+  // Check if user has required role
+  if (!checkRole()) {
+    console.log('Access denied. Required role:', requiredRole, 'User role:', role);
+    return <Navigate to="/" replace />;
   }
 
-  return element; // Render `element` directly as it's already JSX
+  return element;
 };
 
 export default ProtectedRoute;
