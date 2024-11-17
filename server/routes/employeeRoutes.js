@@ -837,149 +837,6 @@ router.get('/transactions/order/:orderId', async (req, res) => {
   }
 });
 
-// DISCOUNT MANAGEMENT  
-
-// POST Discount API
-router.post('/discount', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    const {
-      discount_type,
-      discount_percentage,
-      sale_event_id // Added sale_event_id to the destructuring
-    } = req.body;
-
-    // Validate required fields
-    if (!discount_type || !discount_percentage || !sale_event_id) {
-      return res.status(400).json({ error: 'Discount type, percentage, and sale event ID are required.' });
-    }
-
-    // Insert discount into the discounts table
-    const discountQuery = `
-      INSERT INTO discounts (discount_type, discount_percentage, sale_event_id) 
-      VALUES (?, ?, ?)
-    `;
-    const [discountResult] = await connection.execute(discountQuery, [discount_type, discount_percentage, sale_event_id]);
-    const discount_id = discountResult.insertId;
-
-    // Commit transaction
-    await connection.commit();
-
-    res.status(201).json({ message: 'Discount created successfully', discount_id: discount_id });
-  } catch (error) {
-    await connection.rollback(); // Rollback in case of error
-    console.error('Error creating discount:', error);
-    res.status(500).json({ error: 'Error creating discount' }); // Changed to 500 for server error
-  } finally {
-    connection.release();
-  }
-});
-
-// Get all discounts API
-router.get('/all_discounts', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    // Query to get all discounts
-    const discountsQuery = `
-      SELECT *
-      FROM discounts`;
-
-    const [discountsResult] = await connection.execute(discountsQuery);
-
-    if (discountsResult.length === 0) { // if there are no discounts found
-      return res.status(404).json({ message: 'No discounts found.' });
-    }
-
-    res.status(201).json(discountsResult);
-  } catch (error) {
-    console.error('Error retrieving discounts:', error);
-    res.status(400).json({ error: 'Error retrieving discounts' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
-
-// Get Discount by discount_id API
-router.get('/discount/:discount_id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { discount_id } = req.params; // request parameters
-
-    const discountsQuery = `
-      SELECT *
-      FROM discounts
-      WHERE discount_id = ?
-    `;
-
-    const [discountsResult] = await connection.execute(discountsQuery, [discount_id]); // execute query with parameter
-
-    if (discountsResult.length === 0) { // if no discount found
-      return res.status(404).json({ message: 'No discount found for this ID.' });
-    }
-    res.status(201).json(discountsResult);
-  } catch (error) {
-    console.error('Error retrieving discount:', error);
-    res.status(400).json({ error: 'Error retrieving discount' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
-
-// POST (Update) Discount by discount_id API
-router.put('/discount/:discount_id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { discount_id } = req.params;
-    const { discount_type, discount_percentage } = req.body; // new sale event details
-
-    // Update query to modify the sale event details
-    const updateQuery = `
-      UPDATE discounts
-      SET discount_type = ?, discount_percentage = ?
-      WHERE discount_id = ?
-    `;
-
-    const [updateResult] = await connection.execute(updateQuery, [discount_type, discount_percentage, discount_id]);
-
-    if (updateResult.affectedRows === 0) {
-      return res.status(404).json({ message: 'Discount not found.' });
-    }
-
-    // Respond with a success message
-    res.status(200).json({ message: 'Discount updated successfully.' });
-  } catch (error) {
-    console.error('Error updating discount:', error);
-    res.status(500).json({ error: 'Error updating discount' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
-
-// DELETE Discount API
-router.delete('/discount/:discount_id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const { discount_id } = req.params;
-
-    // Query to delete the discount by discount_id
-    const deleteQuery = 'DELETE FROM discounts WHERE discount_id = ?';
-    const [result] = await connection.execute(deleteQuery, [discount_id]);
-
-    if (result.affectedRows === 0) { // discount not found
-      return res.status(404).json({ error: 'Discount not found.' });
-    }
-
-    res.status(204).send(); // Successfully deleted, no content to return
-  } catch (error) {
-    console.error('Error deleting discount:', error);
-    res.status(500).json({ error: 'Error deleting discount' });
-  } finally {
-    connection.release(); // release the connection back to the pool
-  }
-});
-
 // SALE EVENT MANAGEMENT:
 
 // POST Sale Event API
@@ -987,31 +844,48 @@ router.post('/sale-event', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
-    await connection.beginTransaction(); // Begin the transaction
+    await connection.beginTransaction();
 
     const {
-      event_name, start_date, end_date, product_id, category_id // Added product_id and category_id
+      event_name,
+      start_date,
+      end_date,
+      discount_percentage
     } = req.body;
+
+    // Validate discount_percentage (should be between 0 and 100)
+    if (discount_percentage < 0 || discount_percentage > 100) {
+      return res.status(400).json({ error: 'Discount percentage must be between 0 and 100' });
+    }
 
     // Insert sale event
     const saleEventQuery = `
-      INSERT INTO sale_events (event_name, start_date, end_date, product_id, category_id) 
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO sale_events (
+        event_name, 
+        start_date, 
+        end_date, 
+        discount_percentage
+      ) VALUES (?, ?, ?, ?)
     `;
-    const [saleEventResult] = await connection.execute(saleEventQuery, [event_name, start_date, end_date, product_id, category_id]);
-    const sale_event_id = saleEventResult.insertId;
 
-    // Commit the transaction
+    const [saleEventResult] = await connection.execute(
+      saleEventQuery, 
+      [event_name, start_date, end_date, discount_percentage]
+    );
+
+    const sale_event_id = saleEventResult.insertId;
     await connection.commit();
 
-    res.status(201).json({ message: 'Sale event created successfully', sale_event_id: sale_event_id });
+    res.status(201).json({ 
+      message: 'Sale event created successfully', 
+      sale_event_id: sale_event_id 
+    });
   } catch (error) {
-    // Rollback the transaction in case of error
     await connection.rollback();
     console.error('Error creating sale event:', error);
-    res.status(500).json({ error: 'Error creating sale event' }); // Changed to 500 for server error
+    res.status(500).json({ error: 'Error creating sale event' });
   } finally {
-    connection.release(); // Release the connection
+    connection.release();
   }
 });
 
@@ -1019,28 +893,31 @@ router.post('/sale-event', async (req, res) => {
 router.get('/sale-event/:event_id', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    const { event_id } = req.params; // request parameters
+    const { event_id } = req.params;
 
-    // Query to get sale event details by event_id
     const saleEventQuery = `
-      SELECT *
+      SELECT 
+        sale_event_id,
+        event_name,
+        start_date,
+        end_date,
+        discount_percentage
       FROM sale_events
       WHERE sale_event_id = ?
     `;
 
-    const [saleEventResult] = await connection.execute(saleEventQuery, [event_id]); // execute query with parameter
+    const [saleEventResult] = await connection.execute(saleEventQuery, [event_id]);
 
-    if (saleEventResult.length === 0) { // if no event found
+    if (saleEventResult.length === 0) {
       return res.status(404).json({ message: 'No sale event found for this ID.' });
     }
 
-    // Respond with the sale event data if found
-    res.status(201).json(saleEventResult);
+    res.status(200).json(saleEventResult[0]);
   } catch (error) {
     console.error('Error retrieving event:', error);
-    res.status(400).json({ error: 'Error retrieving event' });
+    res.status(500).json({ error: 'Error retrieving event' });
   } finally {
-    connection.release(); // release the connection back to the pool
+    connection.release();
   }
 });
 
@@ -1048,24 +925,59 @@ router.get('/sale-event/:event_id', async (req, res) => {
 router.get('/sale-events', async (req, res) => {
   const connection = await pool.getConnection();
   try {
-    // Query to get all sale events
     const saleEventQuery = `
-      SELECT *
-      FROM sale_events`;
+      SELECT 
+        sale_event_id,
+        event_name,
+        start_date,
+        end_date,
+        discount_percentage
+      FROM sale_events
+      ORDER BY start_date DESC`;
 
     const [saleEventResult] = await connection.execute(saleEventQuery);
 
-    if (saleEventResult.length === 0) { // if no events found
+    if (saleEventResult.length === 0) {
       return res.status(404).json({ message: 'No sale events found.' });
     }
 
-    // Respond with the sale events data if found
-    res.status(201).json(saleEventResult);
+    res.status(200).json(saleEventResult);
   } catch (error) {
     console.error('Error retrieving events:', error);
-    res.status(400).json({ error: 'Error retrieving sale events' });
+    res.status(500).json({ error: 'Error retrieving sale events' });
   } finally {
-    connection.release(); // release the connection back to the pool
+    connection.release();
+  }
+});
+
+// Get active sale events
+router.get('/sale-events/active', async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const saleEventQuery = `
+      SELECT 
+        sale_event_id,
+        event_name,
+        start_date,
+        end_date,
+        discount_percentage
+      FROM sale_events
+      WHERE start_date <= CURRENT_DATE 
+      AND end_date >= CURRENT_DATE
+      ORDER BY start_date DESC`;
+
+    const [saleEventResult] = await connection.execute(saleEventQuery);
+
+    if (saleEventResult.length === 0) {
+      return res.status(404).json({ message: 'No active sale events found.' });
+    }
+
+    res.status(200).json(saleEventResult);
+  } catch (error) {
+    console.error('Error retrieving active events:', error);
+    res.status(500).json({ error: 'Error retrieving active sale events' });
+  } finally {
+    connection.release();
   }
 });
 
@@ -1074,28 +986,47 @@ router.put('/sale-event/:sale_event_id', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     const { sale_event_id } = req.params;
-    const { event_name, start_date, end_date } = req.body; // new sale event details
+    const { 
+      event_name, 
+      start_date, 
+      end_date, 
+      discount_percentage 
+    } = req.body;
 
-    // Update query to modify the sale event details
+    // Validate discount_percentage if provided
+    if (discount_percentage !== undefined) {
+      if (discount_percentage < 0 || discount_percentage > 100) {
+        return res.status(400).json({ error: 'Discount percentage must be between 0 and 100' });
+      }
+    }
+
     const updateQuery = `
       UPDATE sale_events
-      SET event_name = ?, start_date = ?, end_date = ?
+      SET event_name = ?, 
+          start_date = ?, 
+          end_date = ?, 
+          discount_percentage = ?
       WHERE sale_event_id = ?
     `;
 
-    const [updateResult] = await connection.execute(updateQuery, [event_name, start_date, end_date, sale_event_id]);
+    const [updateResult] = await connection.execute(updateQuery, [
+      event_name,
+      start_date,
+      end_date,
+      discount_percentage,
+      sale_event_id
+    ]);
 
     if (updateResult.affectedRows === 0) {
       return res.status(404).json({ message: 'Sale event not found.' });
     }
 
-    // Respond with a success message
     res.status(200).json({ message: 'Sale event updated successfully.' });
   } catch (error) {
     console.error('Error updating sale event:', error);
     res.status(500).json({ error: 'Error updating sale event' });
   } finally {
-    connection.release(); // release the connection back to the pool
+    connection.release();
   }
 });
 
@@ -1106,22 +1037,22 @@ router.delete('/sale-event/:sale_event_id', async (req, res) => {
     await connection.execute('SET @current_user_id = ?', [req.user.user_id]);
     const { sale_event_id } = req.params;
 
-    // Query to delete the sale event by sale_event_id
     const deleteQuery = 'DELETE FROM sale_events WHERE sale_event_id = ?';
     const [result] = await connection.execute(deleteQuery, [sale_event_id]);
 
-    if (result.affectedRows === 0) { // sale event not found
+    if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Sale event not found.' });
     }
 
-    res.status(204).send(); // Successfully deleted, no content to return
+    res.status(204).send();
   } catch (error) {
     console.error('Error deleting sale event:', error);
     res.status(500).json({ error: 'Error deleting sale event' });
   } finally {
-    connection.release(); // release the connection back to the pool
+    connection.release();
   }
 });
+
 router.get('/activity-logs', async (req, res) => {
   try {
     const [logs] = await pool.query('SELECT * FROM activity_logs ORDER BY log_id ASC');

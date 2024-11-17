@@ -4,10 +4,7 @@ import api from '../utils/api';
 
 const DiscountsManagement = () => {
   const [saleEvents, setSaleEvents] = useState([]);
-  const [discounts, setDiscounts] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const [stats, setStats] = useState({
     totalEvents: 0,
     activeEvents: 0,
@@ -21,16 +18,9 @@ const DiscountsManagement = () => {
 
   const fetchData = async () => {
     try {
-      const [eventsResponse, discountsResponse] = await Promise.all([
-        api.get('/sale-events'),
-        api.get('/all_discounts')
-      ]);
-      
-      const events = eventsResponse.data;
-      const discountsData = discountsResponse.data;
-      
+      const response = await api.get('/sale-events');
+      const events = response.data;
       setSaleEvents(events);
-      setDiscounts(discountsData);
       
       const now = new Date();
       const activeEvents = events.filter(event => {
@@ -44,7 +34,7 @@ const DiscountsManagement = () => {
         return startDate > now;
       });
 
-      const avgDiscount = discountsData.reduce((sum, d) => sum + Number(d.discount_percentage), 0) / discountsData.length;
+      const avgDiscount = events.reduce((sum, e) => sum + Number(e.discount_percentage), 0) / events.length;
 
       setStats({
         totalEvents: events.length,
@@ -60,12 +50,6 @@ const DiscountsManagement = () => {
   const handleDelete = async (eventId) => {
     if (window.confirm('Are you sure you want to delete this sale event?')) {
       try {
-        // First delete associated discount
-        const discount = discounts.find(d => d.sale_event_id === eventId);
-        if (discount) {
-          await api.delete(`/discount/${discount.discount_id}`);
-        }
-        // Then delete the sale event
         await api.delete(`/sale-event/${eventId}`);
         fetchData(); // Refresh data
       } catch (error) {
@@ -79,29 +63,17 @@ const DiscountsManagement = () => {
       event_name: '',
       start_date: '',
       end_date: '',
-      discount_type: '',
-      discount_percentage: '',
-      product_id: '',
-      category_id: ''
+      discount_percentage: ''
     });
 
     const handleSubmit = async (e) => {
       e.preventDefault();
       try {
-        // Create sale event
-        const eventResponse = await api.post('/sale-event', {
+        await api.post('/sale-event', {
           event_name: formData.event_name,
           start_date: formData.start_date,
           end_date: formData.end_date,
-          product_id: formData.product_id || null,
-          category_id: formData.category_id || null
-        });
-
-        // Create associated discount
-        await api.post('/discount', {
-          discount_type: formData.discount_type,
-          discount_percentage: parseFloat(formData.discount_percentage),
-          sale_event_id: eventResponse.data.sale_event_id
+          discount_percentage: parseFloat(formData.discount_percentage)
         });
 
         fetchData();
@@ -153,39 +125,12 @@ const DiscountsManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Category ID (Optional)</label>
-                <input
-                  type="number"
-                  value={formData.category_id}
-                  onChange={(e) => setFormData({...formData, category_id: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Product ID (Optional)</label>
-                <input
-                  type="number"
-                  value={formData.product_id}
-                  onChange={(e) => setFormData({...formData, product_id: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Discount Type</label>
-                <input
-                  type="text"
-                  value={formData.discount_type}
-                  onChange={(e) => setFormData({...formData, discount_type: e.target.value})}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  required
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700">Discount Percentage</label>
                 <input
                   type="number"
                   min="0"
-                  max="50"
+                  max="100"
+                  step="0.01"
                   value={formData.discount_percentage}
                   onChange={(e) => setFormData({...formData, discount_percentage: e.target.value})}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
@@ -290,8 +235,6 @@ const DiscountsManagement = () => {
                       statusColor = 'bg-gray-100 text-gray-800';
                     }
 
-                    const discount = discounts.find(d => d.sale_event_id === event.sale_event_id);
-
                     return (
                       <tr key={event.sale_event_id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -306,7 +249,7 @@ const DiscountsManagement = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {discount ? `${discount.discount_percentage}% ${discount.discount_type}` : 'N/A'}
+                          {event.discount_percentage}%
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-3">
@@ -339,20 +282,17 @@ const DiscountsManagement = () => {
                   const endDate = new Date(event.end_date);
                   return startDate <= now && endDate >= now;
                 })
-                .map((event) => {
-                  const discount = discounts.find(d => d.sale_event_id === event.sale_event_id);
-                  return (
-                    <div key={event.sale_event_id} className="flex items-center space-x-3">
-                      <Tag className="h-5 w-5 text-green-500" />
-                      <div>
+                .map((event) => (
+                  <div key={event.sale_event_id} className="flex items-center space-x-3">
+                    <Tag className="h-5 w-5 text-green-500" />
+                    <div>
                       <p className="font-medium">{event.event_name}</p>
-                        <p className="text-sm text-gray-500">
-                          {discount ? `${discount.discount_percentage}% off` : 'No discount set'}
-                        </p>
-                      </div>
+                      <p className="text-sm text-gray-500">
+                        {event.discount_percentage}% off
+                      </p>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
             </div>
           </div>
         </div>

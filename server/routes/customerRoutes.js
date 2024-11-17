@@ -296,11 +296,11 @@ router.get('/order_items/:order_id', async (req, res) => {
       'SELECT oi.*, p.product_name, p.price, p.image_path FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = ?',
       [req.params.order_id]
     );
-    
+
     if (orderItems.length === 0) {
       return res.status(404).json({ error: 'No items found for this order' });
     }
-    
+
     res.status(200).json(orderItems);
   } catch (error) {
     console.error('Error fetching order items:', error);
@@ -314,7 +314,7 @@ router.post('/returns', async (req, res) => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
-    
+
     const user_id = req.user.user_id;
     const { order_id, items } = req.body;
 
@@ -410,8 +410,8 @@ router.post('/returns', async (req, res) => {
     }
 
     await connection.commit();
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       message: 'Return request created successfully',
       return_id: return_id,
       status: 'Pending'
@@ -421,7 +421,7 @@ router.post('/returns', async (req, res) => {
     await connection.rollback();
     console.error('Error processing return:', error);
     console.error('Stack trace:', error.stack);
-    res.status(400).json({ 
+    res.status(400).json({
       error: error.message || 'Failed to create return request'
     });
   } finally {
@@ -512,11 +512,11 @@ router.get('/customer/returns/:returnId', async (req, res) => {
       'SELECT oi.*, p.product_name, p.price, p.image_path FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = ?',
       [req.params.order_id]
     );
-    
+
     if (orderItems.length === 0) {
       return res.status(404).json({ error: 'No items found for this order' });
     }
-    
+
     res.status(200).json(orderItems);
   } catch (error) {
     console.error('Error fetching order items:', error);
@@ -540,7 +540,7 @@ router.get('/users/:userId/orders',
     }
   });
 
-  // Order Item Management
+// Order Item Management
 // Post
 router.post('/order_items', async (req, res) => {
   const connection = await pool.getConnection();
@@ -627,9 +627,9 @@ router.post('/payment', async (req, res) => {
       throw new Error('Invalid expiration date format');
     }
 
-    // Validate CVV (3 digits)
-    if (!/^\d{3}$/.test(cvv)) {
-      throw new Error('Invalid CVV format');
+    // Validate CVV (3 or 4 digits)
+    if (!/^\d{3,4}$/.test(cvv)) {
+      throw new Error('Invalid CVV format - must be 3 or 4 digits');
     }
 
     // Check if billing address exists
