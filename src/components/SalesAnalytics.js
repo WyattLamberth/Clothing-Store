@@ -146,16 +146,7 @@ const SalesAnalytics = () => {
                 <div>
                     <p className="text-sm text-gray-500 mb-1">{title}</p>
                     <h3 className="text-2xl font-bold">{value}</h3>
-                    <div className="flex items-center mt-2">
-                        {trend === 'up' ? (
-                            <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
-                        ) : (
-                            <ArrowDownRight className="w-4 h-4 text-red-500 mr-1" />
-                        )}
-                        <span className={`text-sm ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                            {trendValue}
-                        </span>
-                    </div>
+                    
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
                     <Icon className="w-6 h-6 text-blue-500" />
@@ -234,29 +225,21 @@ const SalesAnalytics = () => {
                 <MetricCard
                     title="Total Revenue"
                     value={formatCurrency(data.summary.total_revenue)}
-                    trend="up"
-                    trendValue="12.5% vs last period"
                     icon={DollarSign}
                 />
                 <MetricCard
                     title="Total Orders"
                     value={data.summary.total_orders.toLocaleString()}
-                    trend="up"
-                    trendValue="8.2% vs last period"
                     icon={ShoppingBag}
                 />
                 <MetricCard
                     title="Average Order Value"
                     value={formatCurrency(data.summary.average_order_value)}
-                    trend="down"
-                    trendValue="3.1% vs last period"
                     icon={TrendingUp}
                 />
                 <MetricCard
                     title="Returns"
                     value={data.summary.total_returns.toLocaleString()}
-                    trend="down"
-                    trendValue="2.5% vs last period"
                     icon={ArrowDownRight}
                 />
             </div>
