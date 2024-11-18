@@ -13,11 +13,11 @@ const ProductList = ({ products, onProductUpdated, onStockUpdate, refreshTrigger
 
   const handleDelete = async (productId) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
-    
+  
     try {
+      // Call the API to delete the product
       await api.delete(`/products/${productId}`);
-      // Let parent component handle the update
-      onProductUpdated();
+      onProductUpdated(products.filter(product => product.product_id !== productId));
     } catch (err) {
       console.error('Error deleting product:', err);
       setError(err.response?.data?.message || 'Failed to delete product');
