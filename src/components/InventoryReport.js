@@ -65,7 +65,7 @@ const InventoryReport = () => {
     };
 
     const getReturnRateDisplay = () => {
-        const rate = data?.summary?.averageReturnRate;
+        const rate = data?.summary?.overallReturnRate;
         if (rate === null || rate === undefined) {
             return '0.0%';
         }
@@ -155,7 +155,7 @@ const InventoryReport = () => {
                 <div className="bg-white p-6 rounded-lg shadow">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-500">Average Return Rate</p>
+                            <p className="text-sm text-gray-500">Overall Return Rate</p>
                             <h3 className="text-2xl font-bold text-red-500">
                                 {getReturnRateDisplay()}
                             </h3>
