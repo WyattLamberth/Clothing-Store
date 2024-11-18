@@ -26,10 +26,12 @@ Install These:
 - DB_USER=your-db-user
 - DB_PASSWORD=your-db-password
 - DB_NAME=onlinestore
-- JWT_SECRET=some-random-string
+- JWT_SECRET=SomeRandomString
 
 Once repo is cloned:
-- npm install (installs all required node packages)
+- cd Clothing-Store
+- touch .env #(see above section on contents)
+- npm install #(installs all required node packages)
 - cd server
 - npm install
 - cd ..
