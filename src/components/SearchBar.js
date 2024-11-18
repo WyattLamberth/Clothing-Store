@@ -1,16 +1,12 @@
 // SearchBar.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-const SearchBar = () => {
+const SearchBar = ({onSearch}) => {
   const [query, setQuery] = useState('');
-  const navigate = useNavigate(); // Use the useNavigate hook
 
   const handleSearch = (e) => {
     e.preventDefault(); // Prevent default form submission
-    if (query.trim()) {
-      navigate(`/products/search/search?query=${query}`); // Navigate to the search page with query
-    }
+    onSearch(query); // Call the parent-provided search handler
   };
 
   return (

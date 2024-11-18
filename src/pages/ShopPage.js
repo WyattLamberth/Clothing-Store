@@ -28,20 +28,25 @@ const ShopPage = () => {
   const handleSearch = async (query) => {
     try {
       if (!query) {
-        setFilteredProducts(products); // Reset to all products when search query is empty
+        setFilteredProducts(products); // Show all products if the query is empty
         return;
       }
-
-      const response = await api.get('/products/search', {
-        params: { query },
+  
+      const response = await api.get('/products/search/search', {
+        params: { query }, // Pass the search query as a parameter
       });
-
-      setFilteredProducts(response.data); // Update filtered products
+  
+      setFilteredProducts(response.data); // Update filtered products with API results
     } catch (error) {
-      console.error('Error searching products:', error);
-      setFilteredProducts([]); // Reset filtered products on error
+      if (error.response?.status === 404) {
+        // No products found, show an empty list
+        setFilteredProducts([]);
+      } else {
+        console.error('Error searching products:', error);
+      }
     }
   };
+  
 
   useEffect(() => {
     const fetchCategoriesName = async () => {
