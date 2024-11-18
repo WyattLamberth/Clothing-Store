@@ -75,7 +75,6 @@ const OrdersManagement = () => {
                       <option value="Pending">Pending</option>
                       <option value="Shipped">Shipped</option>
                       <option value="Delivered">Delivered</option>
-                      <option value="Cancelled">Cancelled</option>
                       <option value="RETURNED">Returned</option>
                     </select>
                   </div>
@@ -174,7 +173,6 @@ const OrdersManagement = () => {
                 <option value="pending">Pending</option>
                 <option value="shipped">Shipped</option>
                 <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
                 <option value="returned">Returned</option>
               </select>
             </div>
