@@ -140,13 +140,15 @@ const SalesAnalytics = () => {
         );
     }
 
-    const MetricCard = ({ title, value, trend, icon: Icon, trendValue }) => (
+    const MetricCard = ({ title, value, subValue, icon: Icon }) => (
         <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-sm text-gray-500 mb-1">{title}</p>
                     <h3 className="text-2xl font-bold">{value}</h3>
-                    
+                    {subValue && (
+                        <p className="text-sm text-gray-500 mt-1">{subValue}</p>
+                    )}
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
                     <Icon className="w-6 h-6 text-blue-500" />
@@ -240,6 +242,7 @@ const SalesAnalytics = () => {
                 <MetricCard
                     title="Returns"
                     value={data.summary.total_returns.toLocaleString()}
+                    subValue={formatCurrency(Math.abs(data.summary.total_returns * data.summary.average_refund))}
                     icon={ArrowDownRight}
                 />
             </div>

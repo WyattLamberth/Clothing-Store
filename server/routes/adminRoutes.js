@@ -720,9 +720,6 @@ router.get('/reports/inventory', async (req, res) => {
   }
 });
 
-
-
-
 // In adminRoutes.js
 // In adminRoutes.js or a separate analytics route file
 
@@ -793,17 +790,14 @@ router.get('/reports/sales-analytics', async (req, res) => {
   ) as main_stats,
   (
     SELECT 
-      COUNT(*) as total_returns,
-      AVG(ref.refund_amount) as average_refund
+      COUNT(DISTINCT r.return_id) as total_returns,
+      COALESCE(AVG(NULLIF(ref.refund_amount, 0)), 0) as average_refund
     FROM returns r 
-    JOIN refunds ref ON r.return_id = ref.return_id
+    LEFT JOIN refunds ref ON r.return_id = ref.return_id
     JOIN orders o ON r.order_id = o.order_id
-    LEFT JOIN order_items oi ON o.order_id = oi.order_id
-    LEFT JOIN products p ON oi.product_id = p.product_id
-    LEFT JOIN categories c ON p.category_id = c.category_id
     WHERE o.order_date BETWEEN ? AND ?
     ${categoryCondition}
-    AND r.return_status = 'Completed'
+    AND r.return_status IN ('Approved', 'Completed')  -- Include both approved and completed returns
   ) as return_stats
 `;
 
