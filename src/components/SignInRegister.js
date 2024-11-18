@@ -39,23 +39,25 @@ const SignInRegister = () => {
       if (isRegistering) {
         const success = await register(formData);
         if (success) {
-          const loginSuccess = await login(formData.email, formData.password);
-          if (loginSuccess) {
+          const loginResult = await login(formData.email, formData.password);
+          if (loginResult.success) {
             navigate('/');
           } else {
-            setError('Registration successful but login failed');
+            setError(loginResult.error || 'Registration successful but login failed');
           }
+        } else {
+          setError('Registration failed. This email might already be registered.');
         }
       } else {
-        const success = await login(formData.email, formData.password);
-        if (success) {
+        const loginResult = await login(formData.email, formData.password);
+        if (loginResult.success) {
           navigate('/');
         } else {
-          setError('Login failed. Please check your credentials.');
+          setError(loginResult.error);
         }
       }
     } catch (err) {
-      setError(err.message || 'An error occurred');
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     }
   };
 

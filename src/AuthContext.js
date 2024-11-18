@@ -63,27 +63,37 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/login', { email, password });
       const data = response.data;
-
-      // If user is not active, prevent login
-      if (!data.active) {
-        throw new Error('This account has been deactivated. Please contact support.');
-      }
-
+      
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.role);
       localStorage.setItem('userId', data.userId);
-
+      
       setToken(data.token);
       setRole(data.role);
       setUserId(data.userId);
       setIsAuthenticated(true);
 
       await mergeGuestCart();
-
-      return true;
+      
+      return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
-      throw error; // Propagate error to login component
+      // Clear any existing auth data
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('userId');
+      
+      setToken(null);
+      setRole(null);
+      setUserId(null);
+      setIsAuthenticated(false);
+
+      // Return error message from server if available
+      return { 
+        success: false, 
+        error: error.response?.data?.error || 
+               error.response?.data?.message || 
+               'Invalid credentials. Please try again.'
+      };
     }
   };
 
