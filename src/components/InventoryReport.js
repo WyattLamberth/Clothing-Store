@@ -158,15 +158,17 @@ const InventoryReport = () => {
                 <h3 className="text-lg font-medium mb-4">Inventory Health Overview</h3>
                 <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={aggregatedData}>
+                        <BarChart data={data.categoryTotals}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="product_name" />
-                            <YAxis />
+                            <XAxis dataKey="category_name" />
+                            <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                            <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
                             <Tooltip />
                             <Legend />
-                            <Bar dataKey="stock_quantity" name="In Stock" fill="#82ca9d" />
-                            <Bar dataKey="reorder_threshold" name="Reorder Threshold" fill="#8884d8" />
-                            <Line dataKey="total_returns" name="Returns" stroke="#FF8042" />
+                            <Bar yAxisId="left" dataKey="total_items" name="Total Items" fill="#8884d8" />
+                            <Bar yAxisId="left" dataKey="product_count" name="Products" fill="#82ca9d" />
+                            <Bar yAxisId="left" dataKey="returns" name="Returns" fill="#FF8042" />
+                            <Bar yAxisId="right" dataKey="total_value" name="Total Value" fill="#2e8b57" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>

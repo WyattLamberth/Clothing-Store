@@ -615,13 +615,23 @@ router.get('/reports/inventory', async (req, res) => {
 
     // Get category totals with proper decimal handling
     const [categoryTotals] = await connection.execute(`
-      SELECT c.name as category_name,
-             COUNT(p.product_id) as product_count,
-             SUM(p.stock_quantity) as total_items,
-             CAST(SUM(p.stock_quantity * p.price) AS DECIMAL(10,2)) as total_value
-      FROM products p
-      JOIN categories c ON p.category_id = c.category_id
-      GROUP BY c.category_id
+      SELECT 
+    c.name as category_name,
+    COUNT(p.product_id) as product_count,
+    SUM(p.stock_quantity) as total_items,
+    CAST(SUM(p.stock_quantity * p.price) AS DECIMAL(10,2)) as total_value,
+    COALESCE(SUM(returns.return_count), 0) as returns
+FROM products p
+JOIN categories c ON p.category_id = c.category_id
+LEFT JOIN (
+    SELECT 
+        p.category_id,
+        SUM(ri.quantity) as return_count
+    FROM return_items ri
+    JOIN products p ON ri.product_id = p.product_id
+    GROUP BY p.category_id
+) returns ON returns.category_id = c.category_id
+GROUP BY c.category_id
     `);
 
     // Calculate total inventory value with proper decimal handling
