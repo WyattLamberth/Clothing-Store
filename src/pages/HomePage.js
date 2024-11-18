@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, Truck, RefreshCw } from 'lucide-react';
-import SearchBar from '../components/SearchBar';
 import backgroundImage from '../images/pic1.jpg';
 import TrendingSection from '../components/TrendingSection';
 import api from '../utils/api';
@@ -16,6 +15,7 @@ const HeroSection = () => {
     backgroundSize: 'cover', // Cover the entire section
     backgroundPosition: 'left', // Center the image
     height: '100vh', // Full viewport height (adjust as needed)
+    paddingTop: '5rem',
   };
 
   return (
@@ -157,9 +157,6 @@ const HomePage = () => {
 
   return (
     <div>
-      <div className="container mx-auto px-4 py-4">
-        <SearchBar onSearch={handleSearch} />
-      </div>
       <HeroSection />
       <TrendingSection />
       <div className="container mx-auto px-4">
