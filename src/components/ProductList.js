@@ -1,42 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Pencil, Trash2, AlertCircle, Search } from 'lucide-react';
 import EditProductModal from './EditProductModal';
-import api from '../utils/api';
 import { useAuth } from '../AuthContext';
+import api from '../utils/api';
 
-const ProductList = () => {
+const ProductList = ({ products, onProductUpdated, onStockUpdate, refreshTrigger }) => {
   const { token } = useAuth();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
-    try {
-      const response = await api.get('/products');
-      setProducts(response.data);
-      setLoading(false);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch products');
-      setLoading(false);
-    }
-  };
+  const [error, setError] = useState(null);
 
   const handleDelete = async (productId) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
     
     try {
       await api.delete(`/products/${productId}`);
-      setProducts(products.filter(p => p.product_id !== productId));
+      // Let parent component handle the update
+      onProductUpdated();
     } catch (err) {
       console.error('Error deleting product:', err);
-      alert(err.response?.data?.message || 'Failed to delete product');
+      setError(err.response?.data?.message || 'Failed to delete product');
     }
   };
 
@@ -44,11 +28,19 @@ const ProductList = () => {
     setEditingProduct(product);
   };
 
-  const handleSaveEdit = (updatedProduct) => {
-    setProducts(products.map(p => 
-      p.product_id === updatedProduct.product_id ? updatedProduct : p
-    ));
-    setEditingProduct(null);
+  const handleSaveEdit = async (updatedProduct) => {
+    try {
+      // Call the parent's update handler
+      await onProductUpdated(updatedProduct);
+      // Update stock if it changed
+      if (updatedProduct.stock_quantity !== editingProduct.stock_quantity) {
+        await onStockUpdate(updatedProduct.product_id, updatedProduct.stock_quantity);
+      }
+      setEditingProduct(null);
+    } catch (err) {
+      console.error('Error saving product:', err);
+      setError(err.response?.data?.message || 'Failed to save product');
+    }
   };
 
   const formatPrice = (price) => {
@@ -64,7 +56,7 @@ const ProductList = () => {
     setSortConfig({ key, direction });
 
     const sortedProducts = [...products].sort((a, b) => {
-      if (key === 'price') {
+      if (key === 'price' || key === 'stock_quantity') {
         return direction === 'asc' 
           ? parseFloat(a[key]) - parseFloat(b[key])
           : parseFloat(b[key]) - parseFloat(a[key]);
@@ -74,7 +66,8 @@ const ProductList = () => {
       }
       return a[key] < b[key] ? 1 : -1;
     });
-    setProducts(sortedProducts);
+    // Instead of setting state directly, call parent's update handler
+    onProductUpdated(sortedProducts);
   };
 
   const filteredProducts = products.filter(product =>
@@ -82,7 +75,7 @@ const ProductList = () => {
     product.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="text-center py-4">Loading products...</div>;
+  if (!products) return <div className="text-center py-4">Loading products...</div>;
   if (error) return <div className="text-red-500 py-4">Error: {error}</div>;
 
   return (

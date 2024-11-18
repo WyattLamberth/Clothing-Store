@@ -22,14 +22,7 @@ const ProductCard = ({ product, onAddToCart, isInCart }) => {
   };
 
   useEffect(() => {
-    fetchStock(); // Fetch stock once on component mount
-
-    // Set up continuous stock polling
-    const stockInterval = setInterval(() => {
-      fetchStock();
-    }, 2000);
-
-    return () => clearInterval(stockInterval); // Cleanup interval on component unmount
+    fetchStock(); 
   }, [product.product_id]);
 
   const handleAddToCart = (e) => {
