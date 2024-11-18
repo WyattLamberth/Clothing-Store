@@ -998,11 +998,14 @@ const ProfileDashboard = () => {
                         {orderItems[order.order_id].map((item) => (
                           <div key={item.order_item_id} className="flex justify-between p-2 border-b">
                             <div className="flex items-center space-x-4">
-                              <img
-                                src={item.image_path}
-                                alt={item.product_name}
-                                className="w-16 h-16 object-cover rounded"
-                              />
+                            <img
+                              src={require(`../images/${item.image_path}`)}
+                              alt={item.product_name}
+                              className="w-16 h-16 object-cover rounded"
+                              onError={(e) => (e.target.src = '/images/placeholder.png')}
+                              onLoad={() => console.log(`Image loaded: /images/${item.image_path}`)}
+                            />
+
                               <span>{item.product_name}</span>
                             </div>
                             <span>Quantity: {item.quantity}</span>
