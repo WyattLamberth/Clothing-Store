@@ -638,18 +638,48 @@ router.get('/reports/inventory', async (req, res) => {
       WHERE p.stock_quantity <= p.reorder_threshold
     `);
 
+    // Get return data with total orders and total returns for calculating return rate
+    const [returnData] = await connection.execute(`
+      SELECT 
+        p.product_id, 
+        p.product_name, 
+        SUM(ri.quantity) AS total_returned_items,
+        SUM(oi.quantity) AS total_ordered_items
+      FROM products p
+      LEFT JOIN return_items ri ON ri.product_id = p.product_id
+      LEFT JOIN order_items oi ON oi.product_id = p.product_id
+      GROUP BY p.product_id
+    `);
+
+    // Calculate the total return rate (total items returned / total items ordered)
+    const totalReturnedItems = returnData.reduce((sum, item) => sum + (item.total_returned_items || 0), 0);
+    const totalOrderedItems = returnData.reduce((sum, item) => sum + (item.total_ordered_items || 0), 0);
+
+    const averageReturnRate = totalOrderedItems > 0 
+      ? parseFloat(((totalReturnedItems / totalOrderedItems) * 100).toFixed(2))
+      : 0;
+
     // Format the summary data
     const summary = {
       totalProducts: stockLevels.length,
       totalValue: parseFloat(totalValue.toFixed(2)), // Ensure proper decimal handling
       lowStockCount: lowStock.length,
-      averageReturnRate: 0 // Set default value if not calculating returns
+      averageReturnRate // Updated to reflect overall return rate calculation
     };
 
     res.json({
       stockLevels,
       lowStock,
       categoryTotals,
+      returnRates: returnData.map(item => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        total_returned_items: item.total_returned_items || 0,
+        total_ordered_items: item.total_ordered_items || 0,
+        return_rate_percentage: item.total_ordered_items > 0 
+          ? parseFloat(((item.total_returned_items / item.total_ordered_items) * 100).toFixed(2))
+          : 0
+      })),
       summary
     });
   } catch (error) {
@@ -659,6 +689,7 @@ router.get('/reports/inventory', async (req, res) => {
     connection.release();
   }
 });
+
 
 // In adminRoutes.js
 // In adminRoutes.js or a separate analytics route file
