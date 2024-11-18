@@ -8,6 +8,7 @@ import api from '../utils/api';
 const InventoryManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [products, setProducts] = useState([]);
   const [stats, setStats] = useState({
     totalProducts: 0,
     lowStockItems: 0,
@@ -15,25 +16,17 @@ const InventoryManagement = () => {
     totalValue: 0
   });
 
-  // Function to trigger refresh
-  const refreshData = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, [refreshTrigger]); // This will re-fetch stats whenever refreshTrigger changes
-
-  const fetchStats = async () => {
+  const fetchProducts = async () => {
     try {
       const response = await api.get('/products');
-      const products = response.data;
+      const productsData = response.data;
+      setProducts(productsData);
       
       // Calculate stats
-      const totalProducts = products.length;
-      const lowStockItems = products.filter(p => p.stock_quantity <= p.reorder_threshold).length;
-      const uniqueCategories = new Set(products.map(p => p.category_id)).size;
-      const totalValue = products.reduce((sum, product) => {
+      const totalProducts = productsData.length;
+      const lowStockItems = productsData.filter(p => p.stock_quantity <= p.reorder_threshold).length;
+      const uniqueCategories = new Set(productsData.map(p => p.category_id)).size;
+      const totalValue = productsData.reduce((sum, product) => {
         return sum + (product.price * product.stock_quantity);
       }, 0);
 
@@ -44,32 +37,83 @@ const InventoryManagement = () => {
         totalValue
       });
     } catch (error) {
-      console.error('Error fetching inventory stats:', error);
+      console.error('Error fetching inventory data:', error);
     }
   };
 
-  const handleProductAdded = async () => {
+  useEffect(() => {
+    fetchProducts();
+  }, [refreshTrigger]);
+
+  const handleStockUpdate = async (productId, newQuantity) => {
     try {
-      await refreshData(); // Refresh data immediately after adding product
-      setShowAddModal(false);
+      await api.put(`/products/${productId}`, { 
+        stock_quantity: newQuantity,
+        // Include other required fields from the existing product
+        ...products.find(p => p.product_id === productId)
+      });
+      
+      // Update local state immediately
+      setProducts(prevProducts => 
+        prevProducts.map(product => 
+          product.product_id === productId 
+            ? { ...product, stock_quantity: newQuantity }
+            : product
+        )
+      );
+      
+      // Update stats
+      const updatedProducts = products.map(product =>
+        product.product_id === productId
+          ? { ...product, stock_quantity: newQuantity }
+          : product
+      );
+
+      const lowStockItems = updatedProducts.filter(p => p.stock_quantity <= p.reorder_threshold).length;
+      const totalValue = updatedProducts.reduce((sum, product) => {
+        return sum + (product.price * product.stock_quantity);
+      }, 0);
+
+      setStats(prevStats => ({
+        ...prevStats,
+        lowStockItems,
+        totalValue
+      }));
+
+      // Trigger refresh to ensure all components are in sync
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
-      console.error('Error handling product addition:', error);
+      console.error('Error updating stock quantity:', error);
     }
   };
 
-  const handleProductUpdated = async () => {
+  const handleProductUpdated = async (updatedProduct) => {
     try {
-      await refreshData(); // Refresh data when a product is updated
+      // Update local state immediately
+      setProducts(prevProducts =>
+        prevProducts.map(product =>
+          product.product_id === updatedProduct.product_id
+            ? updatedProduct
+            : product
+        )
+      );
+      
+      // Recalculate stats
+      const lowStockItems = products.filter(p => p.stock_quantity <= p.reorder_threshold).length;
+      const totalValue = products.reduce((sum, product) => {
+        return sum + (product.price * product.stock_quantity);
+      }, 0);
+
+      setStats(prevStats => ({
+        ...prevStats,
+        lowStockItems,
+        totalValue
+      }));
+
+      // Trigger refresh
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error handling product update:', error);
-    }
-  };
-
-  const handleRestockComplete = async () => {
-    try {
-      await refreshData(); // Refresh data when restock is complete
-    } catch (error) {
-      console.error('Error handling restock completion:', error);
     }
   };
 
@@ -85,7 +129,7 @@ const InventoryManagement = () => {
           </div>
           <AddProductForm 
             onProductAdded={onProductAdded}
-            refreshData={refreshData} // Pass refresh function to form
+            refreshData={() => setRefreshTrigger(prev => prev + 1)}
           />
         </div>
       </div>
@@ -98,13 +142,7 @@ const InventoryManagement = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Inventory Management</h2>
         <div className="flex gap-2">
-          <button
-            onClick={refreshData}
-            className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition duration-200"
-          >
-            <RotateCcw className="h-5 w-5" />
-            <span>Refresh</span>
-          </button>
+
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
@@ -152,8 +190,10 @@ const InventoryManagement = () => {
         <div className="lg:col-span-2 bg-white rounded-lg shadow">
           <div className="p-6">
             <ProductList 
+              products={products}
               refreshTrigger={refreshTrigger} 
               onProductUpdated={handleProductUpdated}
+              onStockUpdate={handleStockUpdate}
             />
           </div>
         </div>
@@ -163,8 +203,9 @@ const InventoryManagement = () => {
           <div className="p-6">
             <h3 className="text-lg font-semibold mb-4">Low Stock Alerts</h3>
             <LowStockAlerts 
+              products={products}
               refreshTrigger={refreshTrigger}
-              onRestock={handleRestockComplete}
+              onStockUpdate={handleStockUpdate}
             />
           </div>
         </div>
@@ -174,7 +215,10 @@ const InventoryManagement = () => {
       {showAddModal && (
         <AddProductModal
           onClose={() => setShowAddModal(false)}
-          onProductAdded={handleProductAdded}
+          onProductAdded={() => {
+            setShowAddModal(false);
+            setRefreshTrigger(prev => prev + 1);
+          }}
         />
       )}
     </div>
