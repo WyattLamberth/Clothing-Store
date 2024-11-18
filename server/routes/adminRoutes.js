@@ -657,6 +657,45 @@ router.get('/reports/inventory', async (req, res) => {
       ? ((totalReturnedCount / totalOrderedCount) * 100).toFixed(2)
       : 0;
 
+      // Get number of returns by products with return date
+      const [returnsByProduct] = await connection.execute(`
+        SELECT 
+          ri.product_id, 
+          p.product_name, 
+          SUM(ri.quantity) AS total_returns, 
+          r.return_date
+        FROM 
+          return_items ri
+        JOIN 
+          products p ON ri.product_id = p.product_id
+        JOIN 
+          returns r ON ri.return_id = r.return_id
+        GROUP BY 
+          ri.product_id, r.return_date
+        ORDER BY 
+          r.return_date DESC;
+      `);
+  
+      // Get number of returns by categories with return date
+      const [returnsByCategory] = await connection.execute(`
+        SELECT 
+          c.name AS category_name, 
+          SUM(ri.quantity) AS total_returns, 
+          r.return_date
+        FROM 
+          return_items ri
+        JOIN 
+          products p ON ri.product_id = p.product_id
+        JOIN 
+          categories c ON p.category_id = c.category_id
+        JOIN 
+          returns r ON ri.return_id = r.return_id
+        GROUP BY 
+          c.category_id, r.return_date
+        ORDER BY 
+          r.return_date DESC;
+      `);
+
     // Format the summary data
     const summary = {
       totalProducts: stockLevels.length,
@@ -669,6 +708,8 @@ router.get('/reports/inventory', async (req, res) => {
       stockLevels,
       lowStock,
       categoryTotals,
+      returnsByProduct,
+      returnsByCategory,
       summary
     });
   } catch (error) {
@@ -678,6 +719,7 @@ router.get('/reports/inventory', async (req, res) => {
     connection.release();
   }
 });
+
 
 
 
