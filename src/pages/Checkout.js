@@ -348,8 +348,8 @@ return (
           {' '}Use Default Address
         </label>
         <form className="space-y-4 mt-4 grid grid-cols-2 gap-4">
-          <input type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2" />
-          <input type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2" />
+          <input type="text" name="firstName" placeholder="First Name" value={deliveryInfo.firstName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 col-span-2" />
+          <input type="text" name="lastName" placeholder="Last Name" value={deliveryInfo.lastName} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 col-span-2" />
           <input type="email" name="email" placeholder="Email" value={deliveryInfo.email} onChange={handleDeliveryChange} required className="border rounded px-4 py-2" />
           <input type="tel" name="phone" placeholder="Phone" value={deliveryInfo.phone} onChange={handleDeliveryChange} required className="border rounded px-4 py-2" />
           <input type="text" name="line_1" placeholder="Address Line 1" value={deliveryInfo.line_1} onChange={handleDeliveryChange} required className="border rounded px-4 py-2 col-span-2" />
