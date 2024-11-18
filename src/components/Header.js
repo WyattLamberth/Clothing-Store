@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, Shield, Briefcase, UserCircle } from 'lucide-react'; // Import UserCircle for the profile icon
 import { useAuth } from '../AuthContext';
@@ -8,6 +8,7 @@ import { Bell } from 'lucide-react';
 const Header = () => {
   const { isAuthenticated, logout, role } = useAuth();
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -50,6 +51,25 @@ const Header = () => {
     }
   };
 
+    // Handle Click Outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setShowNotifications(false);
+        }
+      };
+  
+      if (showNotifications) {
+        document.addEventListener('mousedown', handleClickOutside);
+      } else {
+        document.removeEventListener('mousedown', handleClickOutside);
+      }
+  
+      // Cleanup
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [showNotifications]);
   
   const userRole = Number(role);
 
@@ -116,37 +136,54 @@ const Header = () => {
                   </li>
                 )}
 
-                  {/* Notification Bell */}
-                  <li className="relative">
-                    <button onClick={() => setShowNotifications(!showNotifications)} className="text-gray-600 hover:text-gray-900 relative">
-                      <Bell className="h-5 w-5" />
-                      {notifications.some((notif) => !notif.read_status) && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute -top-2 -right-2">
-                          {notifications.filter((notif) => !notif.read_status).length}
-                        </span>
-                      )}
-                    </button>
+                {/* Notification Bell */}
+                <li className="relative">
+                <button
+                  onClick={() => setShowNotifications((prev) => !prev)}
+                  className="text-gray-600 hover:text-gray-900 relative"
+                >
+                  <Bell className="h-5 w-5" />
+                  {notifications.some((notif) => !notif.read_status) && (
+                    <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center absolute -top-2 -right-2">
+                      {notifications.filter((notif) => !notif.read_status).length}
+                    </span>
+                  )}
+                </button>
 
-                    {showNotifications && (
-                      <div className="absolute right-0 mt-2 w-64 max-h-96 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50 overflow-y-auto">
-                        <h3 className="text-sm font-bold mb-2">Notifications</h3>
-                        <ul>
-                          {notifications.map((notif) => (
-                            <li key={notif.notification_id} className={`p-2 ${notif.read_status ? 'bg-gray-100' : 'bg-white'}`}>
-                              <div className="text-xs text-gray-500">{new Date(notif.notification_date).toLocaleString()}</div>
-                              <div className="text-sm">{notif.message}</div>
-                              {!notif.read_status && (
-                                <button onClick={() => markAsRead(notif.notification_id)} className="text-blue-600 text-xs mt-1">
-                                  Mark as read
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                        {notifications.length === 0 && <p className="text-gray-500 text-sm">No notifications</p>}
-                      </div>
+                {/* Notifications Dropdown */}
+                {showNotifications && (
+                  <div
+                    ref={dropdownRef}
+                    className="absolute right-0 mt-2 w-64 max-h-96 bg-white border border-gray-200 shadow-lg rounded-lg p-4 z-50 overflow-y-auto"
+                  >
+                    <h3 className="text-sm font-bold mb-2">Notifications</h3>
+                    <ul>
+                      {notifications.map((notif) => (
+                        <li
+                          key={notif.notification_id}
+                          className={`p-2 ${notif.read_status ? 'bg-gray-100' : 'bg-white'}`}
+                        >
+                          <div className="text-xs text-gray-500">
+                            {new Date(notif.notification_date).toLocaleString()}
+                          </div>
+                          <div className="text-sm">{notif.message}</div>
+                          {!notif.read_status && (
+                            <button
+                              onClick={() => markAsRead(notif.notification_id)}
+                              className="text-blue-600 text-xs mt-1"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    {notifications.length === 0 && (
+                      <p className="text-gray-500 text-sm">No notifications</p>
                     )}
-                  </li>
+                  </div>
+                )}
+              </li>
 
 
                 <li>
