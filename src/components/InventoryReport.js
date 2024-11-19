@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     BarChart,
     Bar,
-    Line,
     LineChart,
+    Line,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -22,6 +22,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFE', '#FEA8A1'
 const InventoryReport = () => {
     const [data, setData] = useState({
         stockLevels: [],
+        categoryTotals: [],
         summary: {
             totalProducts: 0,
             totalValue: 0,
@@ -31,20 +32,35 @@ const InventoryReport = () => {
         returnsByProduct: [],
         returnsByCategory: [],
     });
+    const [filteredData, setFilteredData] = useState({
+        categoryTotals: [],
+        stockLevels: [],
+        returnsByProduct: [],
+        returnsByCategory: [],
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [selectedProduct, setSelectedProduct] = useState('all');
 
     useEffect(() => {
         fetchInventoryData();
     }, []);
+
+    useEffect(() => {
+        filterData();
+    }, [selectedCategory, data]);
 
     const fetchInventoryData = async () => {
         try {
             setLoading(true);
             const response = await api.get('/admin/reports/inventory');
             setData(response.data);
+            setFilteredData({
+                categoryTotals: response.data.categoryTotals,
+                stockLevels: response.data.stockLevels,
+                returnsByProduct: response.data.returnsByProduct,
+                returnsByCategory: response.data.returnsByCategory,
+            });
             setError(null);
         } catch (err) {
             console.error('Error fetching inventory data:', err);
@@ -54,37 +70,43 @@ const InventoryReport = () => {
         }
     };
 
-    // Filter and aggregate data for the graph
-    const filteredStockLevels = data.stockLevels.filter((item) => {
-        if (selectedCategory !== 'all' && item.category_name !== selectedCategory) return false;
-        if (selectedProduct !== 'all' && item.product_name !== selectedProduct) return false;
-        return true;
-    });
-
-    const filteredReturns = data.returnsByProduct.filter((item) => {
-        if (selectedProduct !== 'all' && item.product_name !== selectedProduct) return false;
-        if (selectedCategory !== 'all') {
-            const categoryMatch = data.stockLevels.find(
-                (stock) => stock.product_name === item.product_name && stock.category_name === selectedCategory
-            );
-            return !!categoryMatch;
+    const filterData = () => {
+        if (selectedCategory === 'all') {
+            setFilteredData({
+                categoryTotals: data.categoryTotals,
+                stockLevels: data.stockLevels,
+                returnsByProduct: data.returnsByProduct,
+                returnsByCategory: data.returnsByCategory,
+            });
+            return;
         }
-        return true;
-    });
 
-    const aggregatedData = filteredStockLevels.map((stockItem) => {
-        const returnsData = filteredReturns.find((returnItem) => returnItem.product_id === stockItem.product_id) || {};
-        return {
-            product_name: stockItem.product_name,
-            category_name: stockItem.category_name,
-            stock_quantity: stockItem.stock_quantity,
-            reorder_threshold: stockItem.reorder_threshold,
-            total_returns: returnsData.total_returns || 0,
-        };
-    });
+        const filteredStockLevels = data.stockLevels.filter(
+            item => item.category_name === selectedCategory
+        );
+        const filteredCategoryTotals = data.categoryTotals.filter(
+            item => item.category_name === selectedCategory
+        );
+        const filteredReturnsByCategory = data.returnsByCategory.filter(
+            item => item.category_name === selectedCategory
+        );
+        const filteredReturnsByProduct = data.returnsByProduct.filter(item => {
+            const product = data.stockLevels.find(
+                p => p.product_id === item.product_id && p.category_name === selectedCategory
+            );
+            return !!product;
+        });
 
-    const totalStock = data.stockLevels.reduce((sum, item) => sum + item.stock_quantity, 0);
-    const categoryContribution = data.stockLevels.reduce((acc, item) => {
+        setFilteredData({
+            categoryTotals: filteredCategoryTotals,
+            stockLevels: filteredStockLevels,
+            returnsByProduct: filteredReturnsByProduct,
+            returnsByCategory: filteredReturnsByCategory,
+        });
+    };
+
+    const totalStock = filteredData.stockLevels.reduce((sum, item) => sum + item.stock_quantity, 0);
+    const categoryContribution = filteredData.stockLevels.reduce((acc, item) => {
         const category = acc.find((c) => c.category_name === item.category_name);
         if (category) {
             category.stock_quantity += item.stock_quantity;
@@ -122,32 +144,18 @@ const InventoryReport = () => {
                 </div>
             </div>
 
-            {/* Filters */}
+            {/* Category Filter */}
             <div className="bg-white p-6 rounded-lg shadow mb-6">
-                <label className="block mb-2">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
                 <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="block w-full mb-4 p-2 border rounded"
+                    className="block w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 >
                     <option value="all">All Categories</option>
                     {[...new Set(data.stockLevels.map((item) => item.category_name))].map((category) => (
                         <option key={category} value={category}>
                             {category}
-                        </option>
-                    ))}
-                </select>
-
-                <label className="block mb-2">Product</label>
-                <select
-                    value={selectedProduct}
-                    onChange={(e) => setSelectedProduct(e.target.value)}
-                    className="block w-full mb-4 p-2 border rounded"
-                >
-                    <option value="all">All Products</option>
-                    {[...new Set(data.stockLevels.map((item) => item.product_name))].map((product) => (
-                        <option key={product} value={product}>
-                            {product}
                         </option>
                     ))}
                 </select>
@@ -158,7 +166,7 @@ const InventoryReport = () => {
                 <h3 className="text-lg font-medium mb-4">Inventory Health Overview</h3>
                 <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={data.categoryTotals}>
+                        <BarChart data={filteredData.categoryTotals}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="category_name" />
                             <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
@@ -202,11 +210,11 @@ const InventoryReport = () => {
                 </div>
             </div>
 
-            {/* Source Data Tables */}
+            {/* Data Tables */}
             <div className="space-y-6">
                 <DataTable
                     title="Stock Levels Data"
-                    data={data.stockLevels.map((item) => ({
+                    data={filteredData.stockLevels.map((item) => ({
                         product_name: item.product_name,
                         category_name: item.category_name,
                         stock_quantity: item.stock_quantity,
@@ -225,7 +233,7 @@ const InventoryReport = () => {
 
                 <DataTable
                     title="Returns By Product"
-                    data={data.returnsByProduct.map((item) => ({
+                    data={filteredData.returnsByProduct.map((item) => ({
                         product_name: item.product_name,
                         total_returns: item.total_returns,
                         return_date: item.return_date,
@@ -240,7 +248,7 @@ const InventoryReport = () => {
 
                 <DataTable
                     title="Returns By Category"
-                    data={data.returnsByCategory.map((item) => ({
+                    data={filteredData.returnsByCategory.map((item) => ({
                         category_name: item.category_name,
                         total_returns: item.total_returns,
                         return_date: item.return_date,
